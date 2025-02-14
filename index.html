@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta content="width=device-width, initial-scale=1, height=device-height" name="viewport">
+    <link href="/styles.css" rel="stylesheet">
+    <title>Game</title>
+    <script>
+      navigator.serviceWorker.getRegistrations().then(registrations => {
+        for (const registration of registrations) {
+          registration.unregister();
+        }
+      });
+    </script>
+  </head>
+  <body>
+    <canvas id="gameCanvas"></canvas>
+    <div id="startGame">
+      <div id="loadingDiv">Loading...</div>
+      <button id="startButton">Start Game</button>
+    </div>
+
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
