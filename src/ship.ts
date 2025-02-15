@@ -319,19 +319,19 @@ export class Ship {
         }
     }
     private setupMouse() {
-        this._ship.getScene().onPointerDown = (evt, pickInfo, type) => {
+        this._ship.getScene().onPointerDown = (evt) => {
             this._mousePos.x = evt.x;
             this._mousePos.y = evt.y;
             this._mouseDown = true;
 
         }
-        this._ship.getScene().onPointerUp = (evt, pickInfo, type) => {
+        this._ship.getScene().onPointerUp = () => {
             this._mouseDown = false;
         }
-        this._ship.getScene().onPointerMove = (evt, pickInfo, type) => {
+        this._ship.getScene().onPointerMove = () => {
 
         };
-        this._ship.getScene().onPointerMove = (ev, pickInfo, type) => {
+        this._ship.getScene().onPointerMove = (ev) => {
             if (!this._mouseDown) {return};
                 const xInc = this._rightStickVector.x = (ev.x - this._mousePos.x) / 100;
                 const yInc = this._rightStickVector.y = (ev.y - this._mousePos.y) / 100;
