@@ -34,17 +34,13 @@ export class Scoreboard {
         const parent = scene.getMeshById('RightUpperDisplay');
         const scoreboard = MeshBuilder.CreatePlane("scoreboard", {width: 1, height: 1}, scene);
         scoreboard.parent =parent;
-        //DefaultScene.MainScene.onBeforeDrawPhaseObservable.add(() => {
 
-        //});
-        //scoreboard.parent = camera;
         scoreboard.position.x = -.76;
         scoreboard.position.y = 4.19;
         scoreboard.position.z = .53;
-        scoreboard.rotation.x = Angle.FromDegrees(108).radians();
+        scoreboard.rotation.x = Angle.FromDegrees(104).radians();
         scoreboard.rotation.z = Math.PI;
-        scoreboard.scaling = new Vector3(.5, .5, .5);
-        //scoreboard.position = camera.getFrontPosition(1);
+        scoreboard.scaling = new Vector3(.3, .3, .3);
 
         const advancedTexture = AdvancedDynamicTexture.CreateForMesh(scoreboard);
         advancedTexture.background = "black";
@@ -52,6 +48,9 @@ export class Scoreboard {
         advancedTexture.addControl(scoreText);
         const fpsText = this.createText();
         fpsText.top = '120px';
+        const hullText = this.createText();
+        //hullText.top = '240px';
+        hullText.text = 'Hull: 100%';
         const panel = new StackPanel();
         panel.isVertical = true;
         advancedTexture.addControl(fpsText);

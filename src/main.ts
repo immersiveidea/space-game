@@ -28,13 +28,11 @@ export class Main {
             disableDefaultUI: true,
         });
 
-        //const sun = createSun();
         const ship = new Ship();
         const scoreboard = new Scoreboard();
         const level = new Level1(ship);
         const photoDome = new PhotoDome("testdome", '/8192.webp', {}, DefaultScene.MainScene);
-        //starfield(sun);
-        //starfield(sun);
+
 
 
         xr.baseExperience.onInitialXRPoseSetObservable.add(() => {
@@ -63,7 +61,6 @@ export class Main {
             engine = new Engine(canvas, true);
         }
         engine.setHardwareScalingLevel(1 / window.devicePixelRatio);
-        //Engine.audioEngine.useCustomUnlockedButton = true;
         window.onresize = () => {
             engine.resize();
         }

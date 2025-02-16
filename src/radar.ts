@@ -47,9 +47,12 @@ export class Radar {
         this._arrowMesh.material = material;
         window.setInterval(() => {
             const point = scene.getMeshById('endBase');
-            point.computeWorldMatrix(true)
-            this._arrowMesh.position = this._radarTransform.absolutePosition;
-            this._arrowMesh.lookAt(point.absolutePosition);
+            if (point) {
+                point.computeWorldMatrix(true)
+                this._arrowMesh.position = this._radarTransform.absolutePosition;
+                this._arrowMesh.lookAt(point.absolutePosition);
+            }
+
         }, 100);
 
        // arrow[0].parent = this._radarTransform;
