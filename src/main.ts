@@ -6,21 +6,42 @@ import {DefaultScene} from "./defaultScene";
 import {Ship} from "./ship";
 import {Level1} from "./level1";
 import {Scoreboard} from "./scoreboard";
+import Demo from "./demo";
+import Level from "./level";
 
 const webGpu = false;
 const canvas = (document.querySelector('#gameCanvas') as HTMLCanvasElement);
-
+enum GameState {
+    PLAY,
+    DEMO
+}
 export class Main {
-
+    private _loadingDiv: HTMLElement;
+    private _currentLevel: Level;
+    private _gameState: GameState = GameState.DEMO;
     constructor() {
-
+        this._loadingDiv = document.querySelector('#loadingDiv');
         this.initialize();
-    }
 
+        document.querySelector('#startButton').addEventListener('click', () => {
+            Engine.audioEngine.unlock();
+            this.play();
+            document.querySelector('#mainDiv').remove();
+        });
+    }
+    private _started = false;
+    public play() {
+        this._gameState = GameState.PLAY;
+        this._currentLevel.play();
+    }
+    public demo() {
+        this._gameState = GameState.DEMO;
+    }
     private async initialize() {
+        this._loadingDiv.innerText = "Initializing.";
         await this.setupScene();
 
-        const xr = await WebXRDefaultExperience.CreateAsync(DefaultScene.MainScene, {
+        DefaultScene.XR = await WebXRDefaultExperience.CreateAsync(DefaultScene.MainScene, {
             disablePointerSelection: true,
             disableTeleportation: true,
             disableNearInteraction: true,
@@ -28,29 +49,17 @@ export class Main {
             disableDefaultUI: true,
         });
 
-        const ship = new Ship();
-        const scoreboard = new Scoreboard();
-        const level = new Level1(ship);
+        this.setLoadingMessage("Get Ready!");
+        this.setLoadingMessage("Initializing Level...");
+        this._currentLevel = new Level1();
+        this._currentLevel.getReadyObservable().add(() => {
+
+        });
         const photoDome = new PhotoDome("testdome", '/8192.webp', {}, DefaultScene.MainScene);
-
-
-
-        xr.baseExperience.onInitialXRPoseSetObservable.add(() => {
-            xr.baseExperience.camera.parent = ship.transformNode;
-            xr.baseExperience.camera.position = new Vector3(0, 0, 0);
-
-            level.onScoreObservable.add((score) => {
-                scoreboard.onscoreObservable.notifyObservers(score);
-            });
-
-        });
-        xr.input.onControllerAddedObservable.add((controller) => {
-            ship.addController(controller);
-        });
-        DefaultScene.XR = xr;
-
     }
-
+    private setLoadingMessage(message: string) {
+        this._loadingDiv.innerText = message;
+    }
     private async setupScene() {
 
         let engine: WebGPUEngine | Engine = null;
@@ -64,30 +73,36 @@ export class Main {
         window.onresize = () => {
             engine.resize();
         }
+        DefaultScene.DemoScene = new Scene(engine);
         DefaultScene.MainScene = new Scene(engine);
 
-
+        this.setLoadingMessage("Initializing Physics Engine..");
         await this.setupPhysics();
-
         this.setupInspector();
-
         engine.runRenderLoop(() => {
-            DefaultScene.MainScene.render();
+            if (!this._started) {
+                this._started = true;
+                this._loadingDiv.remove();
+                const start = document.querySelector('#startButton');
+                start.classList.add('ready');
+            }
+            if (this._gameState == GameState.PLAY) {
+                DefaultScene.MainScene.render();
+            } else {
+                DefaultScene.DemoScene.render();
+            }
         });
     }
 
     private async setupPhysics() {
         const havok = await HavokPhysics();
-
         const havokPlugin = new HavokPlugin(true, havok);
         DefaultScene.MainScene.enablePhysics(new Vector3(0, 0, 0), havokPlugin);
-
         DefaultScene.MainScene.collisionsEnabled = true;
-
-
     }
 
     private setupInspector() {
+        this.setLoadingMessage("Initializing Inspector...");
         window.addEventListener("keydown", (ev) => {
             if (ev.key == 'i') {
                 import ("@babylonjs/inspector").then((inspector) => {
@@ -102,7 +117,7 @@ export class Main {
 }
 
 const main = new Main();
-
+const demo = new Demo(main);
 
 
 

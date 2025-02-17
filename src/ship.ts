@@ -22,7 +22,7 @@ import {
     WebXRInputSource
 } from "@babylonjs/core";
 import {DefaultScene} from "./defaultScene";
-import {Radar} from "./radar";
+
 import {ShipEngine} from "./shipEngine";
 import {Level1} from "./level1";
 
@@ -71,6 +71,45 @@ export class Ship {
     private _camera: FreeCamera;
 
     constructor() {
+
+        this.setup();
+        this.initialize();
+    }
+
+    private shoot() {
+        this._shot.play();
+        const ammo = MeshBuilder.CreateCapsule("bullet", {radius: .1, height: 2.5}, DefaultScene.MainScene);
+        ammo.parent = this._ship
+        ammo.position.y = 2;
+        ammo.rotation.x = Math.PI / 2;
+        ammo.setParent(null);
+        const ammoAggregate = new PhysicsAggregate(ammo, PhysicsShapeType.CONVEX_HULL, {
+            mass: 1000,
+            restitution: 0
+        }, DefaultScene.MainScene);
+
+
+        ammo.material = this._ammoMaterial;
+        ammoAggregate.body.setMotionType(PhysicsMotionType.DYNAMIC);
+
+        ammoAggregate.body.setLinearVelocity(this._ship.forward.scale(200).add(this._ship.physicsBody.getLinearVelocity()));
+
+        window.setTimeout(() => {
+            ammoAggregate.dispose();
+            ammo.dispose()
+        }, 1500)
+    }
+
+    public set position(newPosition: Vector3) {
+        const body = this._ship.physicsBody;
+        body.disablePreStep = false;
+        body.transformNode.position.copyFrom(newPosition);
+        DefaultScene.MainScene.onAfterRenderObservable.addOnce(() => {
+            body.disablePreStep = true;
+        })
+
+    }
+    private setup() {
         this._ship = new TransformNode("ship", DefaultScene.MainScene);
         this._glowLayer = new GlowLayer('bullets', DefaultScene.MainScene);
         this._glowLayer.intensity = 1;
@@ -87,65 +126,12 @@ export class Ship {
             {loop: false, autoplay: false, volume: .5});
         this._ammoMaterial = new StandardMaterial("ammoMaterial", DefaultScene.MainScene);
         this._ammoMaterial.emissiveColor = new Color3(1, 1, 0);
-        this.initialize();
-
-    }
-
-    private shoot() {
-        this._shot.play();
-        const ammo = MeshBuilder.CreateCapsule("bullet", {radius: .05, height: 1.5}, DefaultScene.MainScene);
-        ammo.parent = this._ship
-        ammo.position.y = 2;
-        ammo.rotation.x = Math.PI / 2;
-        ammo.setParent(null);
-        const ammoAggregate = new PhysicsAggregate(ammo, PhysicsShapeType.CONVEX_HULL, {
-            mass: 1000,
-            restitution: 0
-        }, DefaultScene.MainScene);
-
-
-        ammo.material = this._ammoMaterial;
-        ammoAggregate.body.setMotionType(PhysicsMotionType.DYNAMIC);
-
-        ammoAggregate.body.setLinearVelocity(this._ship.forward.scale(150).add(this._ship.physicsBody.getLinearVelocity()));
-
-        window.setTimeout(() => {
-            ammoAggregate.dispose();
-            ammo.dispose()
-        }, 5000)
-    }
-
-    public set position(newPosition: Vector3) {
-        const body = this._ship.physicsBody;
-        body.disablePreStep = false;
-        body.transformNode.position.copyFrom(newPosition);
-        DefaultScene.MainScene.onAfterRenderObservable.addOnce(() => {
-            body.disablePreStep = true;
-        })
-
-    }
-
-    private async initialize() {
         const light = new DirectionalLight("light", new Vector3(.1, -1, 0), DefaultScene.MainScene);
-        const ship = this._ship;
-        const landingLight = new SpotLight("landingLight", new Vector3(0, 0, 0), new Vector3(0, -.5, .5), 1.5, .5, DefaultScene.MainScene);
-        landingLight.parent = ship;
-        landingLight.position.z = 5;
-        const importMesh = await SceneLoader.ImportMeshAsync(null, "./", "cockpit3.glb", DefaultScene.MainScene);
-        const shipMesh = importMesh.meshes[0];
-        shipMesh.id = "shipMesh";
-        shipMesh.name = "shipMesh";
-        shipMesh.parent = ship;
-        shipMesh.rotation.y = Math.PI;
-        shipMesh.position.y = 1;
-        shipMesh.position.z = -1;
-        DefaultScene.MainScene.getMaterialById('glass_mat.002').alpha = .7;
-        this._camera = new FreeCamera("Flat Camera",
-            new Vector3(0, .5, 0),
-            DefaultScene.MainScene);
-        this._camera.parent = ship;
 
-        const agg = new PhysicsAggregate(ship, PhysicsShapeType.BOX, {
+        const landingLight = new SpotLight("landingLight", new Vector3(0, 0, 0), new Vector3(0, -.5, .5), 1.5, .5, DefaultScene.MainScene);
+        landingLight.parent = this._ship;
+        landingLight.position.z = 5;
+        const agg = new PhysicsAggregate(this._ship, PhysicsShapeType.BOX, {
             mass: 100,
             extents: new Vector3(4, 4, 7.4),
             center: new Vector3(0, 1, 1.8)
@@ -155,8 +141,7 @@ export class Ship {
         agg.body.setLinearDamping(.1);
         agg.body.setAngularDamping(.2);
         agg.body.setAngularVelocity(new Vector3(0, 0, 0));
-        agg.body.setCollisionCallbackEnabled(true)
-        DefaultScene.MainScene.setActiveCameraByName("Flat Camera");
+        agg.body.setCollisionCallbackEnabled(true);
         this.setupKeyboard();
         this.setupMouse();
         this._controllerObservable.add(this.controllerCallback);
@@ -164,6 +149,13 @@ export class Ship {
         this._rotationNode = new TransformNode("rotation", DefaultScene.MainScene);
         this._forwardNode.parent = this._ship;
         this._rotationNode.parent = this._ship;
+        this._camera = new FreeCamera("Flat Camera",
+            new Vector3(0, .5, 0),
+            DefaultScene.MainScene);
+        this._camera.parent = this._ship;
+
+        DefaultScene.MainScene.setActiveCameraByName("Flat Camera");
+
         //const sightPos = this._forwardNode.position.scale(30);
         const sight = MeshBuilder.CreateSphere("sight", {diameter: 1}, DefaultScene.MainScene);
         sight.parent = this._ship
@@ -171,30 +163,21 @@ export class Ship {
         signtMaterial.emissiveColor = Color3.Yellow();
         sight.material = signtMaterial;
         sight.position = new Vector3(0, 2, 125);
+
         window.setInterval(() => {
             this.applyForce();
         }, 50);
-        this.onReadyObservable.notifyObservers(true);
-        //const mirror = new Mirror(this._ship);
-        const radar = new Radar(this._ship);
-
-        document.querySelector('#loadingDiv').remove();
-        //const startButton = document.querySelector('#startButton');
-        //startButton.classList.add('ready');
-        const level = new Level1(this);
-        const background = new Sound("background", "/background.mp3", DefaultScene.MainScene, () => {
-            const startButton = document.querySelector('#startButton');
-            startButton.classList.add('ready');
-            startButton.addEventListener('click', async () => {
-                if (!Engine.audioEngine.unlocked) {
-                    Engine.audioEngine.unlock();
-                }
-                console.log('start background');
-                await DefaultScene.XR.baseExperience.enterXRAsync('immersive-vr', 'local-floor');
-                await level.initialize();
-            });
-        }, {loop: true, autoplay: true, volume: .2});
-
+    }
+    private async initialize() {
+        const importMesh = await SceneLoader.ImportMeshAsync(null, "./", "cockpit3.glb", DefaultScene.MainScene);
+        const shipMesh = importMesh.meshes[0];
+        shipMesh.id = "shipMesh";
+        shipMesh.name = "shipMesh";
+        shipMesh.parent = this._ship;
+        shipMesh.rotation.y = Math.PI;
+        shipMesh.position.y = 1;
+        shipMesh.position.z = -1;
+        DefaultScene.MainScene.getMaterialById('glass_mat.002').alpha = .7;
     }
 
 
@@ -239,7 +222,7 @@ export class Ship {
                     this._thrust.play();
                 }
                 this._thrust.setVolume(Math.abs(this._leftStickVector.y));
-                this._forwardValue += this._leftStickVector.y * .4;
+                this._forwardValue += this._leftStickVector.y * .8;
             } else {
                 if (this._thrust.isPlaying) {
                     this._thrust.pause();
