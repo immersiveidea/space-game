@@ -1,4 +1,13 @@
-import {Engine, HavokPlugin, PhotoDome, Scene, Vector3, WebGPUEngine, WebXRDefaultExperience} from "@babylonjs/core";
+import {
+    Color3,
+    Engine,
+    HavokPlugin,
+    PhotoDome,
+    Scene, StandardMaterial,
+    Vector3,
+    WebGPUEngine,
+    WebXRDefaultExperience
+} from "@babylonjs/core";
 import '@babylonjs/loaders';
 import HavokPhysics from "@babylonjs/havok";
 
@@ -21,6 +30,10 @@ export class Main {
     private _gameState: GameState = GameState.DEMO;
     constructor() {
         this._loadingDiv = document.querySelector('#loadingDiv');
+        if (!navigator.xr) {
+            this._loadingDiv.innerText = "This browser does not support WebXR";
+            return;
+        }
         this.initialize();
 
         document.querySelector('#startButton').addEventListener('click', () => {
@@ -55,7 +68,18 @@ export class Main {
         this._currentLevel.getReadyObservable().add(() => {
 
         });
-        const photoDome = new PhotoDome("testdome", '/8192.webp', {}, DefaultScene.MainScene);
+
+        const photoDome1 = new PhotoDome("testdome", '/8192.webp', {size: 1000}, DefaultScene.MainScene);
+        photoDome1.material.diffuseTexture.hasAlpha = true;
+        photoDome1.material.alpha = .3;
+
+        const photoDome2 = new PhotoDome("testdome", '/8192.webp', {size: 2000}, DefaultScene.MainScene);
+        photoDome2.rotation.y = Math.PI;
+        photoDome2.rotation.x = Math.PI/2;
+        DefaultScene.MainScene.onAfterRenderObservable.add(() => {
+            photoDome1.position = DefaultScene.MainScene.activeCamera.globalPosition;
+            photoDome2.position = DefaultScene.MainScene.activeCamera.globalPosition;
+        });
     }
     private setLoadingMessage(message: string) {
         this._loadingDiv.innerText = message;
@@ -75,6 +99,7 @@ export class Main {
         }
         DefaultScene.DemoScene = new Scene(engine);
         DefaultScene.MainScene = new Scene(engine);
+        DefaultScene.MainScene.ambientColor = new Color3(.2, .2, .2);
 
         this.setLoadingMessage("Initializing Physics Engine..");
         await this.setupPhysics();
@@ -98,6 +123,7 @@ export class Main {
         const havok = await HavokPhysics();
         const havokPlugin = new HavokPlugin(true, havok);
         DefaultScene.MainScene.enablePhysics(new Vector3(0, 0, 0), havokPlugin);
+        DefaultScene.MainScene.getPhysicsEngine().setSubTimeStep(5);
         DefaultScene.MainScene.collisionsEnabled = true;
     }
 

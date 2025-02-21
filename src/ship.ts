@@ -2,9 +2,8 @@ import {
     AbstractMesh,
     Color3,
     DirectionalLight,
-    Engine,
     FreeCamera,
-    GlowLayer,
+    GlowLayer, InstancedMesh, Mesh,
     MeshBuilder,
     Observable,
     PhysicsAggregate,
@@ -22,9 +21,7 @@ import {
     WebXRInputSource
 } from "@babylonjs/core";
 import {DefaultScene} from "./defaultScene";
-
-import {ShipEngine} from "./shipEngine";
-import {Level1} from "./level1";
+const MAX_FORWARD_THRUST = 40;
 
 const controllerComponents = [
     'a-button',
@@ -49,6 +46,7 @@ type ControllerEvent = {
 }
 
 enum ControllerStickMode {
+    BEGINNER,
     ARCADE,
     REALISTIC
 }
@@ -56,30 +54,31 @@ enum ControllerStickMode {
 export class Ship {
     private _ship: TransformNode;
     private _controllerObservable: Observable<ControllerEvent> = new Observable<ControllerEvent>();
-    public onReadyObservable: Observable<unknown> = new Observable<unknown>();
-    private _engine: ShipEngine;
     private _ammoMaterial: StandardMaterial;
     private _forwardNode: TransformNode;
     private _rotationNode: TransformNode;
-    private _onscore: Observable<number>;
-    private _ammo: Array<AbstractMesh> = [];
     private _glowLayer: GlowLayer;
-    private _thrust: Sound;
-    private _thrust2: Sound;
+    private _primaryThrustVectorSound: Sound;
+    private _secondaryThrustVectorSound: Sound;
     private _shot: Sound;
     private _shooting: boolean = false;
     private _camera: FreeCamera;
-
-    constructor() {
-
+    private _ammoBaseMesh: AbstractMesh;
+    private _controllerMode: ControllerStickMode;
+    private _active = false;
+    constructor(mode: ControllerStickMode = ControllerStickMode.BEGINNER) {
+        this._controllerMode = mode
         this.setup();
         this.initialize();
+    }
+    public set controllerMode(mode: ControllerStickMode) {
+        this._controllerMode = mode;
     }
 
     private shoot() {
         this._shot.play();
-        const ammo = MeshBuilder.CreateCapsule("bullet", {radius: .1, height: 2.5}, DefaultScene.MainScene);
-        ammo.parent = this._ship
+        const ammo = new InstancedMesh("ammo", this._ammoBaseMesh as Mesh);
+        ammo.parent = this._ship;
         ammo.position.y = 2;
         ammo.rotation.x = Math.PI / 2;
         ammo.setParent(null);
@@ -87,17 +86,18 @@ export class Ship {
             mass: 1000,
             restitution: 0
         }, DefaultScene.MainScene);
+        ammoAggregate.body.setAngularDamping(1);
 
 
-        ammo.material = this._ammoMaterial;
         ammoAggregate.body.setMotionType(PhysicsMotionType.DYNAMIC);
 
-        ammoAggregate.body.setLinearVelocity(this._ship.forward.scale(200).add(this._ship.physicsBody.getLinearVelocity()));
+        ammoAggregate.body.setLinearVelocity(this._ship.forward.scale(10000))
+            //.add(this._ship.physicsBody.getLinearVelocity()));
 
         window.setTimeout(() => {
             ammoAggregate.dispose();
             ammo.dispose()
-        }, 1500)
+        }, 1500);
     }
 
     public set position(newPosition: Vector3) {
@@ -113,11 +113,11 @@ export class Ship {
         this._ship = new TransformNode("ship", DefaultScene.MainScene);
         this._glowLayer = new GlowLayer('bullets', DefaultScene.MainScene);
         this._glowLayer.intensity = 1;
-        this._thrust = new Sound("thrust", "/thrust5.mp3", DefaultScene.MainScene, null, {
+        this._primaryThrustVectorSound = new Sound("thrust", "/thrust5.mp3", DefaultScene.MainScene, null, {
             loop: true,
             autoplay: false
         });
-        this._thrust2 = new Sound("thrust2", "/thrust5.mp3", DefaultScene.MainScene, null, {
+        this._secondaryThrustVectorSound = new Sound("thrust2", "/thrust5.mp3", DefaultScene.MainScene, null, {
             loop: true,
             autoplay: false,
             volume: .5
@@ -126,6 +126,9 @@ export class Ship {
             {loop: false, autoplay: false, volume: .5});
         this._ammoMaterial = new StandardMaterial("ammoMaterial", DefaultScene.MainScene);
         this._ammoMaterial.emissiveColor = new Color3(1, 1, 0);
+        this._ammoBaseMesh = MeshBuilder.CreateCapsule("bullet", {radius: .1, height: 2.5}, DefaultScene.MainScene);
+        this._ammoBaseMesh.material = this._ammoMaterial;
+
         const light = new DirectionalLight("light", new Vector3(.1, -1, 0), DefaultScene.MainScene);
 
         const landingLight = new SpotLight("landingLight", new Vector3(0, 0, 0), new Vector3(0, -.5, .5), 1.5, .5, DefaultScene.MainScene);
@@ -163,13 +166,17 @@ export class Ship {
         signtMaterial.emissiveColor = Color3.Yellow();
         sight.material = signtMaterial;
         sight.position = new Vector3(0, 2, 125);
-
-        window.setInterval(() => {
-            this.applyForce();
-        }, 50);
+        let i = Date.now();
+        DefaultScene.MainScene.onBeforeRenderObservable.add(() => {
+            if (Date.now() - i > 50 && this._active == true) {
+                this.applyForce();
+                i = Date.now();
+            }
+        });
+        this._active = true;
     }
     private async initialize() {
-        const importMesh = await SceneLoader.ImportMeshAsync(null, "./", "cockpit3.glb", DefaultScene.MainScene);
+        const importMesh = await SceneLoader.ImportMeshAsync(null, "./", "cockpit2.glb", DefaultScene.MainScene);
         const shipMesh = importMesh.meshes[0];
         shipMesh.id = "shipMesh";
         shipMesh.name = "shipMesh";
@@ -177,7 +184,8 @@ export class Ship {
         shipMesh.rotation.y = Math.PI;
         shipMesh.position.y = 1;
         shipMesh.position.z = -1;
-        DefaultScene.MainScene.getMaterialById('glass_mat.002').alpha = .7;
+
+        DefaultScene.MainScene.getMaterialById('glass_mat.002').alpha = .4;
     }
 
 
@@ -190,65 +198,41 @@ export class Ship {
     private _mouseDown = false;
     private _mousePos = new Vector2(0, 0);
 
-    private scale(value: number) {
-        return value * .8;
-    }
-
-
     public get transformNode() {
         return this._ship;
     }
 
-    private adjust(value: number, increment: number = .8): number {
-        if (Math.abs(value) < .001) {
-            return 0;
-        } else {
-            return value * increment;
-        }
-    }
 
     private applyForce() {
         if (!this?._ship?.physicsBody) {
             return;
         }
         const body = this._ship.physicsBody;
-        if (Math.abs(this._forwardValue) > 40) {
-            this._forwardValue = Math.sign(this._forwardValue) * 40;
+        //If we're moving over MAX_FORWARD_THRUST, we can't add any more thrust,
+        //just continue at MAX_FORWARD_THRUST
+        if (Math.abs(this._forwardValue) > MAX_FORWARD_THRUST) {
+            this._forwardValue = Math.sign(this._forwardValue) * MAX_FORWARD_THRUST;
         }
 
-        if (Math.abs(this._forwardValue) <= 40) {
+        //if forward thrust is under 40 we can apply more thrust
+        if (Math.abs(this._forwardValue) <= MAX_FORWARD_THRUST) {
             if (Math.abs(this._leftStickVector.y) > .1) {
-                if (!this._thrust.isPlaying) {
-                    this._thrust.play();
+                if (!this._primaryThrustVectorSound.isPlaying) {
+                    this._primaryThrustVectorSound.play();
                 }
-                this._thrust.setVolume(Math.abs(this._leftStickVector.y));
+                this._primaryThrustVectorSound.setVolume(Math.abs(this._leftStickVector.y));
                 this._forwardValue += this._leftStickVector.y * .8;
             } else {
-                if (this._thrust.isPlaying) {
-                    this._thrust.pause();
+                if (this._primaryThrustVectorSound.isPlaying) {
+                    this._primaryThrustVectorSound.pause();
                 }
-                this._forwardValue = this.adjust(this._forwardValue, .98);
+                this._forwardValue = decrementValue(this._forwardValue, .98);
             }
         }
 
-        if (Math.abs(this._leftStickVector.x) > .1) {
-            this._yawValue += this._leftStickVector.x * .03;
-        } else {
-
-            this._yawValue = this.adjust(this._yawValue);
-        }
-
-        if (Math.abs(this._rightStickVector.x) > .1) {
-            this._rollValue += this._rightStickVector.x * .03;
-        } else {
-            this._rollValue = this.adjust(this._rollValue);
-        }
-
-        if (Math.abs(this._rightStickVector.y) > .1) {
-            this._pitchValue += this._rightStickVector.y * .03;
-        } else {
-            this._pitchValue = this.adjust(this._pitchValue);
-        }
+        this._yawValue = adjustStickValue(this._leftStickVector.x, this._yawValue);
+        this._rollValue = adjustStickValue(this._rightStickVector.x, this._rollValue);
+        this._pitchValue = adjustStickValue(this._rightStickVector.y, this._pitchValue);
 
         this._forwardNode.position.z = this._forwardValue;
         this._rotationNode.position.y = this._yawValue;
@@ -260,20 +244,18 @@ export class Ship {
             Math.abs(this._leftStickVector.x);
 
         if (thrust2 > .01) {
-            if (!this._thrust2.isPlaying) {
-                this._thrust2.play();
+            if (!this._secondaryThrustVectorSound.isPlaying) {
+                this._secondaryThrustVectorSound.play();
             }
-            this._thrust2.setVolume(thrust2 * .4);
+            this._secondaryThrustVectorSound.setVolume(thrust2 * .4);
         } else {
-            if (this._thrust2.isPlaying) {
-                this._thrust2.pause();
+            if (this._secondaryThrustVectorSound.isPlaying) {
+                this._secondaryThrustVectorSound.pause();
             }
 
         }
-
         body.setAngularVelocity(this._rotationNode.absolutePosition.subtract(this._ship.absolutePosition));
         body.setLinearVelocity(this._forwardNode.absolutePosition.subtract(this._ship.absolutePosition).scale(-1));
-        //this._engine.forwardback(this._forwardValue);
     }
 
     private controllerCallback = (controllerEvent: ControllerEvent) => {
@@ -349,7 +331,6 @@ export class Ship {
                 case '1':
                     this._camera.position.x = 15;
                     this._camera.rotation.y = -Math.PI / 2;
-                    console.log(1);
                     break;
                 case ' ':
                     this.shoot();
@@ -386,14 +367,12 @@ export class Ship {
         if (controller.inputSource.handedness == "left") {
             this._leftInputSource = controller;
             this._leftInputSource.onMotionControllerInitObservable.add((motionController) => {
-                console.log(motionController);
                 this.mapMotionController(motionController);
             });
         }
         if (controller.inputSource.handedness == "right") {
             this._rightInputSource = controller;
             this._rightInputSource.onMotionControllerInitObservable.add((motionController) => {
-                console.log(motionController);
                 this.mapMotionController(motionController);
             });
         }
@@ -433,5 +412,20 @@ export class Ship {
                 });
             }
         });
+    }
+}
+function decrementValue(value: number, increment: number = .8): number {
+    if (Math.abs(value) < .01) {
+        return 0;
+    } else {
+        return value * increment;
+    }
+}
+
+function adjustStickValue(stickVector: number, thrustValue: number): number {
+    if (Math.abs(stickVector) > .03) {
+        return thrustValue + (Math.pow(stickVector, 3) * .1);
+    } else {
+        return decrementValue(thrustValue, .85);
     }
 }

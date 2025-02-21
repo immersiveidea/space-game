@@ -1,20 +1,21 @@
 import {DefaultScene} from "./defaultScene";
 import {
     AbstractMesh,
-    Color3, DistanceConstraint, Engine, InstancedMesh, Mesh,
+    Color3, DistanceConstraint, Engine, InstancedMesh, LinesMesh, Mesh,
     MeshBuilder,
     Observable,
     ParticleHelper,
     PhysicsAggregate,
     PhysicsMotionType,
-    PhysicsShapeType, Sound,
+    PhysicsShapeType, PointsCloudSystem, Sound,
     StandardMaterial, TransformNode,
     Vector3
 } from "@babylonjs/core";
 import {Ship} from "./ship";
-import {ScoreEvent} from "./scoreEvent";
+
 import {RockFactory} from "./starfield";
 import Level from "./level";
+import {Scoreboard} from "./scoreboard";
 
 export class Level1 implements Level {
     private _ship: Ship;
@@ -22,10 +23,11 @@ export class Level1 implements Level {
     private _initialized: boolean = false;
     private _startBase: AbstractMesh;
     private _endBase: AbstractMesh;
-    public onScoreObservable: Observable<ScoreEvent> = new Observable<ScoreEvent>();
+    private _scoreboard: Scoreboard;
 
     constructor() {
         this._ship = new Ship();
+        this._scoreboard = new Scoreboard();
         const xr = DefaultScene.XR;
         xr.baseExperience.onInitialXRPoseSetObservable.add(() => {
             xr.baseExperience.camera.parent = this._ship.transformNode;
@@ -35,7 +37,6 @@ export class Level1 implements Level {
             this._ship.addController(controller);
         });
         this.createStartBase();
-
         this.initialize();
 
     }
@@ -55,6 +56,7 @@ export class Level1 implements Level {
         this._endBase.dispose();
     }
     public async initialize() {
+        console.log('initialize');
         if (this._initialized) {
             return;
         }
@@ -62,17 +64,37 @@ export class Level1 implements Level {
         ParticleHelper.BaseAssetsUrl = window.location.href;
         this._ship.position = new Vector3(0, 1, 0);
         await RockFactory.init();
-        const baseTransform = new TransformNode("baseTransform", DefaultScene.MainScene);
-        baseTransform.position = this._startBase.getAbsolutePosition();
 
-        for (let i = 0; i < 50; i++) {
-            const dist = (Math.random() * 200) + 190;
-            const rock = await RockFactory.createRock(i, new Vector3(Math.random() * 200 +50 * Math.sign(Math.random() -.5),200,200), Vector3.Random(1, 5))
+        for (let i = 0; i < 5; i++) {
+            const dist = (Math.random() * 50) + 190;
+            const size = Vector3.Random(1,1.3).scale(Math.random() * 5 + 5)
+
+            const rock = await RockFactory.createRock(i, new Vector3(Math.random() * 200 +50 * Math.sign(Math.random() -.5),200,200),
+                size,
+                this._scoreboard.onScoreObservable);
             const constraint = new DistanceConstraint(dist, DefaultScene.MainScene);
-            //rock.physicsBody.addConstraint(this._endBase.physicsBody, constraint);
+
+            /*
+            const options: {updatable: boolean, points: Array<Vector3>, instance?: LinesMesh} =
+                {updatable: true, points: [rock.position, this._startBase.absolutePosition]}
+
+            let line = MeshBuilder.CreateLines("line", options , DefaultScene.MainScene);
+
+            line.color = new Color3(1, 0, 0);
+            DefaultScene.MainScene.onAfterRenderObservable.add(() => {
+                //const pos = rock.position;
+                options.points[0].copyFrom(rock.position);
+                options.instance = line;
+                line = MeshBuilder.CreateLines("lines", options);
+            });
+            */
+            this._scoreboard.onScoreObservable.notifyObservers({
+                score: 0,
+                remaining: 1,
+                message: "Get Ready"
+            });
             this._startBase.physicsBody.addConstraint(rock.physicsBody, constraint);
-            rock.physicsBody.applyForce(Vector3.Random(-1, 1).scale(50000000), rock.getAbsolutePosition());
-            //rock.physicsBody.setAngularVelocity(Vector3.Random(-.5, .5));
+            rock.physicsBody.applyForce(Vector3.Random(-1, 1).scale(5000000), rock.position);
         }
     }
 
