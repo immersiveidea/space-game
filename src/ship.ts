@@ -128,6 +128,7 @@ export class Ship {
         this._ammoMaterial.emissiveColor = new Color3(1, 1, 0);
         this._ammoBaseMesh = MeshBuilder.CreateCapsule("bullet", {radius: .1, height: 2.5}, DefaultScene.MainScene);
         this._ammoBaseMesh.material = this._ammoMaterial;
+        this._ammoBaseMesh.setEnabled(false);
 
         const light = new DirectionalLight("light", new Vector3(.1, -1, 0), DefaultScene.MainScene);
 
