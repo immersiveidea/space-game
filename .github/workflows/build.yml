@@ -17,12 +17,24 @@ jobs:
     - name: Install dependencies
       run: npm ci
 
-    - name: Run build
+    - name: Build
       run: npm run build
       env:
-        NODE_OPTIONS: "--max-old-space-size=2048"
+        NODE_OPTIONS: '--max-old-space-size=2048'
+
+    - name: Extract hostname from package.json
+      id: get-hostname
+      run: |
+        HOSTNAME=$(node -p "require('./package.json').deployHostname")
+        echo "hostname=$HOSTNAME" >> $GITHUB_OUTPUT
 
     - name: Deploy to nginx
       run: |
-        rm -rf /var/www/localhost/space/*
-        cp -r dist/* /var/www/localhost/space/
+        DEPLOY_PATH="/var/www/localhost/${{ steps.get-hostname.outputs.hostname }}"
+
+        # Create directory if it doesn't exist
+        mkdir -p "$DEPLOY_PATH"
+
+        # Copy built files (overwrite existing)
+        cp -r dist/* "$DEPLOY_PATH/"
+        echo "Deployed to $DEPLOY_PATH"
