@@ -21,3 +21,8 @@ jobs:
       run: npm run build
       env:
         NODE_OPTIONS: "--max-old-space-size=2048"
+
+    - name: Deploy to nginx
+      run: |
+        rm -rf /var/www/localhost/space/*
+        cp -r dist/* /var/www/localhost/space/
