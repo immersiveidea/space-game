@@ -19,3 +19,5 @@ jobs:
 
     - name: Run build
       run: npm run build
+      env:
+        NODE_OPTIONS: "--max-old-space-size=2048"
