@@ -7,15 +7,17 @@ import {
     ParticleHelper,
     PhysicsAggregate,
     PhysicsMotionType,
-    PhysicsShapeType, PointsCloudSystem, Sound,
+    PhysicsShapeType, PointsCloudSystem,
     StandardMaterial, TransformNode,
     Vector3
 } from "@babylonjs/core";
+import type {AudioEngineV2} from "@babylonjs/core";
 import {Ship} from "./ship";
 
 import {RockFactory} from "./starfield";
 import Level from "./level";
 import {Scoreboard} from "./scoreboard";
+import setLoadingMessage from "./setLoadingMessage";
 
 export class Level1 implements Level {
     private _ship: Ship;
@@ -25,6 +27,7 @@ export class Level1 implements Level {
     private _endBase: AbstractMesh;
     private _scoreboard: Scoreboard;
     private _difficulty: string;
+    private _audioEngine: AudioEngineV2;
     private _difficultyConfig: {
         rockCount: number;
         forceMultiplier: number;
@@ -34,10 +37,11 @@ export class Level1 implements Level {
         distanceMax: number;
     };
 
-    constructor(difficulty: string = 'recruit') {
+    constructor(difficulty: string = 'recruit', audioEngine: AudioEngineV2) {
         this._difficulty = difficulty;
+        this._audioEngine = audioEngine;
         this._difficultyConfig = this.getDifficultyConfig(difficulty);
-        this._ship = new Ship();
+        this._ship = new Ship(undefined, audioEngine);
         this._scoreboard = new Scoreboard();
         const xr = DefaultScene.XR;
         xr.baseExperience.onInitialXRPoseSetObservable.add(() => {
@@ -47,6 +51,7 @@ export class Level1 implements Level {
         xr.input.onControllerAddedObservable.add((controller) => {
             this._ship.addController(controller);
         });
+        
         this.createStartBase();
         this.initialize();
 
@@ -116,10 +121,21 @@ export class Level1 implements Level {
     }
 
     private scored: Set<string> = new Set<string>();
-    public play() {
-        const background = new Sound("background", "/background.mp3", DefaultScene.MainScene, () => {
-        }, {loop: true, autoplay: true, volume: .2});
-        DefaultScene.XR.baseExperience.enterXRAsync('immersive-vr', 'local-floor');
+    public async play() {
+        // Create background music using AudioEngineV2
+        const background = await this._audioEngine.createSoundAsync("background", "/song1.mp3", {
+            loop: true,
+            volume: 0.2
+        });
+        background.play();
+
+        // Enter XR mode
+        await DefaultScene.XR.baseExperience.enterXRAsync('immersive-vr', 'local-floor');
+
+        // Check for controllers that are already connected after entering XR
+        DefaultScene.XR.input.controllers.forEach((controller) => {
+            this._ship.addController(controller);
+        });
     }
     public dispose() {
         this._startBase.dispose();
@@ -130,13 +146,13 @@ export class Level1 implements Level {
         if (this._initialized) {
             return;
         }
+        this.createBackgroundElements();
         this._initialized = true;
-        ParticleHelper.BaseAssetsUrl = window.location.href;
         this._ship.position = new Vector3(0, 1, 0);
-        await RockFactory.init();
 
         const config = this._difficultyConfig;
         console.log(config);
+        setLoadingMessage("Creating Asteroids...");
         for (let i = 0; i < config.rockCount; i++) {
             const distRange = config.distanceMax - config.distanceMin;
             const dist = (Math.random() * distRange) + config.distanceMin;
@@ -170,6 +186,9 @@ export class Level1 implements Level {
             this._startBase.physicsBody.addConstraint(rock.physicsBody, constraint);
             rock.physicsBody.applyForce(Vector3.Random(-1, 1).scale(5000000 * config.forceMultiplier), rock.position);
         }
+
+        // Notify that initialization is complete
+        this._onReadyObservable.notifyObservers(this);
     }
 
     private createStartBase() {
@@ -199,6 +218,13 @@ export class Level1 implements Level {
         const agg = new PhysicsAggregate(mesh, PhysicsShapeType.CONVEX_HULL, {mass: 0}, DefaultScene.MainScene);
         agg.body.setMotionType(PhysicsMotionType.ANIMATED);
         this._endBase = mesh;
+    }
+    private createBackgroundElements() {
+        const sun = MeshBuilder.CreateSphere("sun", {diameter: 200}, DefaultScene.MainScene);
+        const sunMaterial = new StandardMaterial("sunMaterial", DefaultScene.MainScene);
+        sunMaterial.emissiveColor = new Color3(1, 1, 0);
+        sun.material = sunMaterial;
+        sun.position = new Vector3(-200, 300, 500);
     }
 
     private createTarget(i: number) {

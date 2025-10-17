@@ -84,7 +84,7 @@ export class RockFactory {
                                    score: Observable<ScoreEvent>): Promise<Rock> {
 
         const rock = new InstancedMesh("asteroid-" +i, this._rockMesh as Mesh);
-
+        console.log(rock.id);
         rock.scaling = size;
         rock.position = position;
         //rock.material = this._rockMaterial;

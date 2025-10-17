@@ -1,13 +1,16 @@
 import {
     Color3,
+    CreateAudioEngineAsync,
     Engine,
     HavokPlugin,
+    ParticleHelper,
     PhotoDome,
     Scene, StandardMaterial,
     Vector3,
     WebGPUEngine,
     WebXRDefaultExperience
 } from "@babylonjs/core";
+import type {AudioEngineV2} from "@babylonjs/core";
 import '@babylonjs/loaders';
 import HavokPhysics from "@babylonjs/havok";
 
@@ -17,6 +20,8 @@ import {Level1} from "./level1";
 import {Scoreboard} from "./scoreboard";
 import Demo from "./demo";
 import Level from "./level";
+import setLoadingMessage from "./setLoadingMessage";
+import {RockFactory} from "./starfield";
 
 const webGpu = false;
 const canvas = (document.querySelector('#gameCanvas') as HTMLCanvasElement);
@@ -25,44 +30,62 @@ enum GameState {
     DEMO
 }
 export class Main {
-    private _loadingDiv: HTMLElement;
     private _currentLevel: Level;
     private _gameState: GameState = GameState.DEMO;
     private _selectedDifficulty: string = 'recruit';
     private _engine: Engine | WebGPUEngine;
+    private _audioEngine: AudioEngineV2;
     constructor() {
-        this._loadingDiv = document.querySelector('#loadingDiv');
         if (!navigator.xr) {
-            this._loadingDiv.innerText = "This browser does not support WebXR";
+            setLoadingMessage("This browser does not support WebXR");
             return;
         }
         this.initialize();
 
         document.querySelectorAll('.level-button').forEach(button => {
-            button.addEventListener('click', (e) => {
+            button.addEventListener('click', async (e) => {
                 const levelButton = e.target as HTMLButtonElement;
                 this._selectedDifficulty = levelButton.dataset.level;
-                this.setLoadingMessage("Initializing Level...");
-                this._currentLevel = new Level1(this._selectedDifficulty);
-                // Unlock audio engine if it exists
-                if (this._engine?.audioEngine) {
-                    this._engine.audioEngine.unlock();
+
+                // Show loading UI again
+                const mainDiv = document.querySelector('#mainDiv');
+                const levelSelect = document.querySelector('#levelSelect') as HTMLElement;
+                if (levelSelect) {
+                    levelSelect.style.display = 'none';
                 }
-                this.play();
-                document.querySelector('#mainDiv').remove();
+                setLoadingMessage("Initializing Level...");
+
+                // Unlock audio engine on user interaction
+                if (this._audioEngine) {
+                    await this._audioEngine.unlockAsync();
+                }
+
+                // Create and initialize level BEFORE entering XR
+                this._currentLevel = new Level1(this._selectedDifficulty, this._audioEngine);
+
+                // Wait for level to be ready
+                this._currentLevel.getReadyObservable().add(() => {
+                    setLoadingMessage("Level Ready! Entering VR...");
+
+                    // Small delay to show message
+                    setTimeout(() => {
+                        mainDiv.remove();
+                        this.play();
+                    }, 500);
+                });
             });
         });
     }
     private _started = false;
-    public play() {
+    public async play() {
         this._gameState = GameState.PLAY;
-        this._currentLevel.play();
+        await this._currentLevel.play();
     }
     public demo() {
         this._gameState = GameState.DEMO;
     }
     private async initialize() {
-        this._loadingDiv.innerText = "Initializing.";
+        setLoadingMessage("Initializing.");
         await this.setupScene();
 
         DefaultScene.XR = await WebXRDefaultExperience.CreateAsync(DefaultScene.MainScene, {
@@ -73,7 +96,7 @@ export class Main {
             disableDefaultUI: true,
         });
 
-        this.setLoadingMessage("Get Ready!");
+        setLoadingMessage("Get Ready!");
 
         const photoDome1 = new PhotoDome("testdome", '/8192.webp', {size: 1000}, DefaultScene.MainScene);
         photoDome1.material.diffuseTexture.hasAlpha = true;
@@ -86,10 +109,9 @@ export class Main {
             photoDome1.position = DefaultScene.MainScene.activeCamera.globalPosition;
             photoDome2.position = DefaultScene.MainScene.activeCamera.globalPosition;
         });
+        setLoadingMessage("Select a difficulty to begin!");
     }
-    private setLoadingMessage(message: string) {
-        this._loadingDiv.innerText = message;
-    }
+
     private async setupScene() {
 
         if (webGpu) {
@@ -106,14 +128,24 @@ export class Main {
         DefaultScene.MainScene = new Scene(this._engine);
         DefaultScene.MainScene.ambientColor = new Color3(.2, .2, .2);
 
-        this.setLoadingMessage("Initializing Physics Engine..");
+        setLoadingMessage("Initializing Physics Engine..");
         await this.setupPhysics();
-        this.setLoadingMessage("Physics Engine Ready!");
+        setLoadingMessage("Physics Engine Ready!");
+
+        setLoadingMessage("Loading Asteroids and Explosions...");
+        ParticleHelper.BaseAssetsUrl = window.location.href;
+        await RockFactory.init();
+        setLoadingMessage("Ready!");
+
+        // Initialize AudioEngineV2
+        setLoadingMessage("Initializing Audio Engine...");
+        this._audioEngine = await CreateAudioEngineAsync();
+        setLoadingMessage("Ready!");
+
         this.setupInspector();
         this._engine.runRenderLoop(() => {
             if (!this._started) {
                 this._started = true;
-                this._loadingDiv.remove();
                 const levelSelect = document.querySelector('#levelSelect');
                 if (levelSelect) {
                     levelSelect.classList.add('ready');
@@ -136,7 +168,7 @@ export class Main {
     }
 
     private setupInspector() {
-        this.setLoadingMessage("Initializing Inspector...");
+        setLoadingMessage("Initializing Inspector...");
         window.addEventListener("keydown", (ev) => {
             if (ev.key == 'i') {
                 import ("@babylonjs/inspector").then((inspector) => {

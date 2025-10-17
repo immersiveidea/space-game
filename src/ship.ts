@@ -10,7 +10,6 @@ import {
     PhysicsMotionType,
     PhysicsShapeType,
     SceneLoader,
-    Sound,
     SpotLight,
     StandardMaterial,
     TransformNode,
@@ -20,6 +19,7 @@ import {
     WebXRControllerComponent,
     WebXRInputSource
 } from "@babylonjs/core";
+import type {AudioEngineV2, StaticSound} from "@babylonjs/core";
 import {DefaultScene} from "./defaultScene";
 const MAX_FORWARD_THRUST = 40;
 
@@ -58,16 +58,20 @@ export class Ship {
     private _forwardNode: TransformNode;
     private _rotationNode: TransformNode;
     private _glowLayer: GlowLayer;
-    private _primaryThrustVectorSound: Sound;
-    private _secondaryThrustVectorSound: Sound;
-    private _shot: Sound;
+    private _primaryThrustVectorSound: StaticSound;
+    private _secondaryThrustVectorSound: StaticSound;
+    private _shot: StaticSound;
+    private _primaryThrustPlaying: boolean = false;
+    private _secondaryThrustPlaying: boolean = false;
     private _shooting: boolean = false;
     private _camera: FreeCamera;
     private _ammoBaseMesh: AbstractMesh;
     private _controllerMode: ControllerStickMode;
     private _active = false;
-    constructor(mode: ControllerStickMode = ControllerStickMode.BEGINNER) {
-        this._controllerMode = mode
+    private _audioEngine: AudioEngineV2;
+    constructor(mode: ControllerStickMode = ControllerStickMode.BEGINNER, audioEngine?: AudioEngineV2) {
+        this._controllerMode = mode;
+        this._audioEngine = audioEngine;
         this.setup();
         this.initialize();
     }
@@ -75,8 +79,25 @@ export class Ship {
         this._controllerMode = mode;
     }
 
+    private async initializeSounds() {
+        if (!this._audioEngine) return;
+
+        this._primaryThrustVectorSound = await this._audioEngine.createSoundAsync("thrust", "/thrust5.mp3", {
+            loop: true,
+            volume: .2
+        });
+        this._secondaryThrustVectorSound = await this._audioEngine.createSoundAsync("thrust2", "/thrust5.mp3", {
+            loop: true,
+            volume: 0.5
+        });
+        this._shot = await this._audioEngine.createSoundAsync("shot", "/shot.mp3", {
+            loop: false,
+            volume: 0.5
+        });
+    }
+
     private shoot() {
-        this._shot.play();
+        this._shot?.play();
         const ammo = new InstancedMesh("ammo", this._ammoBaseMesh as Mesh);
         ammo.parent = this._ship;
         ammo.position.y = 2;
@@ -113,17 +134,11 @@ export class Ship {
         this._ship = new TransformNode("ship", DefaultScene.MainScene);
         this._glowLayer = new GlowLayer('bullets', DefaultScene.MainScene);
         this._glowLayer.intensity = 1;
-        this._primaryThrustVectorSound = new Sound("thrust", "/thrust5.mp3", DefaultScene.MainScene, null, {
-            loop: true,
-            autoplay: false
-        });
-        this._secondaryThrustVectorSound = new Sound("thrust2", "/thrust5.mp3", DefaultScene.MainScene, null, {
-            loop: true,
-            autoplay: false,
-            volume: .5
-        });
-        this._shot = new Sound("shot", "/shot.mp3", DefaultScene.MainScene, null,
-            {loop: false, autoplay: false, volume: .5});
+
+        // Create sounds asynchronously if audio engine is available
+        if (this._audioEngine) {
+            this.initializeSounds();
+        }
         this._ammoMaterial = new StandardMaterial("ammoMaterial", DefaultScene.MainScene);
         this._ammoMaterial.emissiveColor = new Color3(1, 1, 0);
         this._ammoBaseMesh = MeshBuilder.CreateCapsule("bullet", {radius: .1, height: 2.5}, DefaultScene.MainScene);
@@ -218,14 +233,18 @@ export class Ship {
         //if forward thrust is under 40 we can apply more thrust
         if (Math.abs(this._forwardValue) <= MAX_FORWARD_THRUST) {
             if (Math.abs(this._leftStickVector.y) > .1) {
-                if (!this._primaryThrustVectorSound.isPlaying) {
+                if (this._primaryThrustVectorSound && !this._primaryThrustPlaying) {
                     this._primaryThrustVectorSound.play();
+                    this._primaryThrustPlaying = true;
                 }
-                this._primaryThrustVectorSound.setVolume(Math.abs(this._leftStickVector.y));
+                if (this._primaryThrustVectorSound) {
+                    this._primaryThrustVectorSound.volume = Math.abs(this._leftStickVector.y);
+                }
                 this._forwardValue += this._leftStickVector.y * .8;
             } else {
-                if (this._primaryThrustVectorSound.isPlaying) {
-                    this._primaryThrustVectorSound.pause();
+                if (this._primaryThrustVectorSound && this._primaryThrustPlaying) {
+                    this._primaryThrustVectorSound.stop();
+                    this._primaryThrustPlaying = false;
                 }
                 this._forwardValue = decrementValue(this._forwardValue, .98);
             }
@@ -245,13 +264,17 @@ export class Ship {
             Math.abs(this._leftStickVector.x);
 
         if (thrust2 > .01) {
-            if (!this._secondaryThrustVectorSound.isPlaying) {
+            if (this._secondaryThrustVectorSound && !this._secondaryThrustPlaying) {
                 this._secondaryThrustVectorSound.play();
+                this._secondaryThrustPlaying = true;
             }
-            this._secondaryThrustVectorSound.setVolume(thrust2 * .4);
+            if (this._secondaryThrustVectorSound) {
+                this._secondaryThrustVectorSound.volume = thrust2 * .4;
+            }
         } else {
-            if (this._secondaryThrustVectorSound.isPlaying) {
-                this._secondaryThrustVectorSound.pause();
+            if (this._secondaryThrustVectorSound && this._secondaryThrustPlaying) {
+                this._secondaryThrustVectorSound.stop();
+                this._secondaryThrustPlaying = false;
             }
 
         }
