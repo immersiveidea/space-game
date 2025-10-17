@@ -19,9 +19,37 @@
     <canvas id="gameCanvas"></canvas>
     <div id="mainDiv">
       <div id="loadingDiv">Loading...</div>
-      <button id="startButton">Start New Game</button>
+      <div id="levelSelect">
+        <h1>Select Your Level</h1>
+        <div class="card-container">
+          <div class="level-card">
+            <h2>Recruit</h2>
+            <p>Perfect for beginners. Learn the basics of space combat.</p>
+            <button class="level-button" data-level="recruit">Start as Recruit</button>
+          </div>
+          <div class="level-card">
+            <h2>Pilot</h2>
+            <p>Intermediate challenge. Face tougher enemies and obstacles.</p>
+            <button class="level-button" data-level="pilot">Start as Pilot</button>
+          </div>
+          <div class="level-card">
+            <h2>Captain</h2>
+            <p>Advanced difficulty. Command your ship with precision.</p>
+            <button class="level-button" data-level="captain">Start as Captain</button>
+          </div>
+          <div class="level-card">
+            <h2>Commander</h2>
+            <p>Expert mode. Only for the most skilled space warriors.</p>
+            <button class="level-button" data-level="commander">Start as Commander</button>
+          </div>
+          <div class="level-card">
+            <h2>Test</h2>
+            <p>Testing mode. Many large, slow-moving asteroids.</p>
+            <button class="level-button" data-level="test">Start Test Mode</button>
+          </div>
+        </div>
+      </div>
     </div>
-
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

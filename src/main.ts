@@ -28,6 +28,8 @@ export class Main {
     private _loadingDiv: HTMLElement;
     private _currentLevel: Level;
     private _gameState: GameState = GameState.DEMO;
+    private _selectedDifficulty: string = 'recruit';
+    private _engine: Engine | WebGPUEngine;
     constructor() {
         this._loadingDiv = document.querySelector('#loadingDiv');
         if (!navigator.xr) {
@@ -36,10 +38,19 @@ export class Main {
         }
         this.initialize();
 
-        document.querySelector('#startButton').addEventListener('click', () => {
-            Engine.audioEngine.unlock();
-            this.play();
-            document.querySelector('#mainDiv').remove();
+        document.querySelectorAll('.level-button').forEach(button => {
+            button.addEventListener('click', (e) => {
+                const levelButton = e.target as HTMLButtonElement;
+                this._selectedDifficulty = levelButton.dataset.level;
+                this.setLoadingMessage("Initializing Level...");
+                this._currentLevel = new Level1(this._selectedDifficulty);
+                // Unlock audio engine if it exists
+                if (this._engine?.audioEngine) {
+                    this._engine.audioEngine.unlock();
+                }
+                this.play();
+                document.querySelector('#mainDiv').remove();
+            });
         });
     }
     private _started = false;
@@ -63,11 +74,6 @@ export class Main {
         });
 
         this.setLoadingMessage("Get Ready!");
-        this.setLoadingMessage("Initializing Level...");
-        this._currentLevel = new Level1();
-        this._currentLevel.getReadyObservable().add(() => {
-
-        });
 
         const photoDome1 = new PhotoDome("testdome", '/8192.webp', {size: 1000}, DefaultScene.MainScene);
         photoDome1.material.diffuseTexture.hasAlpha = true;
@@ -86,30 +92,32 @@ export class Main {
     }
     private async setupScene() {
 
-        let engine: WebGPUEngine | Engine = null;
         if (webGpu) {
-            engine = new WebGPUEngine(canvas);
-            await (engine as WebGPUEngine).initAsync();
+            this._engine = new WebGPUEngine(canvas);
+            await (this._engine as WebGPUEngine).initAsync();
         } else {
-            engine = new Engine(canvas, true);
+            this._engine = new Engine(canvas, true);
         }
-        engine.setHardwareScalingLevel(1 / window.devicePixelRatio);
+        this._engine.setHardwareScalingLevel(1 / window.devicePixelRatio);
         window.onresize = () => {
-            engine.resize();
+            this._engine.resize();
         }
-        DefaultScene.DemoScene = new Scene(engine);
-        DefaultScene.MainScene = new Scene(engine);
+        DefaultScene.DemoScene = new Scene(this._engine);
+        DefaultScene.MainScene = new Scene(this._engine);
         DefaultScene.MainScene.ambientColor = new Color3(.2, .2, .2);
 
         this.setLoadingMessage("Initializing Physics Engine..");
         await this.setupPhysics();
+        this.setLoadingMessage("Physics Engine Ready!");
         this.setupInspector();
-        engine.runRenderLoop(() => {
+        this._engine.runRenderLoop(() => {
             if (!this._started) {
                 this._started = true;
                 this._loadingDiv.remove();
-                const start = document.querySelector('#startButton');
-                start.classList.add('ready');
+                const levelSelect = document.querySelector('#levelSelect');
+                if (levelSelect) {
+                    levelSelect.classList.add('ready');
+                }
             }
             if (this._gameState == GameState.PLAY) {
                 DefaultScene.MainScene.render();

@@ -1,0 +1,91 @@
+#levelSelect {
+  text-align: center;
+  padding: 20px;
+  opacity: 0;
+  transition: opacity 0.5s ease-in;
+}
+
+#levelSelect.ready {
+  opacity: 1;
+}
+
+#levelSelect h1 {
+  color: #fff;
+  font-size: 2.5em;
+  margin-bottom: 30px;
+  text-shadow: 0 0 10px rgba(0, 150, 255, 0.8);
+}
+
+.card-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 20px;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+.level-card {
+  background: rgba(20, 20, 40, 0.9);
+  border: 2px solid rgba(0, 150, 255, 0.5);
+  border-radius: 12px;
+  padding: 30px 20px;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+}
+
+.level-card:hover {
+  transform: translateY(-5px);
+  border-color: rgba(0, 200, 255, 0.8);
+  box-shadow: 0 8px 16px rgba(0, 150, 255, 0.4);
+}
+
+.level-card h2 {
+  color: #00d4ff;
+  font-size: 1.8em;
+  margin-bottom: 15px;
+  text-transform: uppercase;
+}
+
+.level-card p {
+  color: #ccc;
+  font-size: 1em;
+  line-height: 1.6;
+  margin-bottom: 20px;
+  min-height: 50px;
+}
+
+.level-button {
+  background: linear-gradient(135deg, #0066cc, #0099ff);
+  color: white;
+  border: none;
+  padding: 12px 30px;
+  font-size: 1.1em;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.level-button:hover {
+  background: linear-gradient(135deg, #0088ff, #00bbff);
+  box-shadow: 0 4px 12px rgba(0, 150, 255, 0.6);
+  transform: scale(1.05);
+}
+
+.level-button:active {
+  transform: scale(0.98);
+}
+
+@media (max-width: 768px) {
+  .card-container {
+    grid-template-columns: 1fr;
+    gap: 15px;
+  }
+
+  #levelSelect h1 {
+    font-size: 2em;
+  }
+}

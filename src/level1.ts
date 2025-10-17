@@ -24,8 +24,19 @@ export class Level1 implements Level {
     private _startBase: AbstractMesh;
     private _endBase: AbstractMesh;
     private _scoreboard: Scoreboard;
+    private _difficulty: string;
+    private _difficultyConfig: {
+        rockCount: number;
+        forceMultiplier: number;
+        rockSizeMin: number;
+        rockSizeMax: number;
+        distanceMin: number;
+        distanceMax: number;
+    };
 
-    constructor() {
+    constructor(difficulty: string = 'recruit') {
+        this._difficulty = difficulty;
+        this._difficultyConfig = this.getDifficultyConfig(difficulty);
         this._ship = new Ship();
         this._scoreboard = new Scoreboard();
         const xr = DefaultScene.XR;
@@ -39,6 +50,65 @@ export class Level1 implements Level {
         this.createStartBase();
         this.initialize();
 
+    }
+
+    private getDifficultyConfig(difficulty: string) {
+        switch (difficulty) {
+            case 'recruit':
+                return {
+                    rockCount: 5,
+                    forceMultiplier: 1,
+                    rockSizeMin: 4,
+                    rockSizeMax: 10,
+                    distanceMin: 150,
+                    distanceMax: 180
+                };
+            case 'pilot':
+                return {
+                    rockCount: 10,
+                    forceMultiplier: 1.6,
+                    rockSizeMin: 3,
+                    rockSizeMax: 8,
+                    distanceMin: 120,
+                    distanceMax: 220
+                };
+            case 'captain':
+                return {
+                    rockCount: 20,
+                    forceMultiplier: 2.0,
+                    rockSizeMin: 2,
+                    rockSizeMax: 7,
+                    distanceMin: 100,
+                    distanceMax: 250
+                };
+            case 'commander':
+                return {
+                    rockCount: 50,
+                    forceMultiplier: 2.5,
+                    rockSizeMin: 2,
+                    rockSizeMax: 8,
+                    distanceMin: 90,
+                    distanceMax: 280
+                };
+            case 'test':
+                return {
+                    rockCount: 100,
+                    forceMultiplier: 0.3,
+                    rockSizeMin: 8,
+                    rockSizeMax: 15,
+                    distanceMin: 150,
+                    distanceMax: 200
+                };
+            default:
+                return {
+                    rockCount: 5,
+                    forceMultiplier: 1.0,
+                    rockSizeMin: 4,
+                    rockSizeMax: 8,
+                    distanceMin: 170,
+                    distanceMax: 220
+                };
+        }
     }
 
     getReadyObservable(): Observable<Level> {
@@ -65,9 +135,13 @@ export class Level1 implements Level {
         this._ship.position = new Vector3(0, 1, 0);
         await RockFactory.init();
 
-        for (let i = 0; i < 5; i++) {
-            const dist = (Math.random() * 50) + 190;
-            const size = Vector3.Random(1,1.3).scale(Math.random() * 5 + 5)
+        const config = this._difficultyConfig;
+        console.log(config);
+        for (let i = 0; i < config.rockCount; i++) {
+            const distRange = config.distanceMax - config.distanceMin;
+            const dist = (Math.random() * distRange) + config.distanceMin;
+            const sizeRange = config.rockSizeMax - config.rockSizeMin;
+            const size = Vector3.Random(1,1.3).scale(Math.random() * sizeRange + config.rockSizeMin)
 
             const rock = await RockFactory.createRock(i, new Vector3(Math.random() * 200 +50 * Math.sign(Math.random() -.5),200,200),
                 size,
@@ -94,7 +168,7 @@ export class Level1 implements Level {
                 message: "Get Ready"
             });
             this._startBase.physicsBody.addConstraint(rock.physicsBody, constraint);
-            rock.physicsBody.applyForce(Vector3.Random(-1, 1).scale(5000000), rock.position);
+            rock.physicsBody.applyForce(Vector3.Random(-1, 1).scale(5000000 * config.forceMultiplier), rock.position);
         }
     }
 

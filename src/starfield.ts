@@ -32,14 +32,18 @@ export class Rock {
 export class RockFactory {
     private static _rockMesh: AbstractMesh;
     private static _rockMaterial: PBRMaterial;
-    private static _explosion: ParticleSystemSet;
-    public static async init() {
+    private static _explosionPool: ParticleSystemSet[] = [];
+    private static _poolSize: number = 10;
 
-        if (!this._explosion) {
-          const set = await ParticleHelper.CreateAsync("explosion", DefaultScene.MainScene);
-            this._explosion = set.serialize(true);
-            set.dispose();
+    public static async init() {
+        // Pre-create explosion particle systems for pooling
+        console.log("Pre-creating explosion particle systems...");
+        for (let i = 0; i < this._poolSize; i++) {
+            const set = await ParticleHelper.CreateAsync("explosion", DefaultScene.MainScene);
+            this._explosionPool.push(set);
         }
+        console.log(`Created ${this._poolSize} explosion particle systems in pool`);
+
         if (!this._rockMesh) {
             console.log('loading mesh');
             const importMesh = await SceneLoader.ImportMeshAsync(null, "./", "asteroid2.glb", DefaultScene.MainScene);
@@ -64,6 +68,18 @@ export class RockFactory {
             }
         }
     }
+
+    private static getExplosionFromPool(): ParticleSystemSet | null {
+        return this._explosionPool.pop() || null;
+    }
+
+    private static returnExplosionToPool(explosion: ParticleSystemSet) {
+        explosion.dispose();
+        ParticleHelper.CreateAsync("explosion", DefaultScene.MainScene).then((set) => {
+            this._explosionPool.push(set);
+        })
+    }
+
     public static async createRock(i: number, position: Vector3, size: Vector3,
                                    score: Observable<ScoreEvent>): Promise<Rock> {
 
@@ -89,9 +105,7 @@ export class RockFactory {
             if (eventData.type == 'COLLISION_STARTED') {
                 if ( eventData.collidedAgainst.transformNode.id == 'ammo') {
                     score.notifyObservers({score: 1, remaining: -1, message: "Asteroid Destroyed"});
-                    const explosion = ParticleSystemSet.Parse(this._explosion, DefaultScene.MainScene, false, 10);
                     const position = eventData.point;
-                    // _explosion.emitterNode = position;
 
                     eventData.collider.shape.dispose();
                     eventData.collider.transformNode.dispose();
@@ -101,27 +115,46 @@ export class RockFactory {
                     eventData.collidedAgainst.transformNode.dispose();
                     eventData.collidedAgainst.dispose();
 
-                    const ball = MeshBuilder.CreateBox("ball", {size: .01}, DefaultScene.MainScene);
+                    // Get explosion from pool (or create new if pool empty)
+                    let explosion = RockFactory.getExplosionFromPool();
 
-                    ball.scaling = new Vector3(.4, .4, .4);
-                    ball.position = position;
-                    //const material = new StandardMaterial("ball-material", DefaultScene.MainScene);
-                    //material.emissiveColor = Color3.Yellow();
-                    //ball.material = material;
+                    if (!explosion) {
+                        console.log("Pool empty, creating new explosion");
+                        ParticleHelper.CreateAsync("explosion", DefaultScene.MainScene).then((set) => {
+                            const point = MeshBuilder.CreateSphere("point", {diameter: 0.1}, DefaultScene.MainScene);
+                            point.position = position.clone();
+                            //point.isVisible = false;
 
-                    explosion.start(ball);
+                            set.start(point);
 
-                    setTimeout(() => {
-                        explosion.systems.forEach((system: ParticleSystem) => {
-                            system.stop();
-                            system.dispose(true, true, true);
+                            setTimeout(() => {
+                                set.dispose();
+                                point.dispose();
+                            }, 2000);
                         });
-                        explosion.dispose();
-                        if (ball && !ball.isDisposed()) {
-                            ball.dispose(false, true);
-                        }
-                        //ball.dispose();
-                    }, 1500);
+                    } else {
+                        // Use pooled explosion
+                        const point = MeshBuilder.CreateSphere("point", {diameter: 10}, DefaultScene.MainScene);
+                        point.position = position.clone();
+                        //point.isVisible = false;
+
+                        console.log("Using pooled explosion with", explosion.systems.length, "systems at", position);
+
+                        // Set emitter and start each system individually
+                        explosion.systems.forEach((system: ParticleSystem, idx: number) => {
+                            system.emitter = point;  // Set emitter to the collision point
+                            system.start();  // Start this specific system
+                            console.log(`  System ${idx}: emitter set to`, system.emitter, "activeCount=", system.getActiveCount());
+                        });
+
+                        setTimeout(() => {
+                            explosion.systems.forEach((system: ParticleSystem) => {
+                                system.stop();
+                            });
+                            RockFactory.returnExplosionToPool(explosion);
+                            point.dispose();
+                        }, 2000);
+                    }
                 }
             }
         });

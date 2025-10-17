@@ -434,7 +434,7 @@
       [
         {
           "name": "plumeAnimation",
-          "property": "emitter.y",
+          "property": "emitter.position.y",
           "framePerSecond": 60,
           "dataType": 0,
           "loopBehavior": 2,
