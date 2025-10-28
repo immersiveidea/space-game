@@ -38,6 +38,7 @@ export class Scoreboard {
 
         const parent = scene.getMeshById('RightUpperDisplay');
         const scoreboard = MeshBuilder.CreatePlane("scoreboard", {width: 1, height: 1}, scene);
+        scoreboard.renderingGroupId = 3;
         const material = new StandardMaterial("scoreboard", scene);
 
         scoreboard.parent =parent;

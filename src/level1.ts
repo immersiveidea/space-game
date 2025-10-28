@@ -73,25 +73,25 @@ export class Level1 implements Level {
             case 'recruit':
                 return {
                     rockCount: 5,
-                    forceMultiplier: 1,
+                    forceMultiplier: .5,
                     rockSizeMin: 10,
-                    rockSizeMax: 20,
-                    distanceMin: 150,
-                    distanceMax: 200
+                    rockSizeMax: 15,
+                    distanceMin: 80,
+                    distanceMax: 100
                 };
             case 'pilot':
                 return {
                     rockCount: 10,
-                    forceMultiplier: 1.6,
-                    rockSizeMin: 3,
-                    rockSizeMax: 8,
-                    distanceMin: 120,
-                    distanceMax: 220
+                    forceMultiplier: 1,
+                    rockSizeMin: 8,
+                    rockSizeMax: 12,
+                    distanceMin: 80,
+                    distanceMax: 150
                 };
             case 'captain':
                 return {
                     rockCount: 20,
-                    forceMultiplier: 2.0,
+                    forceMultiplier: 1.2,
                     rockSizeMin: 2,
                     rockSizeMax: 7,
                     distanceMin: 100,
@@ -100,7 +100,7 @@ export class Level1 implements Level {
             case 'commander':
                 return {
                     rockCount: 50,
-                    forceMultiplier: 2.5,
+                    forceMultiplier: 1.3,
                     rockSizeMin: 2,
                     rockSizeMax: 8,
                     distanceMin: 90,

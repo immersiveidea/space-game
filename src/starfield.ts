@@ -42,6 +42,9 @@ export class RockFactory {
         console.log("Pre-creating explosion particle systems...");
         for (let i = 0; i < this._poolSize; i++) {
             const set = await ParticleHelper.CreateAsync("explosion", DefaultScene.MainScene);
+            set.systems.forEach((system) => {
+                system.renderingGroupId =1;
+            })
             this._explosionPool.push(set);
         }
         console.log(`Created ${this._poolSize} explosion particle systems in pool`);
@@ -70,8 +73,8 @@ export class RockFactory {
                 //material.albedoColor = new Color3(1, 1, 1);
                 //material.emissiveColor = new Color3(1, 1, 1);
                 this._rockMesh.material = this._rockMaterial;
-                //importMesh.meshes[1].dispose(false, true);
-                //importMesh.meshes[0].dispose();
+                importMesh.meshes[1].dispose(false, true);
+                importMesh.meshes[0].dispose();
             }
         }
     }
@@ -114,7 +117,7 @@ export class RockFactory {
         body.setLinearDamping(0);
         body.setMotionType(PhysicsMotionType.DYNAMIC);
         body.setCollisionCallbackEnabled(true);
-
+        let scaling = Vector3.One();
         body.getCollisionObservable().add((eventData) => {
             if (eventData.type == 'COLLISION_STARTED') {
                 if ( eventData.collidedAgainst.transformNode.id == 'ammo') {
@@ -124,7 +127,8 @@ export class RockFactory {
                     eventData.collider.shape.dispose();
                     eventData.collider.transformNode.dispose();
                     eventData.collider.dispose();
-
+                    scaling = eventData.collider.transformNode.scaling.clone();
+                    console.log(scaling);
                     eventData.collidedAgainst.shape.dispose();
                     eventData.collidedAgainst.transformNode.dispose();
                     eventData.collidedAgainst.dispose();
@@ -137,7 +141,7 @@ export class RockFactory {
                         ParticleHelper.CreateAsync("explosion", DefaultScene.MainScene).then((set) => {
                             const point = MeshBuilder.CreateSphere("point", {diameter: 0.1}, DefaultScene.MainScene);
                             point.position = position.clone();
-                            //point.isVisible = false;
+                            point.isVisible = false;
 
                             set.start(point);
 
@@ -150,8 +154,8 @@ export class RockFactory {
                         // Use pooled explosion
                         const point = MeshBuilder.CreateSphere("point", {diameter: 10}, DefaultScene.MainScene);
                         point.position = position.clone();
-                        //point.isVisible = false;
-
+                        point.isVisible = false;
+                        point.scaling = scaling.multiplyByFloats(.2,.3,.2);
                         console.log("Using pooled explosion with", explosion.systems.length, "systems at", position);
 
                         // Set emitter and start each system individually

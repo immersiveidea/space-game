@@ -112,7 +112,7 @@ export class Ship {
 
         ammoAggregate.body.setMotionType(PhysicsMotionType.DYNAMIC);
 
-        ammoAggregate.body.setLinearVelocity(this._ship.forward.scale(10000))
+        ammoAggregate.body.setLinearVelocity(this._ship.forward.scale(100000))
             //.add(this._ship.physicsBody.getLinearVelocity()));
 
         window.setTimeout(() => {
@@ -201,10 +201,12 @@ export class Ship {
         shipMesh.rotation.y = Math.PI;
         shipMesh.position.y = 1;
         shipMesh.position.z = -1;
+        shipMesh.renderingGroupId = 3;
         const light = new PointLight("ship.light", new Vector3(0, 1, .9), DefaultScene.MainScene);
         light.intensity = 4;
         light.includedOnlyMeshes = [shipMesh];
         for (const mesh of shipMesh.getChildMeshes()) {
+            mesh.renderingGroupId = 3;
             if (mesh.material.id.indexOf('glass') === -1) {
                 light.includedOnlyMeshes.push(mesh);
             }
