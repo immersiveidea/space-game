@@ -20,7 +20,7 @@ jobs:
     - name: Build
       run: npm run build
       env:
-        NODE_OPTIONS: '--max-old-space-size=2048'
+        NODE_OPTIONS: '--max-old-space-size=4096'
 
     - name: Extract hostname from package.json
       id: get-hostname
