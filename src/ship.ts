@@ -145,11 +145,11 @@ export class Ship {
         this._ammoBaseMesh.material = this._ammoMaterial;
         this._ammoBaseMesh.setEnabled(false);
 
-        const light = new DirectionalLight("light", new Vector3(.1, -1, 0), DefaultScene.MainScene);
+        //const light = new DirectionalLight("light", new Vector3(.1, -1, 0), DefaultScene.MainScene);
 
-        const landingLight = new SpotLight("landingLight", new Vector3(0, 0, 0), new Vector3(0, -.5, .5), 1.5, .5, DefaultScene.MainScene);
-        landingLight.parent = this._ship;
-        landingLight.position.z = 5;
+        //const landingLight = new SpotLight("landingLight", new Vector3(0, 0, 0), new Vector3(0, -.5, .5), 1.5, .5, DefaultScene.MainScene);
+       // landingLight.parent = this._ship;
+       // landingLight.position.z = 5;
         const agg = new PhysicsAggregate(this._ship, PhysicsShapeType.BOX, {
             mass: 100,
             extents: new Vector3(4, 4, 7.4),
@@ -180,6 +180,7 @@ export class Ship {
         sight.parent = this._ship
         const signtMaterial = new StandardMaterial("sightMaterial", DefaultScene.MainScene);
         signtMaterial.emissiveColor = Color3.Yellow();
+        signtMaterial.ambientColor = Color3.Yellow();
         sight.material = signtMaterial;
         sight.position = new Vector3(0, 2, 125);
         let i = Date.now();
@@ -283,6 +284,12 @@ export class Ship {
     }
 
     private controllerCallback = (controllerEvent: ControllerEvent) => {
+        // Log first few events to verify they're firing
+        if (Math.random() < 0.01) { // Only log 1% to avoid spam
+            console.log('Controller event:', controllerEvent.type, controllerEvent.hand,
+                       controllerEvent.type === 'thumbstick' ? controllerEvent.axisData : controllerEvent.value);
+        }
+
         if (controllerEvent.type == 'thumbstick') {
             if (controllerEvent.hand == 'left') {
                 this._leftStickVector.x = controllerEvent.axisData.x;
@@ -388,23 +395,50 @@ export class Ship {
     private _rightInputSource: WebXRInputSource;
 
     public addController(controller: WebXRInputSource) {
+        console.log('Ship.addController called for:', controller.inputSource.handedness);
+
         if (controller.inputSource.handedness == "left") {
+            console.log('Adding left controller');
             this._leftInputSource = controller;
             this._leftInputSource.onMotionControllerInitObservable.add((motionController) => {
+                console.log('Left motion controller initialized:', motionController.handness);
                 this.mapMotionController(motionController);
             });
+
+            // Check if motion controller is already initialized
+            if (controller.motionController) {
+                console.log('Left motion controller already initialized, mapping now');
+                this.mapMotionController(controller.motionController);
+            }
         }
         if (controller.inputSource.handedness == "right") {
+            console.log('Adding right controller');
             this._rightInputSource = controller;
             this._rightInputSource.onMotionControllerInitObservable.add((motionController) => {
+                console.log('Right motion controller initialized:', motionController.handness);
                 this.mapMotionController(motionController);
             });
+
+            // Check if motion controller is already initialized
+            if (controller.motionController) {
+                console.log('Right motion controller already initialized, mapping now');
+                this.mapMotionController(controller.motionController);
+            }
         }
     }
 
     private mapMotionController(controller: WebXRAbstractMotionController) {
+        console.log('Mapping motion controller:', controller.handness, 'Profile:', controller.profileId);
+
         controllerComponents.forEach((component) => {
             const comp = controller.components[component];
+
+            if (!comp) {
+                console.log(`  Component ${component} not found on ${controller.handness} controller`);
+                return;
+            }
+
+            console.log(`  Found component ${component} on ${controller.handness} controller`);
             const observable = this._controllerObservable;
 
             if (comp && comp.onAxisValueChangedObservable) {

@@ -1,28 +1,29 @@
+import type {AudioEngineV2} from "@babylonjs/core";
 import {
     Color3,
     CreateAudioEngineAsync,
     Engine,
     HavokPlugin,
     ParticleHelper,
-    PhotoDome,
-    Scene, StandardMaterial,
+    Scene,
     Vector3,
     WebGPUEngine,
-    WebXRDefaultExperience
+    WebXRDefaultExperience,
+    WebXRFeatureName
 } from "@babylonjs/core";
-import type {AudioEngineV2} from "@babylonjs/core";
 import '@babylonjs/loaders';
 import HavokPhysics from "@babylonjs/havok";
 
 import {DefaultScene} from "./defaultScene";
-import {Ship} from "./ship";
 import {Level1} from "./level1";
-import {Scoreboard} from "./scoreboard";
 import Demo from "./demo";
 import Level from "./level";
 import setLoadingMessage from "./setLoadingMessage";
 import {RockFactory} from "./starfield";
+import {ControllerDebug} from "./controllerDebug";
 
+// Set to true to run minimal controller debug test
+const DEBUG_CONTROLLERS = false;
 const webGpu = false;
 const canvas = (document.querySelector('#gameCanvas') as HTMLCanvasElement);
 enum GameState {
@@ -94,20 +95,24 @@ export class Main {
             disableNearInteraction: true,
             disableHandTracking: true,
             disableDefaultUI: true,
+
         });
+        DefaultScene.XR.baseExperience.featuresManager.enableFeature(WebXRFeatureName.LAYERS, "stable",
+    {preferMultiviewOnInit: true});
+
 
         setLoadingMessage("Get Ready!");
 
-        const photoDome1 = new PhotoDome("testdome", '/8192.webp', {size: 1000}, DefaultScene.MainScene);
-        photoDome1.material.diffuseTexture.hasAlpha = true;
-        photoDome1.material.alpha = .3;
+        //const photoDome1 = new PhotoDome("testdome", '/8192.webp', {size: 1000}, DefaultScene.MainScene);
+        //photoDome1.material.diffuseTexture.hasAlpha = true;
+        //photoDome1.material.alpha = .3;
 
-        const photoDome2 = new PhotoDome("testdome", '/8192.webp', {size: 2000}, DefaultScene.MainScene);
-        photoDome2.rotation.y = Math.PI;
-        photoDome2.rotation.x = Math.PI/2;
+        //const photoDome2 = new PhotoDome("testdome", '/8192.webp', {size: 2000}, DefaultScene.MainScene);
+        //photoDome2.rotation.y = Math.PI;
+        //photoDome2.rotation.x = Math.PI/2;
         DefaultScene.MainScene.onAfterRenderObservable.add(() => {
-            photoDome1.position = DefaultScene.MainScene.activeCamera.globalPosition;
-            photoDome2.position = DefaultScene.MainScene.activeCamera.globalPosition;
+          //  photoDome1.position = DefaultScene.MainScene.activeCamera.globalPosition;
+          //  photoDome2.position = DefaultScene.MainScene.activeCamera.globalPosition;
         });
         setLoadingMessage("Select a difficulty to begin!");
     }
@@ -140,30 +145,33 @@ export class Main {
         // Initialize AudioEngineV2
         setLoadingMessage("Initializing Audio Engine...");
         this._audioEngine = await CreateAudioEngineAsync();
-        setLoadingMessage("Ready!");
+
 
         this.setupInspector();
-        this._engine.runRenderLoop(() => {
+        window.setTimeout(()=>{
             if (!this._started) {
                 this._started = true;
                 const levelSelect = document.querySelector('#levelSelect');
                 if (levelSelect) {
                     levelSelect.classList.add('ready');
+                    setLoadingMessage("Ready!");
                 }
             }
-            if (this._gameState == GameState.PLAY) {
+        })
+
+        this._engine.runRenderLoop(() => {
                 DefaultScene.MainScene.render();
-            } else {
-                DefaultScene.DemoScene.render();
-            }
         });
     }
 
     private async setupPhysics() {
         const havok = await HavokPhysics();
         const havokPlugin = new HavokPlugin(true, havok);
+
         DefaultScene.MainScene.enablePhysics(new Vector3(0, 0, 0), havokPlugin);
-        DefaultScene.MainScene.getPhysicsEngine().setSubTimeStep(5);
+        DefaultScene.MainScene.getPhysicsEngine().setTimeStep(1/90);
+        DefaultScene.MainScene.getPhysicsEngine().setSubTimeStep(9);
+
         DefaultScene.MainScene.collisionsEnabled = true;
     }
 
@@ -182,8 +190,18 @@ export class Main {
     }
 }
 
-const main = new Main();
-const demo = new Demo(main);
+if (DEBUG_CONTROLLERS) {
+    console.log('🔍 DEBUG MODE: Running minimal controller test');
+    // Hide the UI elements
+    const mainDiv = document.querySelector('#mainDiv');
+    if (mainDiv) {
+        (mainDiv as HTMLElement).style.display = 'none';
+    }
+    new ControllerDebug();
+} else {
+    const main = new Main();
+    const demo = new Demo(main);
+}
 
 
 

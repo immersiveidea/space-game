@@ -9,13 +9,15 @@ import {
     PBRMaterial,
     PhysicsAggregate, PhysicsBody,
     PhysicsMotionType,
-    PhysicsShapeType,
+    PhysicsShapeType, PhysicsViewer,
     SceneLoader,
     Vector3
 } from "@babylonjs/core";
 import {DefaultScene} from "./defaultScene";
 import {ScoreEvent} from "./scoreboard";
+import {Debug} from "@babylonjs/core/Legacy/legacy";
 let _particleData: any = null;
+
 export class Rock {
     private _rockMesh: AbstractMesh;
     constructor(mesh: AbstractMesh) {
@@ -34,7 +36,7 @@ export class RockFactory {
     private static _rockMaterial: PBRMaterial;
     private static _explosionPool: ParticleSystemSet[] = [];
     private static _poolSize: number = 10;
-
+    private static _viewer: PhysicsViewer = null;
     public static async init() {
         // Pre-create explosion particle systems for pooling
         console.log("Pre-creating explosion particle systems...");
@@ -92,11 +94,18 @@ export class RockFactory {
         rock.id = "asteroid-" + i;
         rock.metadata = {type: 'asteroid'};
         rock.setEnabled(true);
+        console.log(rock.getBoundingInfo());
         const agg = new PhysicsAggregate(rock, PhysicsShapeType.CONVEX_HULL, {
             mass: 10000,
             restitution: .5,
             }, DefaultScene.MainScene);
         const body =agg.body;
+
+        if (!this._viewer) {
+            this._viewer = new PhysicsViewer(DefaultScene.MainScene);
+        }
+
+        //this._viewer.showBody(body);
         body.setLinearDamping(0);
         body.setMotionType(PhysicsMotionType.DYNAMIC);
         body.setCollisionCallbackEnabled(true);

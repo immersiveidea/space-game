@@ -18,6 +18,8 @@ import {RockFactory} from "./starfield";
 import Level from "./level";
 import {Scoreboard} from "./scoreboard";
 import setLoadingMessage from "./setLoadingMessage";
+import {createPlanet, createSun} from "./createSun";
+import {createPlanetsOrbital} from "./createPlanets";
 
 export class Level1 implements Level {
     private _ship: Ship;
@@ -44,13 +46,22 @@ export class Level1 implements Level {
         this._ship = new Ship(undefined, audioEngine);
         this._scoreboard = new Scoreboard();
         const xr = DefaultScene.XR;
+
+        console.log('Level1 constructor - Setting up XR observables');
+        console.log('XR input exists:', !!xr.input);
+        console.log('onControllerAddedObservable exists:', !!xr.input?.onControllerAddedObservable);
+
         xr.baseExperience.onInitialXRPoseSetObservable.add(() => {
             xr.baseExperience.camera.parent = this._ship.transformNode;
             xr.baseExperience.camera.position = new Vector3(0, 0, 0);
+            const observer = xr.input.onControllerAddedObservable.add((controller) => {
+                console.log('🎮 onControllerAddedObservable FIRED for:', controller.inputSource.handedness);
+                this._ship.addController(controller);
+            });
         });
-        xr.input.onControllerAddedObservable.add((controller) => {
-            this._ship.addController(controller);
-        });
+
+
+        //console.log('Controller observable registered, observer:', !!observer);
         
         this.createStartBase();
         this.initialize();
@@ -63,10 +74,10 @@ export class Level1 implements Level {
                 return {
                     rockCount: 5,
                     forceMultiplier: 1,
-                    rockSizeMin: 4,
+                    rockSizeMin: 5,
                     rockSizeMax: 10,
                     distanceMin: 150,
-                    distanceMax: 180
+                    distanceMax: 200
                 };
             case 'pilot':
                 return {
@@ -125,17 +136,27 @@ export class Level1 implements Level {
         // Create background music using AudioEngineV2
         const background = await this._audioEngine.createSoundAsync("background", "/song1.mp3", {
             loop: true,
-            volume: 0.2
+            volume: 0.5
         });
         background.play();
 
         // Enter XR mode
-        await DefaultScene.XR.baseExperience.enterXRAsync('immersive-vr', 'local-floor');
-
+        const xr = await DefaultScene.XR.baseExperience.enterXRAsync('immersive-vr', 'local-floor');
         // Check for controllers that are already connected after entering XR
-        DefaultScene.XR.input.controllers.forEach((controller) => {
+        console.log('Checking for controllers after entering XR. Count:', DefaultScene.XR.input.controllers.length);
+        DefaultScene.XR.input.controllers.forEach((controller, index) => {
+            console.log(`Controller ${index} - handedness: ${controller.inputSource.handedness}`);
             this._ship.addController(controller);
         });
+
+        // Wait and check again after a delay (controllers might connect later)
+        console.log('Waiting 2 seconds to check for controllers again...');
+        setTimeout(() => {
+            console.log('After 2 second delay - controller count:', DefaultScene.XR.input.controllers.length);
+            DefaultScene.XR.input.controllers.forEach((controller, index) => {
+                console.log(`  Late controller ${index} - handedness: ${controller.inputSource.handedness}`);
+            });
+        }, 2000);
     }
     public dispose() {
         this._startBase.dispose();
@@ -149,7 +170,6 @@ export class Level1 implements Level {
         this.createBackgroundElements();
         this._initialized = true;
         this._ship.position = new Vector3(0, 1, 0);
-
         const config = this._difficultyConfig;
         console.log(config);
         setLoadingMessage("Creating Asteroids...");
@@ -159,7 +179,7 @@ export class Level1 implements Level {
             const sizeRange = config.rockSizeMax - config.rockSizeMin;
             const size = Vector3.Random(1,1.3).scale(Math.random() * sizeRange + config.rockSizeMin)
 
-            const rock = await RockFactory.createRock(i, new Vector3(Math.random() * 200 +50 * Math.sign(Math.random() -.5),200,200),
+            const rock = await RockFactory.createRock(i, new Vector3(0,1,dist),
                 size,
                 this._scoreboard.onScoreObservable);
             const constraint = new DistanceConstraint(dist, DefaultScene.MainScene);
@@ -180,11 +200,12 @@ export class Level1 implements Level {
             */
             this._scoreboard.onScoreObservable.notifyObservers({
                 score: 0,
-                remaining: 1,
+                remaining: i+1,
                 message: "Get Ready"
             });
             this._startBase.physicsBody.addConstraint(rock.physicsBody, constraint);
-            rock.physicsBody.applyForce(Vector3.Random(-1, 1).scale(5000000 * config.forceMultiplier), rock.position);
+            rock.physicsBody.applyForce(new Vector3(50000000 * config.forceMultiplier, 0, 0), rock.position);
+            //rock.physicsBody.applyForce(Vector3.Random(-1, 1).scale(5000000 * config.forceMultiplier), rock.position);
         }
 
         // Notify that initialization is complete
@@ -220,11 +241,25 @@ export class Level1 implements Level {
         this._endBase = mesh;
     }
     private createBackgroundElements() {
-        const sun = MeshBuilder.CreateSphere("sun", {diameter: 200}, DefaultScene.MainScene);
-        const sunMaterial = new StandardMaterial("sunMaterial", DefaultScene.MainScene);
-        sunMaterial.emissiveColor = new Color3(1, 1, 0);
-        sun.material = sunMaterial;
-        sun.position = new Vector3(-200, 300, 500);
+        //const sun = MeshBuilder.CreateSphere("sun", {diameter: 200}, DefaultScene.MainScene);
+        //const sunMaterial = new StandardMaterial("sunMaterial", DefaultScene.MainScene);
+        //sunMaterial.emissiveColor = new Color3(1, 1, 0);
+        //sun.material = sunMaterial;
+        //sun.position = new Vector3(-200, 300, 500);
+        const sun = createSun();
+
+        // Create planets around the sun
+        const sunPosition = sun.position;
+        const planets = createPlanetsOrbital(
+            8,              // 8 planets
+            sunPosition,    // sun position
+            50,             // min diameter
+            100,            // max diameter
+            400,            // min distance from sun
+            1000            // max distance from sun
+        );
+
+        console.log(`Created ${planets.length} planets around sun at position`, sunPosition);
     }
 
     private createTarget(i: number) {
