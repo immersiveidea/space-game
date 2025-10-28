@@ -59,9 +59,9 @@ export function createPlanets(
 
         // Apply random planet texture
         const material = new StandardMaterial(`planet-material-${i}`, DefaultScene.MainScene);
-        material.diffuseTexture = new Texture(getRandomPlanetTexture(), DefaultScene.MainScene);
-        planet.material = material;
-        material.specularColor = Color3.Black()
+        const texture  = new Texture(getRandomPlanetTexture(), DefaultScene.MainScene);
+        material.diffuseTexture = texture;
+        material.ambientTexture = texture;
 
         planets.push(planet);
     }

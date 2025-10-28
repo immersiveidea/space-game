@@ -8,7 +8,7 @@ import {
     Observable,
     PhysicsAggregate,
     PhysicsMotionType,
-    PhysicsShapeType,
+    PhysicsShapeType, PointLight,
     SceneLoader,
     SpotLight,
     StandardMaterial,
@@ -145,7 +145,7 @@ export class Ship {
         this._ammoBaseMesh.material = this._ammoMaterial;
         this._ammoBaseMesh.setEnabled(false);
 
-        //const light = new DirectionalLight("light", new Vector3(.1, -1, 0), DefaultScene.MainScene);
+
 
         //const landingLight = new SpotLight("landingLight", new Vector3(0, 0, 0), new Vector3(0, -.5, .5), 1.5, .5, DefaultScene.MainScene);
        // landingLight.parent = this._ship;
@@ -201,7 +201,15 @@ export class Ship {
         shipMesh.rotation.y = Math.PI;
         shipMesh.position.y = 1;
         shipMesh.position.z = -1;
-
+        const light = new PointLight("ship.light", new Vector3(0, 1, .9), DefaultScene.MainScene);
+        light.intensity = 4;
+        light.includedOnlyMeshes = [shipMesh];
+        for (const mesh of shipMesh.getChildMeshes()) {
+            if (mesh.material.id.indexOf('glass') === -1) {
+                light.includedOnlyMeshes.push(mesh);
+            }
+        }
+        light.parent = this._ship;
         DefaultScene.MainScene.getMaterialById('glass_mat.002').alpha = .4;
     }
 

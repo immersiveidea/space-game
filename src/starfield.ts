@@ -61,12 +61,17 @@ export class RockFactory {
                 this._rockMaterial.id = 'asteroid-material';
                 const material = (this._rockMaterial as PBRMaterial)
                 //material.albedoTexture = null;
-                material.ambientColor = new Color3(.4, .4 ,.4);
+                //material.ambientColor = new Color3(.4, .4 ,.4);
+                material.albedoColor = new Color3(.4, .4 ,.4);
+                //material.ambientTexture = material.albedoTexture;
+
+
+
                 //material.albedoColor = new Color3(1, 1, 1);
                 //material.emissiveColor = new Color3(1, 1, 1);
                 this._rockMesh.material = this._rockMaterial;
-                importMesh.meshes[1].dispose(false, true);
-                importMesh.meshes[0].dispose();
+                //importMesh.meshes[1].dispose(false, true);
+                //importMesh.meshes[0].dispose();
             }
         }
     }

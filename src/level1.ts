@@ -74,8 +74,8 @@ export class Level1 implements Level {
                 return {
                     rockCount: 5,
                     forceMultiplier: 1,
-                    rockSizeMin: 5,
-                    rockSizeMax: 10,
+                    rockSizeMin: 10,
+                    rockSizeMax: 20,
                     distanceMin: 150,
                     distanceMax: 200
                 };
@@ -177,7 +177,7 @@ export class Level1 implements Level {
             const distRange = config.distanceMax - config.distanceMin;
             const dist = (Math.random() * distRange) + config.distanceMin;
             const sizeRange = config.rockSizeMax - config.rockSizeMin;
-            const size = Vector3.Random(1,1.3).scale(Math.random() * sizeRange + config.rockSizeMin)
+            const size = Vector3.One().scale(Math.random() * sizeRange + config.rockSizeMin)
 
             const rock = await RockFactory.createRock(i, new Vector3(0,1,dist),
                 size,
@@ -251,12 +251,12 @@ export class Level1 implements Level {
         // Create planets around the sun
         const sunPosition = sun.position;
         const planets = createPlanetsOrbital(
-            8,              // 8 planets
+            12,              // 8 planets
             sunPosition,    // sun position
-            50,             // min diameter
-            100,            // max diameter
-            400,            // min distance from sun
-            1000            // max distance from sun
+            100,             // min diameter
+            200,            // max diameter
+            1000,            // min distance from sun
+            2000            // max distance from sun
         );
 
         console.log(`Created ${planets.length} planets around sun at position`, sunPosition);

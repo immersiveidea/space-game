@@ -131,7 +131,7 @@ export class Main {
         }
         DefaultScene.DemoScene = new Scene(this._engine);
         DefaultScene.MainScene = new Scene(this._engine);
-        DefaultScene.MainScene.ambientColor = new Color3(.2, .2, .2);
+        DefaultScene.MainScene.ambientColor = new Color3(.5, .5, .5);
 
         setLoadingMessage("Initializing Physics Engine..");
         await this.setupPhysics();
@@ -169,8 +169,8 @@ export class Main {
         const havokPlugin = new HavokPlugin(true, havok);
 
         DefaultScene.MainScene.enablePhysics(new Vector3(0, 0, 0), havokPlugin);
-        DefaultScene.MainScene.getPhysicsEngine().setTimeStep(1/90);
-        DefaultScene.MainScene.getPhysicsEngine().setSubTimeStep(9);
+        DefaultScene.MainScene.getPhysicsEngine().setTimeStep(1/45);
+        DefaultScene.MainScene.getPhysicsEngine().setSubTimeStep(5);
 
         DefaultScene.MainScene.collisionsEnabled = true;
     }
