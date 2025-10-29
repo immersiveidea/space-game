@@ -140,7 +140,7 @@ export class LevelGenerator {
     }
 
     /**
-     * Generate asteroids distributed evenly around the base in a circular pattern
+     * Generate asteroids distributed evenly around the base in a spherical pattern (all 3 axes)
      */
     private generateAsteroids(): AsteroidConfig[] {
         const asteroids: AsteroidConfig[] = [];
@@ -151,17 +151,25 @@ export class LevelGenerator {
             const distRange = config.distanceMax - config.distanceMin;
             const dist = (Math.random() * distRange) + config.distanceMin;
 
-            // Evenly distribute asteroids around a circle
-            const angle = (i / config.rockCount) * Math.PI * 2;
+            // Evenly distribute asteroids on a sphere using spherical coordinates
+            // Azimuth angle (phi): rotation around Y axis
+            const phi = (i / config.rockCount) * Math.PI * 2;
 
-            // Add small random variation to angle to prevent perfect spacing
-            const angleVariation = (Math.random() - 0.5) * 0.3; // ±0.15 radians variation
-            const finalAngle = angle + angleVariation;
+            // Elevation angle (theta): angle from top (0) to bottom (π)
+            // Using equal area distribution: acos(1 - 2*u) where u is [0,1]
+            const u = (i + 0.5) / config.rockCount;
+            const theta = Math.acos(1 - 2 * u);
 
-            // Calculate position in a circle around the base (XZ plane)
-            const x = dist * Math.cos(finalAngle);
-            const z = dist * Math.sin(finalAngle);
-            const y = 1; // Keep at same height as ship
+            // Add small random variations to prevent perfect spacing
+            const phiVariation = (Math.random() - 0.5) * 0.3; // ±0.15 radians
+            const thetaVariation = (Math.random() - 0.5) * 0.3; // ±0.15 radians
+            const finalPhi = phi + phiVariation;
+            const finalTheta = theta + thetaVariation;
+
+            // Convert spherical to Cartesian coordinates
+            const x = dist * Math.sin(finalTheta) * Math.cos(finalPhi);
+            const y = dist * Math.cos(finalTheta);
+            const z = dist * Math.sin(finalTheta) * Math.sin(finalPhi);
 
             const position: Vector3Array = [x, y, z];
 
@@ -171,16 +179,19 @@ export class LevelGenerator {
             const scaling: Vector3Array = [size, size, size];
 
             // Calculate initial velocity based on force applied in Level1
-            // Velocity should be tangential to the circle (perpendicular to radius)
+            // Velocity should be tangential to the sphere (perpendicular to radius)
             const forceMagnitude = 50000000 * config.forceMultiplier;
             const mass = 10000;
             const velocityMagnitude = forceMagnitude / mass / 100; // Approximation
 
-            // Tangential velocity (perpendicular to the radius vector)
-            const vx = -velocityMagnitude * Math.sin(finalAngle);
-            const vz = velocityMagnitude * Math.cos(finalAngle);
+            // Tangential velocity: use cross product of radius with an arbitrary vector
+            // to get perpendicular direction, then rotate around radius
+            // Simple approach: velocity perpendicular to radius in a tangent plane
+            const vx = -velocityMagnitude * Math.sin(finalPhi);
+            const vy = 0;
+            const vz = velocityMagnitude * Math.cos(finalPhi);
 
-            const linearVelocity: Vector3Array = [vx, 0, vz];
+            const linearVelocity: Vector3Array = [vx, vy, vz];
 
             asteroids.push({
                 id: `asteroid-${i}`,
