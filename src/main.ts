@@ -1,4 +1,4 @@
-import type {AudioEngineV2} from "@babylonjs/core";
+import {AudioEngineV2, DirectionalLight} from "@babylonjs/core";
 import {
     Color3,
     CreateAudioEngineAsync,
@@ -170,9 +170,10 @@ export class Main {
     private async setupPhysics() {
         const havok = await HavokPhysics();
         const havokPlugin = new HavokPlugin(true, havok);
-
+        DefaultScene.MainScene.ambientColor = new Color3(.1, .1, .1);
+        const light = new DirectionalLight("dirLight", new Vector3(-1, -2, -1), DefaultScene.MainScene);
         DefaultScene.MainScene.enablePhysics(new Vector3(0, 0, 0), havokPlugin);
-        DefaultScene.MainScene.getPhysicsEngine().setTimeStep(1/45);
+        DefaultScene.MainScene.getPhysicsEngine().setTimeStep(1/30);
         DefaultScene.MainScene.getPhysicsEngine().setSubTimeStep(5);
 
         DefaultScene.MainScene.collisionsEnabled = true;

@@ -26,6 +26,7 @@ import {
     validateLevelConfig
 } from "./levelConfig";
 import { FireProceduralTexture } from "@babylonjs/procedural-textures";
+import {createSphereLightmap} from "./sphereLightmap";
 
 /**
  * Deserializes a LevelConfig JSON object and creates all entities in the scene
@@ -59,7 +60,7 @@ export class LevelDeserializer {
         const startBase = this.createStartBase();
         const sun = this.createSun();
         const planets = this.createPlanets();
-        const asteroids = await this.createAsteroids(startBase, scoreObservable);
+        const asteroids = await this.createAsteroids(scoreObservable);
 
         return {
             startBase,
@@ -104,8 +105,8 @@ export class LevelDeserializer {
         const config = this.config.sun;
 
         // Create point light
-        const light = new PointLight("light", this.arrayToVector3(config.position), this.scene);
-        light.intensity = config.intensity || 1000000;
+        //const light = new PointLight("light", this.arrayToVector3(config.position), this.scene);
+        //light.intensity = config.intensity || 1000000;
 
         // Create sun sphere
         const sun = MeshBuilder.CreateSphere("sun", {
@@ -123,8 +124,8 @@ export class LevelDeserializer {
         sun.material = material;
 
         // Create glow layer
-        const gl = new GlowLayer("glow", this.scene);
-        gl.intensity = 1;
+        //const gl = new GlowLayer("glow", this.scene);
+        //gl.intensity = 1;
 
         return sun;
     }
@@ -134,6 +135,7 @@ export class LevelDeserializer {
      */
     private createPlanets(): AbstractMesh[] {
         const planets: AbstractMesh[] = [];
+        const sunPosition = this.arrayToVector3(this.config.sun.position);
 
         for (const planetConfig of this.config.planets) {
             const planet = MeshBuilder.CreateSphere(planetConfig.name, {
@@ -141,17 +143,37 @@ export class LevelDeserializer {
                 segments: 32
             }, this.scene);
 
-            planet.position = this.arrayToVector3(planetConfig.position);
+            const planetPosition = this.arrayToVector3(planetConfig.position);
+            planet.position = planetPosition;
 
-            if (planetConfig.rotation) {
-                planet.rotation = this.arrayToVector3(planetConfig.rotation);
-            }
+            // Calculate direction from planet to sun
+            const toSun = sunPosition.subtract(planetPosition).normalize();
 
             // Apply texture
             const material = new StandardMaterial(planetConfig.name + "-material", this.scene);
             const texture = new Texture(planetConfig.texturePath, this.scene);
-            material.diffuseTexture = texture;
-            material.ambientTexture = texture;
+
+            // Create lightmap with bright light pointing toward sun
+            const lightmap = createSphereLightmap(
+                planetConfig.name + "-lightmap",
+                512,                              // texture size
+                DefaultScene.MainScene,
+                toSun,                           // bright light from sun direction
+                1,                               // bright intensity
+                toSun.negate(),                  // dim light from opposite direction
+                0.3,                             // dim intensity
+                0.3                             // ambient
+            );
+
+            // Apply to material
+            // Use emissiveTexture (self-lit) instead of diffuseTexture when lighting is disabled
+            material.emissiveTexture = texture;
+            material.lightmapTexture = lightmap;
+            material.useLightmapAsShadowmap = true;
+
+            // Disable standard lighting since we're using baked lightmap
+            material.disableLighting = true;
+
             material.roughness = 1;
             material.specularColor = Color3.Black();
             planet.material = material;
@@ -167,7 +189,6 @@ export class LevelDeserializer {
      * Create asteroids from config
      */
     private async createAsteroids(
-        startBase: AbstractMesh,
         scoreObservable: Observable<ScoreEvent>
     ): Promise<AbstractMesh[]> {
         const asteroids: AbstractMesh[] = [];

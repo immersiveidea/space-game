@@ -2,7 +2,7 @@ import {
     AbstractMesh,
     Color3, InstancedMesh,
     Mesh,
-    MeshBuilder, Observable,
+    MeshBuilder, NoiseProceduralTexture, Observable,
     ParticleHelper,
     ParticleSystem,
     ParticleSystemSet,
@@ -10,12 +10,13 @@ import {
     PhysicsAggregate, PhysicsBody,
     PhysicsMotionType,
     PhysicsShapeType, PhysicsViewer,
-    SceneLoader,
+    SceneLoader, StandardMaterial,
     Vector3
 } from "@babylonjs/core";
 import {DefaultScene} from "./defaultScene";
 import {ScoreEvent} from "./scoreboard";
 import {Debug} from "@babylonjs/core/Legacy/legacy";
+import {createSphereLightmap} from "./sphereLightmap";
 let _particleData: any = null;
 
 export class Rock {
@@ -50,35 +51,35 @@ export class RockFactory {
         console.log(`Created ${this._poolSize} explosion particle systems in pool`);
 
         if (!this._rockMesh) {
-            console.log('loading mesh');
-            const importMesh = await SceneLoader.ImportMeshAsync(null, "./", "asteroid2.glb", DefaultScene.MainScene);
-            this._rockMesh = importMesh.meshes[1].clone("asteroid", null, false);
-            this._rockMesh.setParent(null);
-            this._rockMesh.setEnabled(false);
-
-            //importMesh.meshes[1].dispose();
-            console.log(importMesh.meshes);
-            if (!this._rockMaterial) {
-                this._rockMaterial = this._rockMesh.material.clone("asteroid") as PBRMaterial;
-                this._rockMaterial.name = 'asteroid-material';
-                this._rockMaterial.id = 'asteroid-material';
-                const material = (this._rockMaterial as PBRMaterial)
-                //material.albedoTexture = null;
-                //material.ambientColor = new Color3(.4, .4 ,.4);
-                material.albedoColor = new Color3(.4, .4 ,.4);
-                //material.ambientTexture = material.albedoTexture;
-
-
-
-                //material.albedoColor = new Color3(1, 1, 1);
-                //material.emissiveColor = new Color3(1, 1, 1);
-                this._rockMesh.material = this._rockMaterial;
-                importMesh.meshes[1].dispose(false, true);
-                importMesh.meshes[0].dispose();
-            }
+            await this.loadMesh();
         }
     }
+    private static async loadMesh() {
+        console.log('loading mesh');
+        const importMesh = await SceneLoader.ImportMeshAsync(null, "./", "asteroid2.glb", DefaultScene.MainScene);
+        this._rockMesh = importMesh.meshes[1].clone("asteroid", null, false);
+        this._rockMesh.setParent(null);
+        this._rockMesh.setEnabled(false);
 
+        //importMesh.meshes[1].dispose();
+        console.log(importMesh.meshes);
+        if (!this._rockMaterial) {
+            this._rockMaterial = this._rockMesh.material.clone("asteroid") as PBRMaterial;
+
+            this._rockMaterial.name = 'asteroid-material';
+            this._rockMaterial.id = 'asteroid-material';
+            const material = (this._rockMaterial as PBRMaterial)
+            const noiseTexture = new NoiseProceduralTexture("asteroid-noise", 256, DefaultScene.MainScene);
+            noiseTexture.brightness = 0.6;  // Brighter base color
+            noiseTexture.octaves = 4;       // More detaila
+            material.albedoTexture = noiseTexture;
+            material.roughness = 1;
+
+            this._rockMesh.material = material;
+            importMesh.meshes[1].dispose(false, true);
+            importMesh.meshes[0].dispose();
+        }
+    }
     private static getExplosionFromPool(): ParticleSystemSet | null {
         return this._explosionPool.pop() || null;
     }
@@ -102,19 +103,22 @@ export class RockFactory {
         rock.id = "asteroid-" + i;
         rock.metadata = {type: 'asteroid'};
         rock.setEnabled(true);
-        console.log(rock.getBoundingInfo());
-        const agg = new PhysicsAggregate(rock, PhysicsShapeType.CONVEX_HULL, {
+
+        // PhysicsAggregate will automatically compute sphere size from mesh bounding info
+        // The mesh scaling is already applied, so Babylon will create correctly sized physics shape
+        const agg = new PhysicsAggregate(rock, PhysicsShapeType.SPHERE, {
             mass: 10000,
-            restitution: .5,
+            restitution: .5
+            // Don't pass radius - let Babylon compute from scaled mesh bounds
             }, DefaultScene.MainScene);
-        const body =agg.body;
+        const body = agg.body;
 
         if (!this._viewer) {
-            this._viewer = new PhysicsViewer(DefaultScene.MainScene);
+           // this._viewer = new PhysicsViewer(DefaultScene.MainScene);
         }
 
-        //this._viewer.showBody(body);
-        body.setLinearDamping(0);
+        // this._viewer.showBody(body);
+        body.setLinearDamping(0)
         body.setMotionType(PhysicsMotionType.DYNAMIC);
         body.setCollisionCallbackEnabled(true);
         let scaling = Vector3.One();
