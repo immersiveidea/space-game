@@ -33,6 +33,9 @@ export class Scoreboard {
     public set done(value: boolean) {
         this._done = value;
     }
+    public setRemainingCount(count: number) {
+        this._remaining = count;
+    }
     private initialize() {
         const scene = DefaultScene.MainScene;
 

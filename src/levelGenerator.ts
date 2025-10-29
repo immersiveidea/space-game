@@ -14,30 +14,37 @@ import { getRandomPlanetTexture } from "./planetTextures";
  * Generates procedural level configurations matching the current Level1 generation logic
  */
 export class LevelGenerator {
-    private _difficulty: string;
-    private _difficultyConfig: DifficultyConfig;
+    protected _difficulty: string;
+    protected _difficultyConfig: DifficultyConfig;
 
-    // Constants matching Level1 defaults
-    private static readonly SHIP_POSITION: Vector3Array = [0, 1, 0];
-    private static readonly START_BASE_POSITION: Vector3Array = [0, 0, 0];
-    private static readonly START_BASE_DIAMETER = 10;
-    private static readonly START_BASE_HEIGHT = 1;
-    private static readonly START_BASE_COLOR: Vector3Array = [1, 1, 0]; // Yellow
+    // Configurable properties (can be overridden by subclasses or set before generate())
+    public shipPosition: Vector3Array = [0, 1, 0];
+    public startBasePosition: Vector3Array = [0, 0, 0];
+    public startBaseDiameter = 10;
+    public startBaseHeight = 1;
+    public startBaseColor: Vector3Array = [1, 1, 0]; // Yellow
 
-    private static readonly SUN_POSITION: Vector3Array = [0, 0, 400];
-    private static readonly SUN_DIAMETER = 50;
-    private static readonly SUN_INTENSITY = 1000000;
+    public sunPosition: Vector3Array = [0, 0, 400];
+    public sunDiameter = 50;
+    public sunIntensity = 1000000;
 
-    // Planet generation constants (matching createPlanetsOrbital call in Level1)
-    private static readonly PLANET_COUNT = 12;
-    private static readonly PLANET_MIN_DIAMETER = 100;
-    private static readonly PLANET_MAX_DIAMETER = 200;
-    private static readonly PLANET_MIN_DISTANCE = 1000;
-    private static readonly PLANET_MAX_DISTANCE = 2000;
+    // Planet generation parameters
+    public planetCount = 12;
+    public planetMinDiameter = 100;
+    public planetMaxDiameter = 200;
+    public planetMinDistance = 1000;
+    public planetMaxDistance = 2000;
 
     constructor(difficulty: string) {
         this._difficulty = difficulty;
         this._difficultyConfig = this.getDifficultyConfig(difficulty);
+    }
+
+    /**
+     * Set custom difficulty configuration
+     */
+    public setDifficultyConfig(config: DifficultyConfig) {
+        this._difficultyConfig = config;
     }
 
     /**
@@ -69,7 +76,7 @@ export class LevelGenerator {
 
     private generateShip(): ShipConfig {
         return {
-            position: [...LevelGenerator.SHIP_POSITION],
+            position: [...this.shipPosition],
             rotation: [0, 0, 0],
             linearVelocity: [0, 0, 0],
             angularVelocity: [0, 0, 0]
@@ -78,18 +85,18 @@ export class LevelGenerator {
 
     private generateStartBase(): StartBaseConfig {
         return {
-            position: [...LevelGenerator.START_BASE_POSITION],
-            diameter: LevelGenerator.START_BASE_DIAMETER,
-            height: LevelGenerator.START_BASE_HEIGHT,
-            color: [...LevelGenerator.START_BASE_COLOR]
+            position: [...this.startBasePosition],
+            diameter: this.startBaseDiameter,
+            height: this.startBaseHeight,
+            color: [...this.startBaseColor]
         };
     }
 
     private generateSun(): SunConfig {
         return {
-            position: [...LevelGenerator.SUN_POSITION],
-            diameter: LevelGenerator.SUN_DIAMETER,
-            intensity: LevelGenerator.SUN_INTENSITY
+            position: [...this.sunPosition],
+            diameter: this.sunDiameter,
+            intensity: this.sunIntensity
         };
     }
 
@@ -98,27 +105,26 @@ export class LevelGenerator {
      */
     private generatePlanets(): PlanetConfig[] {
         const planets: PlanetConfig[] = [];
-        const sunPosition = LevelGenerator.SUN_POSITION;
 
-        for (let i = 0; i < LevelGenerator.PLANET_COUNT; i++) {
+        for (let i = 0; i < this.planetCount; i++) {
             // Random diameter between min and max
-            const diameter = LevelGenerator.PLANET_MIN_DIAMETER +
-                Math.random() * (LevelGenerator.PLANET_MAX_DIAMETER - LevelGenerator.PLANET_MIN_DIAMETER);
+            const diameter = this.planetMinDiameter +
+                Math.random() * (this.planetMaxDiameter - this.planetMinDiameter);
 
             // Random distance from sun
-            const distance = LevelGenerator.PLANET_MIN_DISTANCE +
-                Math.random() * (LevelGenerator.PLANET_MAX_DISTANCE - LevelGenerator.PLANET_MIN_DISTANCE);
+            const distance = this.planetMinDistance +
+                Math.random() * (this.planetMaxDistance - this.planetMinDistance);
 
             // Random angle around Y axis (orbital plane)
             const angle = Math.random() * Math.PI * 2;
 
             // Small vertical variation (like a solar system)
-            const y = (Math.random() - 0.5) * 100;
+            const y = (Math.random() - 0.5) * 400;
 
             const position: Vector3Array = [
-                sunPosition[0] + distance * Math.cos(angle),
-                sunPosition[1] + y,
-                sunPosition[2] + distance * Math.sin(angle)
+                this.sunPosition[0] + distance * Math.cos(angle),
+                this.sunPosition[1] + y,
+                this.sunPosition[2] + distance * Math.sin(angle)
             ];
 
             planets.push({
@@ -134,7 +140,7 @@ export class LevelGenerator {
     }
 
     /**
-     * Generate asteroids matching Level1.initialize() logic
+     * Generate asteroids distributed evenly around the base in a circular pattern
      */
     private generateAsteroids(): AsteroidConfig[] {
         const asteroids: AsteroidConfig[] = [];
@@ -145,8 +151,19 @@ export class LevelGenerator {
             const distRange = config.distanceMax - config.distanceMin;
             const dist = (Math.random() * distRange) + config.distanceMin;
 
-            // Initial position (forward from start base)
-            const position: Vector3Array = [0, 1, dist];
+            // Evenly distribute asteroids around a circle
+            const angle = (i / config.rockCount) * Math.PI * 2;
+
+            // Add small random variation to angle to prevent perfect spacing
+            const angleVariation = (Math.random() - 0.5) * 0.3; // ±0.15 radians variation
+            const finalAngle = angle + angleVariation;
+
+            // Calculate position in a circle around the base (XZ plane)
+            const x = dist * Math.cos(finalAngle);
+            const z = dist * Math.sin(finalAngle);
+            const y = 1; // Keep at same height as ship
+
+            const position: Vector3Array = [x, y, z];
 
             // Random size
             const sizeRange = config.rockSizeMax - config.rockSizeMin;
@@ -154,14 +171,16 @@ export class LevelGenerator {
             const scaling: Vector3Array = [size, size, size];
 
             // Calculate initial velocity based on force applied in Level1
-            // In Level1: rock.physicsBody.applyForce(new Vector3(50000000 * config.forceMultiplier, 0, 0), rock.position)
-            // For a body with mass 10000, force becomes velocity over time
-            // Simplified: velocity ≈ force / mass (ignoring physics timestep details)
+            // Velocity should be tangential to the circle (perpendicular to radius)
             const forceMagnitude = 50000000 * config.forceMultiplier;
             const mass = 10000;
             const velocityMagnitude = forceMagnitude / mass / 100; // Approximation
 
-            const linearVelocity: Vector3Array = [velocityMagnitude, 0, 0];
+            // Tangential velocity (perpendicular to the radius vector)
+            const vx = -velocityMagnitude * Math.sin(finalAngle);
+            const vz = velocityMagnitude * Math.cos(finalAngle);
+
+            const linearVelocity: Vector3Array = [vx, 0, vz];
 
             asteroids.push({
                 id: `asteroid-${i}`,

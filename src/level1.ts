@@ -109,6 +109,10 @@ export class Level1 implements Level {
         this._startBase = entities.startBase;
         // sun and planets are already created by deserializer
 
+        // Initialize scoreboard with total asteroid count
+        this._scoreboard.setRemainingCount(entities.asteroids.length);
+        console.log(`Initialized scoreboard with ${entities.asteroids.length} asteroids`);
+
         // Position ship from config
         const shipConfig = this._deserializer.getShipConfig();
         this._ship.position = new Vector3(shipConfig.position[0], shipConfig.position[1], shipConfig.position[2]);

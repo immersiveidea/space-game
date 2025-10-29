@@ -201,13 +201,6 @@ export class LevelDeserializer {
             if (mesh) {
                 asteroids.push(mesh);
             }
-
-            // Notify scoreboard of asteroid count
-            scoreObservable.notifyObservers({
-                score: 0,
-                remaining: i + 1,
-                message: "Loading from config"
-            });
         }
 
         console.log(`Created ${asteroids.length} asteroids from config`);
