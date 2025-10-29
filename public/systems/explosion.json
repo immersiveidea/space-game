@@ -154,7 +154,7 @@
       "beginAnimationFrom": 0,
       "beginAnimationTo": 60,
       "beginAnimationLoop": false,
-      "startDelay": 60,
+      "startDelay": 20,
       "renderingGroupId": 0,
       "isBillboardBased": true,
       "billboardMode": 7,
@@ -168,9 +168,9 @@
       "maxScaleY": 1,
       "minEmitPower": 40,
       "maxEmitPower": 90,
-      "minLifeTime": 3,
+      "minLifeTime": 1,
       "maxLifeTime": 3,
-      "emitRate": 3000,
+      "emitRate": 300,
       "gravity":
       [
         0,
@@ -414,7 +414,7 @@
     {
       "name": "fireball",
       "id": "fireball",
-      "capacity": 1000,
+      "capacity": 100,
       "emitter":
       [
         0,
@@ -424,7 +424,7 @@
       "particleEmitterType":
       {
         "type": "SphereParticleEmitter",
-        "radius": 2,
+        "radius": 3,
         "radiusRange": 1,
         "directionRandomizer": 0
       },
@@ -466,7 +466,7 @@
               "frame": 50,
               "values":
               [
-                9
+                12
               ]
             },
             {
@@ -480,7 +480,7 @@
               "frame": 60,
               "values":
               [
-                10
+                15
               ]
             }
           ],
@@ -504,10 +504,10 @@
       "minScaleY": 1,
       "maxScaleY": 1,
       "minEmitPower": 30,
-      "maxEmitPower": 60,
-      "minLifeTime": 6,
+      "maxEmitPower": 200,
+      "minLifeTime": 2,
       "maxLifeTime": 8,
-      "emitRate": 400,
+      "emitRate": 190,
       "gravity":
       [
         0,
@@ -541,7 +541,7 @@
         1,
         0
       ],
-      "updateSpeed": 0.016666666666666666,
+      "updateSpeed": 0.01,
       "targetStopDuration": 1,
       "blendMode": 4,
       "preWarmCycles": 0,
@@ -760,7 +760,7 @@
     {
       "name": "debris",
       "id": "debris",
-      "capacity": 10,
+      "capacity": 50,
       "emitter":
       [
         0,
@@ -770,7 +770,7 @@
       "particleEmitterType":
       {
         "type": "SphereParticleEmitter",
-        "radius": 0.9,
+        "radius": 0.5,
         "directionRandomizer": 0
       },
       "textureName": "explosion/Flare.png",
@@ -780,7 +780,7 @@
       "beginAnimationFrom": 0,
       "beginAnimationTo": 60,
       "beginAnimationLoop": false,
-      "startDelay": 90,
+      "startDelay": 10,
       "renderingGroupId": 0,
       "isBillboardBased": true,
       "billboardMode": 7,
@@ -793,10 +793,10 @@
       "minScaleY": 1,
       "maxScaleY": 1,
       "minEmitPower": 16,
-      "maxEmitPower": 30,
-      "minLifeTime": 2,
-      "maxLifeTime": 2,
-      "emitRate": 50,
+      "maxEmitPower": 50,
+      "minLifeTime": 1,
+      "maxLifeTime": 3,
+      "emitRate": 500,
       "gravity":
       [
         0,
@@ -923,8 +923,8 @@
               "minEmitPower": 0,
               "maxEmitPower": 0,
               "minLifeTime": 0.5,
-              "maxLifeTime": 0.8,
-              "emitRate": 130,
+              "maxLifeTime": 2,
+              "emitRate": 230,
               "gravity":
               [
                 0,
@@ -1105,8 +1105,8 @@
               "minEmitPower": 0,
               "maxEmitPower": 0,
               "minLifeTime": 1,
-              "maxLifeTime": 3,
-              "emitRate": 100,
+              "maxLifeTime": 2,
+              "emitRate": 1000,
               "gravity":
               [
                 0,

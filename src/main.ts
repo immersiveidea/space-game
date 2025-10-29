@@ -21,6 +21,10 @@ import Level from "./level";
 import setLoadingMessage from "./setLoadingMessage";
 import {RockFactory} from "./starfield";
 import {ControllerDebug} from "./controllerDebug";
+import {router, showView} from "./router";
+import {populateLevelSelector, hasSavedLevels} from "./levelSelector";
+import {LevelConfig} from "./levelConfig";
+import {generateDefaultLevels} from "./levelEditor";
 
 // Set to true to run minimal controller debug test
 const DEBUG_CONTROLLERS = false;
@@ -33,7 +37,6 @@ enum GameState {
 export class Main {
     private _currentLevel: Level;
     private _gameState: GameState = GameState.DEMO;
-    private _selectedDifficulty: string = 'recruit';
     private _engine: Engine | WebGPUEngine;
     private _audioEngine: AudioEngineV2;
     constructor() {
@@ -43,37 +46,37 @@ export class Main {
         }
         this.initialize();
 
-        document.querySelectorAll('.level-button').forEach(button => {
-            button.addEventListener('click', async (e) => {
-                const levelButton = e.target as HTMLButtonElement;
-                this._selectedDifficulty = levelButton.dataset.level;
+        // Listen for level selection event
+        window.addEventListener('levelSelected', async (e: CustomEvent) => {
+            const {levelName, config} = e.detail as {levelName: string, config: LevelConfig};
 
-                // Show loading UI again
-                const mainDiv = document.querySelector('#mainDiv');
-                const levelSelect = document.querySelector('#levelSelect') as HTMLElement;
-                if (levelSelect) {
-                    levelSelect.style.display = 'none';
-                }
-                setLoadingMessage("Initializing Level...");
+            console.log(`Starting level: ${levelName}`);
 
-                // Unlock audio engine on user interaction
-                if (this._audioEngine) {
-                    await this._audioEngine.unlockAsync();
-                }
+            // Show loading UI again
+            const mainDiv = document.querySelector('#mainDiv');
+            const levelSelect = document.querySelector('#levelSelect') as HTMLElement;
+            if (levelSelect) {
+                levelSelect.style.display = 'none';
+            }
+            setLoadingMessage("Initializing Level...");
 
-                // Create and initialize level BEFORE entering XR
-                this._currentLevel = new Level1(this._selectedDifficulty, this._audioEngine);
+            // Unlock audio engine on user interaction
+            if (this._audioEngine) {
+                await this._audioEngine.unlockAsync();
+            }
 
-                // Wait for level to be ready
-                this._currentLevel.getReadyObservable().add(() => {
-                    setLoadingMessage("Level Ready! Entering VR...");
+            // Create and initialize level from config
+            this._currentLevel = new Level1(config, this._audioEngine);
 
-                    // Small delay to show message
-                    setTimeout(() => {
-                        mainDiv.remove();
-                        this.play();
-                    }, 500);
-                });
+            // Wait for level to be ready
+            this._currentLevel.getReadyObservable().add(() => {
+                setLoadingMessage("Level Ready! Entering VR...");
+
+                // Small delay to show message
+                setTimeout(() => {
+                    mainDiv.remove();
+                    this.play();
+                }, 500);
             });
         });
     }
@@ -137,7 +140,7 @@ export class Main {
         await this.setupPhysics();
         setLoadingMessage("Physics Engine Ready!");
 
-        setLoadingMessage("Loading Asteroids and Explosions...");
+        setLoadingMessage("Loading Assets and animations...");
         ParticleHelper.BaseAssetsUrl = window.location.href;
         await RockFactory.init();
         setLoadingMessage("Ready!");
@@ -190,6 +193,47 @@ export class Main {
     }
 }
 
+// Setup router
+router.on('/', () => {
+    // Check if there are saved levels
+    if (!hasSavedLevels()) {
+        console.log('No saved levels found, redirecting to editor');
+        router.navigate('/editor');
+        return;
+    }
+
+    showView('game');
+
+    // Populate level selector
+    populateLevelSelector();
+
+    // Initialize game if not in debug mode
+    if (!DEBUG_CONTROLLERS) {
+        // Check if already initialized
+        if (!(window as any).__gameInitialized) {
+            const main = new Main();
+            const demo = new Demo(main);
+            (window as any).__gameInitialized = true;
+        }
+    }
+});
+
+router.on('/editor', () => {
+    showView('editor');
+    // Dynamically import and initialize editor
+    if (!(window as any).__editorInitialized) {
+        import('./levelEditor').then(() => {
+            (window as any).__editorInitialized = true;
+        });
+    }
+});
+
+// Generate default levels if localStorage is empty
+generateDefaultLevels();
+
+// Start the router after all routes are registered
+router.start();
+
 if (DEBUG_CONTROLLERS) {
     console.log('🔍 DEBUG MODE: Running minimal controller test');
     // Hide the UI elements
@@ -198,9 +242,6 @@ if (DEBUG_CONTROLLERS) {
         (mainDiv as HTMLElement).style.display = 'none';
     }
     new ControllerDebug();
-} else {
-    const main = new Main();
-    const demo = new Demo(main);
 }
 
 

@@ -18,8 +18,8 @@ import {RockFactory} from "./starfield";
 import Level from "./level";
 import {Scoreboard} from "./scoreboard";
 import setLoadingMessage from "./setLoadingMessage";
-import {createPlanet, createSun} from "./createSun";
-import {createPlanetsOrbital} from "./createPlanets";
+import {LevelConfig} from "./levelConfig";
+import {LevelDeserializer} from "./levelDeserializer";
 
 export class Level1 implements Level {
     private _ship: Ship;
@@ -28,21 +28,14 @@ export class Level1 implements Level {
     private _startBase: AbstractMesh;
     private _endBase: AbstractMesh;
     private _scoreboard: Scoreboard;
-    private _difficulty: string;
+    private _levelConfig: LevelConfig;
     private _audioEngine: AudioEngineV2;
-    private _difficultyConfig: {
-        rockCount: number;
-        forceMultiplier: number;
-        rockSizeMin: number;
-        rockSizeMax: number;
-        distanceMin: number;
-        distanceMax: number;
-    };
+    private _deserializer: LevelDeserializer;
 
-    constructor(difficulty: string = 'recruit', audioEngine: AudioEngineV2) {
-        this._difficulty = difficulty;
+    constructor(levelConfig: LevelConfig, audioEngine: AudioEngineV2) {
+        this._levelConfig = levelConfig;
         this._audioEngine = audioEngine;
-        this._difficultyConfig = this.getDifficultyConfig(difficulty);
+        this._deserializer = new LevelDeserializer(levelConfig);
         this._ship = new Ship(undefined, audioEngine);
         this._scoreboard = new Scoreboard();
         const xr = DefaultScene.XR;
@@ -62,69 +55,9 @@ export class Level1 implements Level {
 
 
         //console.log('Controller observable registered, observer:', !!observer);
-        
-        this.createStartBase();
+
         this.initialize();
 
-    }
-
-    private getDifficultyConfig(difficulty: string) {
-        switch (difficulty) {
-            case 'recruit':
-                return {
-                    rockCount: 5,
-                    forceMultiplier: .5,
-                    rockSizeMin: 10,
-                    rockSizeMax: 15,
-                    distanceMin: 80,
-                    distanceMax: 100
-                };
-            case 'pilot':
-                return {
-                    rockCount: 10,
-                    forceMultiplier: 1,
-                    rockSizeMin: 8,
-                    rockSizeMax: 12,
-                    distanceMin: 80,
-                    distanceMax: 150
-                };
-            case 'captain':
-                return {
-                    rockCount: 20,
-                    forceMultiplier: 1.2,
-                    rockSizeMin: 2,
-                    rockSizeMax: 7,
-                    distanceMin: 100,
-                    distanceMax: 250
-                };
-            case 'commander':
-                return {
-                    rockCount: 50,
-                    forceMultiplier: 1.3,
-                    rockSizeMin: 2,
-                    rockSizeMax: 8,
-                    distanceMin: 90,
-                    distanceMax: 280
-                };
-            case 'test':
-                return {
-                    rockCount: 100,
-                    forceMultiplier: 0.3,
-                    rockSizeMin: 8,
-                    rockSizeMax: 15,
-                    distanceMin: 150,
-                    distanceMax: 200
-                };
-            default:
-                return {
-                    rockCount: 5,
-                    forceMultiplier: 1.0,
-                    rockSizeMin: 4,
-                    rockSizeMax: 8,
-                    distanceMin: 170,
-                    distanceMax: 220
-                };
-        }
     }
 
     getReadyObservable(): Observable<Level> {
@@ -163,104 +96,42 @@ export class Level1 implements Level {
         this._endBase.dispose();
     }
     public async initialize() {
-        console.log('initialize');
+        console.log('Initializing level from config:', this._levelConfig.difficulty);
         if (this._initialized) {
             return;
         }
-        this.createBackgroundElements();
-        this._initialized = true;
-        this._ship.position = new Vector3(0, 1, 0);
-        const config = this._difficultyConfig;
-        console.log(config);
-        setLoadingMessage("Creating Asteroids...");
-        for (let i = 0; i < config.rockCount; i++) {
-            const distRange = config.distanceMax - config.distanceMin;
-            const dist = (Math.random() * distRange) + config.distanceMin;
-            const sizeRange = config.rockSizeMax - config.rockSizeMin;
-            const size = Vector3.One().scale(Math.random() * sizeRange + config.rockSizeMin)
 
-            const rock = await RockFactory.createRock(i, new Vector3(0,1,dist),
-                size,
-                this._scoreboard.onScoreObservable);
-            const constraint = new DistanceConstraint(dist, DefaultScene.MainScene);
+        setLoadingMessage("Loading level from configuration...");
 
-            /*
-            const options: {updatable: boolean, points: Array<Vector3>, instance?: LinesMesh} =
-                {updatable: true, points: [rock.position, this._startBase.absolutePosition]}
+        // Use deserializer to create all entities from config
+        const entities = await this._deserializer.deserialize(this._scoreboard.onScoreObservable);
 
-            let line = MeshBuilder.CreateLines("line", options , DefaultScene.MainScene);
+        this._startBase = entities.startBase;
+        // sun and planets are already created by deserializer
 
-            line.color = new Color3(1, 0, 0);
-            DefaultScene.MainScene.onAfterRenderObservable.add(() => {
-                //const pos = rock.position;
-                options.points[0].copyFrom(rock.position);
-                options.instance = line;
-                line = MeshBuilder.CreateLines("lines", options);
-            });
-            */
-            this._scoreboard.onScoreObservable.notifyObservers({
-                score: 0,
-                remaining: i+1,
-                message: "Get Ready"
-            });
-            this._startBase.physicsBody.addConstraint(rock.physicsBody, constraint);
-            rock.physicsBody.applyForce(new Vector3(50000000 * config.forceMultiplier, 0, 0), rock.position);
-            //rock.physicsBody.applyForce(Vector3.Random(-1, 1).scale(5000000 * config.forceMultiplier), rock.position);
+        // Position ship from config
+        const shipConfig = this._deserializer.getShipConfig();
+        this._ship.position = new Vector3(shipConfig.position[0], shipConfig.position[1], shipConfig.position[2]);
+
+        // Add distance constraints to asteroids
+        setLoadingMessage("Configuring physics constraints...");
+        const asteroidMeshes = entities.asteroids;
+        for (let i = 0; i < asteroidMeshes.length; i++) {
+            const asteroidMesh = asteroidMeshes[i];
+            if (asteroidMesh.physicsBody) {
+                // Calculate distance from start base
+                const dist = Vector3.Distance(asteroidMesh.position, this._startBase.position);
+                const constraint = new DistanceConstraint(dist, DefaultScene.MainScene);
+                this._startBase.physicsBody.addConstraint(asteroidMesh.physicsBody, constraint);
+            }
         }
+
+        this._initialized = true;
 
         // Notify that initialization is complete
         this._onReadyObservable.notifyObservers(this);
     }
 
-    private createStartBase() {
-        const mesh = MeshBuilder.CreateCylinder("startBase", {
-            diameter: 10,
-            height: 1,
-            tessellation: 72
-        }, DefaultScene.MainScene);
-        const material = new StandardMaterial("material", DefaultScene.MainScene);
-        material.diffuseColor = new Color3(1, 1, 0);
-        mesh.material = material;
-        const agg = new PhysicsAggregate(mesh, PhysicsShapeType.CONVEX_HULL, {mass: 0}, DefaultScene.MainScene);
-        agg.body.setMotionType(PhysicsMotionType.ANIMATED);
-        this._startBase = mesh;
-    }
-
-    private createEndBase() {
-        const mesh = MeshBuilder.CreateCylinder("endBase", {
-            diameter: 10,
-            height: 1,
-            tessellation: 72
-        }, DefaultScene.MainScene);
-        mesh.position = new Vector3(0, 5, 500);
-        const material = new StandardMaterial("material", DefaultScene.MainScene);
-        material.diffuseColor = new Color3(0, 1, 0);
-        mesh.material = material;
-        const agg = new PhysicsAggregate(mesh, PhysicsShapeType.CONVEX_HULL, {mass: 0}, DefaultScene.MainScene);
-        agg.body.setMotionType(PhysicsMotionType.ANIMATED);
-        this._endBase = mesh;
-    }
-    private createBackgroundElements() {
-        //const sun = MeshBuilder.CreateSphere("sun", {diameter: 200}, DefaultScene.MainScene);
-        //const sunMaterial = new StandardMaterial("sunMaterial", DefaultScene.MainScene);
-        //sunMaterial.emissiveColor = new Color3(1, 1, 0);
-        //sun.material = sunMaterial;
-        //sun.position = new Vector3(-200, 300, 500);
-        const sun = createSun();
-
-        // Create planets around the sun
-        const sunPosition = sun.position;
-        const planets = createPlanetsOrbital(
-            12,              // 8 planets
-            sunPosition,    // sun position
-            100,             // min diameter
-            200,            // max diameter
-            1000,            // min distance from sun
-            2000            // max distance from sun
-        );
-
-        console.log(`Created ${planets.length} planets around sun at position`, sunPosition);
-    }
 
     private createTarget(i: number) {
         const target = MeshBuilder.CreateTorus("target" + i, {diameter: 10, tessellation: 72}, DefaultScene.MainScene);
