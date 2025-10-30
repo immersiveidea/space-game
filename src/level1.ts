@@ -117,16 +117,18 @@ export class Level1 implements Level {
         const shipConfig = this._deserializer.getShipConfig();
         this._ship.position = new Vector3(shipConfig.position[0], shipConfig.position[1], shipConfig.position[2]);
 
-        // Add distance constraints to asteroids
+        // Add distance constraints to asteroids (if physics enabled)
         setLoadingMessage("Configuring physics constraints...");
         const asteroidMeshes = entities.asteroids;
-        for (let i = 0; i < asteroidMeshes.length; i++) {
-            const asteroidMesh = asteroidMeshes[i];
-            if (asteroidMesh.physicsBody) {
-                // Calculate distance from start base
-                const dist = Vector3.Distance(asteroidMesh.position, this._startBase.position);
-                const constraint = new DistanceConstraint(dist, DefaultScene.MainScene);
-                this._startBase.physicsBody.addConstraint(asteroidMesh.physicsBody, constraint);
+        if (this._startBase.physicsBody) {
+            for (let i = 0; i < asteroidMeshes.length; i++) {
+                const asteroidMesh = asteroidMeshes[i];
+                if (asteroidMesh.physicsBody) {
+                    // Calculate distance from start base
+                    const dist = Vector3.Distance(asteroidMesh.position, this._startBase.position);
+                    const constraint = new DistanceConstraint(dist, DefaultScene.MainScene);
+                    this._startBase.physicsBody.addConstraint(asteroidMesh.physicsBody, constraint);
+                }
             }
         }
 

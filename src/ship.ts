@@ -21,6 +21,7 @@ import {
 } from "@babylonjs/core";
 import type {AudioEngineV2, StaticSound} from "@babylonjs/core";
 import {DefaultScene} from "./defaultScene";
+import { GameConfig } from "./gameConfig";
 const MAX_FORWARD_THRUST = 40;
 
 const controllerComponents = [
@@ -97,6 +98,12 @@ export class Ship {
     }
 
     private shoot() {
+        // Only allow shooting if physics is enabled
+        const config = GameConfig.getInstance();
+        if (!config.physicsEnabled) {
+            return;
+        }
+
         this._shot?.play();
         const ammo = new InstancedMesh("ammo", this._ammoBaseMesh as Mesh);
         ammo.parent = this._ship;
@@ -202,38 +209,41 @@ export class Ship {
         shipMesh.name = "shipMesh";
         shipMesh.parent = this._ship;
 
-        // Create physics aggregate based on the loaded mesh
-        // Find the actual geometry mesh (usually meshes[1] or a child)
-        //const geometryMesh = importMesh.meshes.find(m => m instanceof Mesh && m.getTotalVertices() > 0) as Mesh;
-        const geo = shipMesh.getChildMeshes()[0]
-        if (geo) {
+        // Create physics aggregate based on the loaded mesh (if physics enabled)
+        const config = GameConfig.getInstance();
+        if (config.physicsEnabled) {
+            // Find the actual geometry mesh (usually meshes[1] or a child)
+            //const geometryMesh = importMesh.meshes.find(m => m instanceof Mesh && m.getTotalVertices() > 0) as Mesh;
+            const geo = shipMesh.getChildMeshes()[0]
+            if (geo) {
 
 
-            // Create physics aggregate on the ship TransformNode using the mesh shape
-            const agg = new PhysicsAggregate(this._ship, PhysicsShapeType.CONVEX_HULL, {
-                mass: 100,
-                mesh: (geo as Mesh)  // Use the actual ship geometry
-            }, DefaultScene.MainScene);
+                // Create physics aggregate on the ship TransformNode using the mesh shape
+                const agg = new PhysicsAggregate(this._ship, PhysicsShapeType.CONVEX_HULL, {
+                    mass: 100,
+                    mesh: (geo as Mesh)  // Use the actual ship geometry
+                }, DefaultScene.MainScene);
 
-            agg.body.setMotionType(PhysicsMotionType.DYNAMIC);
-            agg.body.setLinearDamping(.1);
-            agg.body.setAngularDamping(.2);
-            agg.body.setAngularVelocity(new Vector3(0, 0, 0));
-            agg.body.setCollisionCallbackEnabled(true);
-        } else {
-            console.warn("No geometry mesh found in ship1.glb, falling back to box shape");
-            // Fallback to box shape if mesh not found
-            const agg = new PhysicsAggregate(this._ship, PhysicsShapeType.BOX, {
-                mass: 100,
-                extents: new Vector3(4, 4, 7.4),
-                center: new Vector3(0, 1, 1.8)
-            }, DefaultScene.MainScene);
+                agg.body.setMotionType(PhysicsMotionType.DYNAMIC);
+                agg.body.setLinearDamping(.1);
+                agg.body.setAngularDamping(.2);
+                agg.body.setAngularVelocity(new Vector3(0, 0, 0));
+                agg.body.setCollisionCallbackEnabled(true);
+            } else {
+                console.warn("No geometry mesh found in ship1.glb, falling back to box shape");
+                // Fallback to box shape if mesh not found
+                const agg = new PhysicsAggregate(this._ship, PhysicsShapeType.BOX, {
+                    mass: 100,
+                    extents: new Vector3(4, 4, 7.4),
+                    center: new Vector3(0, 1, 1.8)
+                }, DefaultScene.MainScene);
 
-            agg.body.setMotionType(PhysicsMotionType.DYNAMIC);
-            agg.body.setLinearDamping(.1);
-            agg.body.setAngularDamping(.2);
-            agg.body.setAngularVelocity(new Vector3(0, 0, 0));
-            agg.body.setCollisionCallbackEnabled(true);
+                agg.body.setMotionType(PhysicsMotionType.DYNAMIC);
+                agg.body.setLinearDamping(.1);
+                agg.body.setAngularDamping(.2);
+                agg.body.setAngularVelocity(new Vector3(0, 0, 0));
+                agg.body.setCollisionCallbackEnabled(true);
+            }
         }
         //shipMesh.rotation.y = Angle.FromDegrees(90).radians();
         //shipMesh.rotation.y = Math.PI;

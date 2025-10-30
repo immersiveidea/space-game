@@ -27,6 +27,8 @@ import {
 } from "./levelConfig";
 import { FireProceduralTexture } from "@babylonjs/procedural-textures";
 import {createSphereLightmap} from "./sphereLightmap";
+import { GameConfig } from "./gameConfig";
+import { MaterialFactory } from "./materialFactory";
 
 /**
  * Deserializes a LevelConfig JSON object and creates all entities in the scene
@@ -92,8 +94,12 @@ export class LevelDeserializer {
         }
         mesh.material = material;
 
-        const agg = new PhysicsAggregate(mesh, PhysicsShapeType.CONVEX_HULL, { mass: 0 }, this.scene);
-        agg.body.setMotionType(PhysicsMotionType.ANIMATED);
+        // Only create physics if enabled in config
+        const gameConfig = GameConfig.getInstance();
+        if (gameConfig.physicsEnabled) {
+            const agg = new PhysicsAggregate(mesh, PhysicsShapeType.CONVEX_HULL, { mass: 0 }, this.scene);
+            agg.body.setMotionType(PhysicsMotionType.ANIMATED);
+        }
 
         return mesh;
     }
@@ -116,11 +122,13 @@ export class LevelDeserializer {
 
         sun.position = this.arrayToVector3(config.position);
 
-        // Create material with procedural fire texture
-        const material = new StandardMaterial("sunMaterial", this.scene);
-        material.emissiveTexture = new FireProceduralTexture("fire", 1024, this.scene);
-        material.emissiveColor = new Color3(0.5, 0.5, 0.1);
-        material.disableLighting = true;
+        // Create material using GameConfig texture level
+        const gameConfig = GameConfig.getInstance();
+        const material = MaterialFactory.createSunMaterial(
+            "sunMaterial",
+            gameConfig.sunTextureLevel,
+            this.scene
+        );
         sun.material = material;
 
         // Create glow layer
@@ -151,33 +159,16 @@ export class LevelDeserializer {
             // Calculate direction from planet to sun
             const toSun = sunPosition.subtract(planetPosition).normalize();
 
-            // Apply texture
-            const material = new StandardMaterial(planetConfig.name + "-material", this.scene);
-            const texture = new Texture(planetConfig.texturePath, this.scene);
-
-            // Create lightmap with bright light pointing toward sun
-            const lightmap = createSphereLightmap(
-                planetConfig.name + "-lightmap",
-                256,                              // texture size
-                DefaultScene.MainScene,
-                toSun,                           // bright light from sun direction
-                1,                               // bright intensity
-                toSun.negate(),                  // dim light from opposite direction
-                0.3,                             // dim intensity
-                0.3                             // ambient
+            // Create material using GameConfig texture level
+            const config = GameConfig.getInstance();
+            const material = MaterialFactory.createPlanetMaterial(
+                planetConfig.name + "-material",
+                planetConfig.texturePath,
+                config.planetTextureLevel,
+                this.scene,
+                toSun
             );
 
-            // Apply to material
-            // Use emissiveTexture (self-lit) instead of diffuseTexture when lighting is disabled
-            material.emissiveTexture = texture;
-            material.lightmapTexture = lightmap;
-            material.useLightmapAsShadowmap = true;
-
-            // Disable standard lighting since we're using baked lightmap
-            material.disableLighting = true;
-
-            material.roughness = 1;
-            material.specularColor = Color3.Black();
             planet.material = material;
 
             planets.push(planet);
