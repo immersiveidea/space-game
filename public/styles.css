@@ -35,6 +35,7 @@ body {
     left: 50%;
     transform: translate(-50%, -50%);
     z-index: 1000;
+    overflow: scroll;
 }
 
 #gameCanvas {
@@ -59,6 +60,75 @@ body {
     font-size: 2.5em;
     margin-bottom: 30px;
     text-shadow: 0 0 10px rgba(255,255,255,0.5);
+}
+
+.controls-info {
+    background: rgba(255, 255, 255, 0.1);
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    border-radius: 15px;
+    padding: 30px;
+    margin: 0 auto 40px;
+    max-width: 900px;
+    backdrop-filter: blur(10px);
+}
+
+.controls-info h2 {
+    margin-top: 0;
+    margin-bottom: 25px;
+    font-size: 2em;
+    color: #4CAF50;
+    text-shadow: 0 0 10px rgba(76, 175, 80, 0.5);
+}
+
+.controls-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 25px;
+    margin-bottom: 20px;
+}
+
+.control-section {
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 10px;
+    padding: 20px;
+}
+
+.control-section h3 {
+    margin-top: 0;
+    margin-bottom: 15px;
+    color: #64B5F6;
+    font-size: 1.3em;
+}
+
+.control-section ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.control-section li {
+    margin-bottom: 12px;
+    padding-left: 20px;
+    position: relative;
+    line-height: 1.6;
+    font-size: 0.95em;
+}
+
+
+.control-section strong {
+    color: #FFD54F;
+}
+
+.controls-note {
+    background: rgba(255, 152, 0, 0.15);
+    border: 1px solid rgba(255, 152, 0, 0.3);
+    border-radius: 8px;
+    padding: 15px;
+    margin-top: 20px;
+    font-size: 0.9em;
+    line-height: 1.6;
+    color: #FFE082;
 }
 
 .card-container {
@@ -414,6 +484,32 @@ body {
 
 /* Mobile-specific adjustments */
 @media (max-width: 768px) {
+    .controls-info {
+        padding: 20px;
+        margin-bottom: 30px;
+    }
+
+    .controls-info h2 {
+        font-size: 1.5em;
+    }
+
+    .controls-grid {
+        grid-template-columns: 1fr;
+        gap: 15px;
+    }
+
+    .control-section h3 {
+        font-size: 1.1em;
+    }
+
+    .control-section li {
+        font-size: 0.9em;
+    }
+
+    .controls-note {
+        font-size: 0.85em;
+    }
+
     [data-view="editor"] {
         padding: 10px;
     }

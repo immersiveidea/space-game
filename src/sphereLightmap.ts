@@ -23,7 +23,7 @@ export function createSphereLightmap(
     ambientIntensity: number = 0.1
 ): DynamicTexture {
     const texture = new DynamicTexture(name, { width: size, height: size }, scene, false);
-    const context = texture.getContext();
+    const context = texture.getContext() as CanvasRenderingContext2D;
     const imageData = context.createImageData(size, size);
 
     // Normalize light directions
@@ -99,7 +99,7 @@ export function createColoredSphereLightmap(
     ambientColor: { r: number; g: number; b: number } = { r: 0.1, g: 0.1, b: 0.1 }
 ): DynamicTexture {
     const texture = new DynamicTexture(name, { width: size, height: size }, scene, false);
-    const context = texture.getContext();
+    const context = texture.getContext() as CanvasRenderingContext2D;
     const imageData = context.createImageData(size, size);
 
     const brightDir = brightLightDir.normalize();
