@@ -55,7 +55,12 @@ export class ExplosionManager {
      * @returns Array of sphere mesh objects
      */
     private splitIntoSeparateMeshes(mesh: Mesh, pieces: number = 32): Mesh[] {
-        console.log(`Creating ${pieces} sphere debris pieces`);
+        console.log(`[ExplosionManager] Creating ${pieces} sphere debris pieces`);
+        console.log('[ExplosionManager] Base mesh info:', {
+            position: mesh.position.toString(),
+            scaling: mesh.scaling.toString(),
+            hasMaterial: !!mesh.material
+        });
 
         const meshPieces: Mesh[] = [];
         const basePosition = mesh.position.clone();
@@ -65,41 +70,62 @@ export class ExplosionManager {
         const material = mesh.material?.clone('debris-material');
         if (material) {
             //(material as any).emissiveColor = Color3.Yellow();
+            console.log('[ExplosionManager] Material cloned successfully');
+        } else {
+            console.warn('[ExplosionManager] WARNING: No material on base mesh');
         }
 
         // Create sphere debris scattered around the original mesh position
         const avgScale = (baseScale.x + baseScale.y + baseScale.z) / 3;
         const debrisSize = avgScale * 0.3; // Size relative to asteroid
 
+        console.log('[ExplosionManager] Debris parameters:', {
+            avgScale,
+            debrisSize,
+            offsetRadius: avgScale * 0.5
+        });
+
         for (let i = 0; i < pieces; i++) {
-            // Create a small sphere for debris
-            const sphere = MeshBuilder.CreateIcoSphere(
-                `${mesh.name}_debris_${i}`,
-                {
-                 radius: debrisSize,
-                    subdivisions:  2
-                }, DefaultScene.MainScene
-            );
+            try {
+                // Create a small sphere for debris
+                const sphere = MeshBuilder.CreateIcoSphere(
+                    `${mesh.name}_debris_${i}`,
+                    {
+                     radius: debrisSize,
+                        subdivisions:  2
+                    }, DefaultScene.MainScene
+                );
 
-            // Position spheres in a small cluster around the original position
-            const offsetRadius = avgScale * 0.5;
-            const angle1 = (i / pieces) * Math.PI * 2;
-            const angle2 = Math.random() * Math.PI;
+                // Position spheres in a small cluster around the original position
+                const offsetRadius = avgScale * 0.5;
+                const angle1 = (i / pieces) * Math.PI * 2;
+                const angle2 = Math.random() * Math.PI;
 
-            sphere.position = new Vector3(
-                basePosition.x + Math.sin(angle2) * Math.cos(angle1) * offsetRadius,
-                basePosition.y + Math.sin(angle2) * Math.sin(angle1) * offsetRadius,
-                basePosition.z + Math.cos(angle2) * offsetRadius
-            );
+                sphere.position = new Vector3(
+                    basePosition.x + Math.sin(angle2) * Math.cos(angle1) * offsetRadius,
+                    basePosition.y + Math.sin(angle2) * Math.sin(angle1) * offsetRadius,
+                    basePosition.z + Math.cos(angle2) * offsetRadius
+                );
 
-            sphere.material = material;
-            sphere.isVisible = true;
-            sphere.setEnabled(true);
+                sphere.material = material;
+                sphere.isVisible = true;
+                sphere.setEnabled(true);
 
-            meshPieces.push(sphere);
+                meshPieces.push(sphere);
+            } catch (error) {
+                console.error(`[ExplosionManager] ERROR creating debris piece ${i}:`, error);
+            }
         }
 
-        console.log(`Created ${meshPieces.length} sphere debris pieces`);
+        console.log(`[ExplosionManager] Successfully created ${meshPieces.length}/${pieces} sphere debris pieces`);
+        if (meshPieces.length > 0) {
+            console.log('[ExplosionManager] First piece sample:', {
+                name: meshPieces[0].name,
+                position: meshPieces[0].position.toString(),
+                isVisible: meshPieces[0].isVisible,
+                isEnabled: meshPieces[0].isEnabled()
+            });
+        }
         return meshPieces;
     }
 
@@ -108,20 +134,33 @@ export class ExplosionManager {
      * @param mesh The mesh to explode (will be cloned internally)
      */
     public playExplosion(mesh: AbstractMesh): void {
+        console.log('[ExplosionManager] playExplosion called');
+        console.log('[ExplosionManager] Input mesh:', {
+            name: mesh.name,
+            id: mesh.id,
+            isInstancedMesh: !!(mesh as any).sourceMesh,
+            position: mesh.position.toString(),
+            scaling: mesh.scaling.toString()
+        });
+
         // Get the source mesh if this is an instanced mesh
         let sourceMesh: Mesh;
         if ((mesh as any).sourceMesh) {
             sourceMesh = (mesh as any).sourceMesh as Mesh;
+            console.log('[ExplosionManager] Using source mesh from instance:', sourceMesh.name);
         } else {
             sourceMesh = mesh as Mesh;
+            console.log('[ExplosionManager] Using mesh directly (not instanced)');
         }
 
         // Clone the source mesh so we don't affect the original
+        console.log('[ExplosionManager] Cloning mesh...');
         const meshToExplode = sourceMesh.clone("exploding-" + mesh.name, null, true, false);
         if (!meshToExplode) {
-            console.warn("Failed to clone mesh for explosion");
+            console.error('[ExplosionManager] ERROR: Failed to clone mesh for explosion');
             return;
         }
+        console.log('[ExplosionManager] Mesh cloned successfully');
 
         // Apply the instance's transformation to the cloned mesh
         meshToExplode.position = mesh.getAbsolutePosition().clone();
@@ -134,77 +173,130 @@ export class ExplosionManager {
 
         // Check if mesh has proper geometry
         if (!meshToExplode.getTotalVertices || meshToExplode.getTotalVertices() === 0) {
-            console.warn("Mesh has no vertices, cannot explode");
+            console.error('[ExplosionManager] ERROR: Mesh has no vertices, cannot explode');
             meshToExplode.dispose();
             return;
         }
 
-        console.log(`Exploding mesh: ${meshToExplode.name}, vertices: ${meshToExplode.getTotalVertices()}`);
+        console.log(`[ExplosionManager] Mesh ready for explosion:`, {
+            name: meshToExplode.name,
+            vertices: meshToExplode.getTotalVertices(),
+            position: meshToExplode.position.toString(),
+            scaling: meshToExplode.scaling.toString()
+        });
 
         // Split the mesh into separate mesh objects (MeshExploder requirement)
+        console.log('[ExplosionManager] Splitting mesh into pieces...');
         const meshPieces = this.splitIntoSeparateMeshes(meshToExplode, 12);
 
         if (meshPieces.length === 0) {
-            console.warn("Failed to split mesh into pieces");
+            console.error('[ExplosionManager] ERROR: Failed to split mesh into pieces');
             meshToExplode.dispose();
             return;
         }
 
         // Original mesh is no longer needed - the pieces replace it
+        console.log('[ExplosionManager] Disposing original cloned mesh');
         meshToExplode.dispose();
 
         // Create the exploder with the array of separate meshes
         // The second parameter is optional - it's the center mesh to explode from
         // If not provided, MeshExploder will auto-calculate the center
-        const exploder = new MeshExploder(meshPieces);
+        console.log('[ExplosionManager] Creating MeshExploder...');
+        try {
+            const exploder = new MeshExploder(meshPieces);
+            console.log('[ExplosionManager] MeshExploder created successfully');
 
-        console.log(`Starting explosion animation for ${meshPieces.length} mesh pieces`);
-
-        // Animate the explosion by calling explode() each frame with increasing values
-        const startTime = Date.now();
-        const animationDuration = this.config.duration;
-        const maxForce = this.config.explosionForce;
-
-        const animate = () => {
-            const elapsed = Date.now() - startTime;
-            const progress = Math.min(elapsed / animationDuration, 1.0);
-
-            // Calculate current explosion value (0 to maxForce)
-            const currentValue = progress * maxForce;
-            exploder.explode(currentValue);
-
-            // Animate debris size to zero (1.0 to 0.0)
-            const scale = 1.0 - progress;
-            meshPieces.forEach(piece => {
-                piece.scaling.set(scale, scale, scale);
+            console.log(`[ExplosionManager] Starting explosion animation:`, {
+                pieceCount: meshPieces.length,
+                duration: this.config.duration,
+                maxForce: this.config.explosionForce
             });
 
-            // Continue animation if not complete
-            if (progress < 1.0) {
-                requestAnimationFrame(animate);
-            } else {
-                // Animation complete - clean up
-                console.log(`Explosion animation complete, cleaning up`);
-                this.cleanupExplosion(meshPieces);
-            }
-        };
+            // Animate the explosion by calling explode() each frame with increasing values
+            const startTime = Date.now();
+            const animationDuration = this.config.duration;
+            const maxForce = this.config.explosionForce;
+            let frameCount = 0;
 
-        // Start the animation
-        animate();
+            const animate = () => {
+                const elapsed = Date.now() - startTime;
+                const progress = Math.min(elapsed / animationDuration, 1.0);
+
+                // Calculate current explosion value (0 to maxForce)
+                const currentValue = progress * maxForce;
+
+                try {
+                    exploder.explode(currentValue);
+                } catch (error) {
+                    console.error('[ExplosionManager] ERROR in explode():', error);
+                }
+
+                // Animate debris size to zero (1.0 to 0.0)
+                const scale = 1.0 - progress;
+                meshPieces.forEach(piece => {
+                    if (piece && !piece.isDisposed()) {
+                        piece.scaling.set(scale, scale, scale);
+                    }
+                });
+
+                frameCount++;
+
+                // Log every 15 frames (approximately every 250ms at 60fps)
+                if (frameCount % 15 === 0 || frameCount === 1) {
+                    console.log(`[ExplosionManager] Animation frame ${frameCount}:`, {
+                        elapsed: `${elapsed}ms`,
+                        progress: progress.toFixed(3),
+                        currentValue: currentValue.toFixed(2),
+                        scale: scale.toFixed(3),
+                        piecesAlive: meshPieces.filter(p => !p.isDisposed()).length
+                    });
+                }
+
+                // Continue animation if not complete
+                if (progress < 1.0) {
+                    requestAnimationFrame(animate);
+                } else {
+                    // Animation complete - clean up
+                    console.log(`[ExplosionManager] Animation complete after ${frameCount} frames, cleaning up`);
+                    this.cleanupExplosion(meshPieces);
+                }
+            };
+
+            // Start the animation
+            console.log('[ExplosionManager] Starting animation loop...');
+            animate();
+        } catch (error) {
+            console.error('[ExplosionManager] ERROR creating MeshExploder:', error);
+            // Clean up pieces if exploder failed
+            meshPieces.forEach(piece => {
+                if (piece && !piece.isDisposed()) {
+                    piece.dispose();
+                }
+            });
+        }
     }
 
     /**
      * Clean up explosion meshes
      */
     private cleanupExplosion(meshPieces: Mesh[]): void {
+        console.log('[ExplosionManager] Starting cleanup of explosion meshes...');
+
+        let disposedCount = 0;
         // Dispose all the mesh pieces
-        meshPieces.forEach(mesh => {
+        meshPieces.forEach((mesh, index) => {
             if (mesh && !mesh.isDisposed()) {
-                mesh.dispose();
+                try {
+                    mesh.dispose();
+                    disposedCount++;
+                } catch (error) {
+                    console.error(`[ExplosionManager] ERROR disposing piece ${index}:`, error);
+                }
             }
         });
 
-        console.log(`Explosion cleaned up - disposed ${meshPieces.length} pieces`);
+        console.log(`[ExplosionManager] Cleanup complete - disposed ${disposedCount}/${meshPieces.length} pieces`);
     }
 
     /**

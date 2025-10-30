@@ -154,6 +154,7 @@ export class MaterialFactory {
         material.disableLighting = true;
         material.roughness = 1;
         material.specularColor = Color3.Black();
+        material.freeze();
 
         return material;
     }

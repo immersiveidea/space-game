@@ -77,6 +77,7 @@ export class RockFactory {
                 DefaultScene.MainScene,
                 this._originalMaterial
             ) as PBRMaterial;
+            this._rockMaterial.freeze();
 
             this._rockMesh.material = this._rockMaterial;
             importMesh.meshes[1].dispose(false, true);
@@ -119,22 +120,37 @@ export class RockFactory {
             body.setCollisionCallbackEnabled(true);
             body.getCollisionObservable().add((eventData) => {
                 if (eventData.type == 'COLLISION_STARTED') {
+                    console.log('[RockFactory] Collision detected:', {
+                        collidedWith: eventData.collidedAgainst.transformNode.id,
+                        asteroidName: eventData.collider.transformNode.name
+                    });
+
                     if ( eventData.collidedAgainst.transformNode.id == 'ammo') {
+                        console.log('[RockFactory] ASTEROID HIT! Triggering explosion...');
                         score.notifyObservers({score: 1, remaining: -1, message: "Asteroid Destroyed"});
 
                         // Get the asteroid mesh before disposing
                         const asteroidMesh = eventData.collider.transformNode as AbstractMesh;
+                        console.log('[RockFactory] Asteroid mesh to explode:', {
+                            name: asteroidMesh.name,
+                            id: asteroidMesh.id,
+                            position: asteroidMesh.position.toString()
+                        });
 
                         // Play explosion using ExplosionManager (clones mesh internally)
+                        console.log('[RockFactory] Calling ExplosionManager.playExplosion()...');
                         RockFactory._explosionManager.playExplosion(asteroidMesh);
+                        console.log('[RockFactory] Explosion call completed');
 
                         // Now dispose the physics objects and original mesh
+                        console.log('[RockFactory] Disposing physics objects and meshes...');
                         eventData.collider.shape.dispose();
                         eventData.collider.transformNode.dispose();
                         eventData.collider.dispose();
                         eventData.collidedAgainst.shape.dispose();
                         eventData.collidedAgainst.transformNode.dispose();
                         eventData.collidedAgainst.dispose();
+                        console.log('[RockFactory] Disposal complete');
                     }
                 }
             });

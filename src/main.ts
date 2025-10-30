@@ -1,28 +1,31 @@
-import {AudioEngineV2, DirectionalLight} from "@babylonjs/core";
 import {
+    AudioEngineV2,
     Color3,
     CreateAudioEngineAsync,
+    DirectionalLight,
     Engine,
     HavokPlugin,
     ParticleHelper,
     Scene,
+    ScenePerformancePriority,
     Vector3,
     WebGPUEngine,
     WebXRDefaultExperience,
-    WebXRFeatureName
+    WebXRFeatureName, WebXRFeaturesManager
 } from "@babylonjs/core";
 import '@babylonjs/loaders';
 import HavokPhysics from "@babylonjs/havok";
 
 import {DefaultScene} from "./defaultScene";
 import {Level1} from "./level1";
+import {TestLevel} from "./testLevel";
 import Demo from "./demo";
 import Level from "./level";
 import setLoadingMessage from "./setLoadingMessage";
 import {RockFactory} from "./rockFactory";
 import {ControllerDebug} from "./controllerDebug";
 import {router, showView} from "./router";
-import {populateLevelSelector, hasSavedLevels} from "./levelSelector";
+import {hasSavedLevels, populateLevelSelector} from "./levelSelector";
 import {LevelConfig} from "./levelConfig";
 import {generateDefaultLevels} from "./levelEditor";
 
@@ -79,11 +82,85 @@ export class Main {
                 }, 500);
             });
         });
+
+        // Listen for test level button click
+        window.addEventListener('DOMContentLoaded', () => {
+            console.log('[Main] DOMContentLoaded fired, looking for test button...');
+            const testLevelBtn = document.querySelector('#testLevelBtn');
+            console.log('[Main] Test button found:', !!testLevelBtn);
+
+            if (testLevelBtn) {
+                testLevelBtn.addEventListener('click', async () => {
+                    console.log('[Main] ========== TEST LEVEL BUTTON CLICKED ==========');
+
+                    // Show loading UI
+                    const mainDiv = document.querySelector('#mainDiv');
+                    const levelSelect = document.querySelector('#levelSelect') as HTMLElement;
+                    console.log('[Main] mainDiv exists:', !!mainDiv);
+                    console.log('[Main] levelSelect exists:', !!levelSelect);
+
+                    if (levelSelect) {
+                        levelSelect.style.display = 'none';
+                        console.log('[Main] levelSelect hidden');
+                    }
+                    setLoadingMessage("Initializing Test Scene...");
+
+                    // Unlock audio engine on user interaction
+                    if (this._audioEngine) {
+                        console.log('[Main] Unlocking audio engine...');
+                        await this._audioEngine.unlockAsync();
+                        console.log('[Main] Audio engine unlocked');
+                    }
+
+                    // Create test level
+                    console.log('[Main] Creating TestLevel...');
+                    this._currentLevel = new TestLevel(this._audioEngine);
+                    console.log('[Main] TestLevel created:', !!this._currentLevel);
+
+                    // Wait for level to be ready
+                    console.log('[Main] Registering ready observable...');
+                    this._currentLevel.getReadyObservable().add(() => {
+                        console.log('[Main] ========== TEST LEVEL READY OBSERVABLE FIRED ==========');
+                        setLoadingMessage("Test Scene Ready! Entering VR...");
+                        console.log('[Main] Setting timeout to enter VR...');
+
+                        // Small delay to show message
+                        setTimeout(() => {
+                            console.log('[Main] Timeout fired, removing mainDiv and calling play()');
+                            if (mainDiv) {
+                                mainDiv.remove();
+                                console.log('[Main] mainDiv removed');
+                            }
+                            console.log('[Main] About to call this.play()...');
+                            this.play();
+                        }, 500);
+                    });
+                    console.log('[Main] Ready observable registered');
+
+                    // Now initialize the level (after observable is registered)
+                    console.log('[Main] Calling TestLevel.initialize()...');
+                    await this._currentLevel.initialize();
+                    console.log('[Main] TestLevel.initialize() completed');
+                });
+                console.log('[Main] Click listener added to test button');
+            } else {
+                console.warn('[Main] Test level button not found in DOM');
+            }
+        });
     }
     private _started = false;
     public async play() {
+        console.log('[Main] play() called');
+        console.log('[Main] Current level exists:', !!this._currentLevel);
         this._gameState = GameState.PLAY;
-        await this._currentLevel.play();
+
+        if (this._currentLevel) {
+            console.log('[Main] Calling level.play()...');
+            await this._currentLevel.play();
+            console.log('[Main] level.play() completed');
+        } else {
+            console.error('[Main] ERROR: No current level to play!');
+        }
     }
     public demo() {
         this._gameState = GameState.DEMO;
@@ -97,11 +174,11 @@ export class Main {
             disableTeleportation: true,
             disableNearInteraction: true,
             disableHandTracking: true,
-            disableDefaultUI: true,
+            disableDefaultUI: true
 
         });
-        DefaultScene.XR.baseExperience.featuresManager.enableFeature(WebXRFeatureName.LAYERS, "stable",
-    {preferMultiviewOnInit: true});
+        console.log(WebXRFeaturesManager.GetAvailableFeatures());
+        //DefaultScene.XR.baseExperience.featuresManager.enableFeature(WebXRFeatureName.LAYERS, "latest", {preferMultiviewOnInit: true});
 
 
         setLoadingMessage("Get Ready!");
@@ -124,16 +201,20 @@ export class Main {
 
         if (webGpu) {
             this._engine = new WebGPUEngine(canvas);
+            console.log("Webgpu enabled");
             await (this._engine as WebGPUEngine).initAsync();
         } else {
+            console.log("Standard WebGL enabled");
             this._engine = new Engine(canvas, true);
         }
+
         this._engine.setHardwareScalingLevel(1 / window.devicePixelRatio);
         window.onresize = () => {
             this._engine.resize();
         }
         DefaultScene.DemoScene = new Scene(this._engine);
         DefaultScene.MainScene = new Scene(this._engine);
+
         DefaultScene.MainScene.ambientColor = new Color3(0,0,0);
         DefaultScene.MainScene.clearColor = new Color3(0, 0, 0).toColor4();
 
@@ -175,7 +256,7 @@ export class Main {
         //DefaultScene.MainScene.ambientColor = new Color3(.1, .1, .1);
         const light = new DirectionalLight("dirLight", new Vector3(-1, -2, -1), DefaultScene.MainScene);
         DefaultScene.MainScene.enablePhysics(new Vector3(0, 0, 0), havokPlugin);
-        DefaultScene.MainScene.getPhysicsEngine().setTimeStep(1/30);
+        DefaultScene.MainScene.getPhysicsEngine().setTimeStep(1/60);
         DefaultScene.MainScene.getPhysicsEngine().setSubTimeStep(5);
 
         DefaultScene.MainScene.collisionsEnabled = true;

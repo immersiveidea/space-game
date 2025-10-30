@@ -343,10 +343,7 @@ export class Ship {
 
     private controllerCallback = (controllerEvent: ControllerEvent) => {
         // Log first few events to verify they're firing
-        if (Math.random() < 0.01) { // Only log 1% to avoid spam
-            console.log('Controller event:', controllerEvent.type, controllerEvent.hand,
-                       controllerEvent.type === 'thumbstick' ? controllerEvent.axisData : controllerEvent.value);
-        }
+
 
         if (controllerEvent.type == 'thumbstick') {
             if (controllerEvent.hand == 'left') {
