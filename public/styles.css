@@ -115,11 +115,10 @@ body {
     box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
 }
 
-.editor-link {
+.editor-link,
+.settings-link {
     position: absolute;
     top: 20px;
-    right: 20px;
-    background: rgba(76, 175, 80, 0.8);
     color: white;
     padding: 10px 20px;
     border-radius: 5px;
@@ -129,13 +128,29 @@ body {
     z-index: 2000;
 }
 
+.editor-link {
+    right: 180px;
+    background: rgba(76, 175, 80, 0.8);
+}
+
 .editor-link:hover {
     background: rgba(76, 175, 80, 1);
     transform: scale(1.05);
 }
 
+.settings-link {
+    right: 20px;
+    background: rgba(33, 150, 243, 0.8);
+}
+
+.settings-link:hover {
+    background: rgba(33, 150, 243, 1);
+    transform: scale(1.05);
+}
+
 /* Editor View Styles */
-[data-view="editor"] {
+[data-view="editor"],
+[data-view="settings"] {
     background: linear-gradient(135deg, #0a0618, #1a1033, #0f0c29);
     min-height: 100vh;
     padding: 15px;
@@ -165,7 +180,8 @@ body {
     text-shadow: 0 1px 3px rgba(0,0,0,0.8);
 }
 
-.editor-grid {
+.editor-grid,
+.settings-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));
     gap: 15px;

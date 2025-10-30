@@ -229,6 +229,17 @@ router.on('/editor', () => {
     }
 });
 
+router.on('/settings', () => {
+    showView('settings');
+    // Dynamically import and initialize settings
+    if (!(window as any).__settingsInitialized) {
+        import('./settingsScreen').then((module) => {
+            module.initializeSettingsScreen();
+            (window as any).__settingsInitialized = true;
+        });
+    }
+});
+
 // Generate default levels if localStorage is empty
 generateDefaultLevels();
 
