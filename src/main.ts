@@ -134,7 +134,9 @@ export class Main {
         }
         DefaultScene.DemoScene = new Scene(this._engine);
         DefaultScene.MainScene = new Scene(this._engine);
-        DefaultScene.MainScene.ambientColor = new Color3(.5, .5, .5);
+        DefaultScene.MainScene.ambientColor = new Color3(0,0,0);
+        DefaultScene.MainScene.clearColor = new Color3(0, 0, 0).toColor4();
+
 
         setLoadingMessage("Initializing Physics Engine..");
         await this.setupPhysics();
@@ -170,7 +172,7 @@ export class Main {
     private async setupPhysics() {
         const havok = await HavokPhysics();
         const havokPlugin = new HavokPlugin(true, havok);
-        DefaultScene.MainScene.ambientColor = new Color3(.1, .1, .1);
+        //DefaultScene.MainScene.ambientColor = new Color3(.1, .1, .1);
         const light = new DirectionalLight("dirLight", new Vector3(-1, -2, -1), DefaultScene.MainScene);
         DefaultScene.MainScene.enablePhysics(new Vector3(0, 0, 0), havokPlugin);
         DefaultScene.MainScene.getPhysicsEngine().setTimeStep(1/30);

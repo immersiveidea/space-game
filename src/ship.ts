@@ -58,7 +58,6 @@ export class Ship {
     private _ammoMaterial: StandardMaterial;
     private _forwardNode: TransformNode;
     private _rotationNode: TransformNode;
-    private _glowLayer: GlowLayer;
     private _primaryThrustVectorSound: StaticSound;
     private _secondaryThrustVectorSound: StaticSound;
     private _shot: StaticSound;
@@ -147,8 +146,7 @@ export class Ship {
     }
     private setup() {
         this._ship = new TransformNode("ship", DefaultScene.MainScene);
-        this._glowLayer = new GlowLayer('bullets', DefaultScene.MainScene);
-        this._glowLayer.intensity = 1;
+
 
         // Create sounds asynchronously if audio engine is available
         if (this._audioEngine) {

@@ -20,6 +20,7 @@ import {Scoreboard} from "./scoreboard";
 import setLoadingMessage from "./setLoadingMessage";
 import {LevelConfig} from "./levelConfig";
 import {LevelDeserializer} from "./levelDeserializer";
+import {BackgroundStars} from "./backgroundStars";
 
 export class Level1 implements Level {
     private _ship: Ship;
@@ -31,6 +32,7 @@ export class Level1 implements Level {
     private _levelConfig: LevelConfig;
     private _audioEngine: AudioEngineV2;
     private _deserializer: LevelDeserializer;
+    private _backgroundStars: BackgroundStars;
 
     constructor(levelConfig: LevelConfig, audioEngine: AudioEngineV2) {
         this._levelConfig = levelConfig;
@@ -94,6 +96,9 @@ export class Level1 implements Level {
     public dispose() {
         this._startBase.dispose();
         this._endBase.dispose();
+        if (this._backgroundStars) {
+            this._backgroundStars.dispose();
+        }
     }
     public async initialize() {
         console.log('Initializing level from config:', this._levelConfig.difficulty);
@@ -131,6 +136,23 @@ export class Level1 implements Level {
                 }
             }
         }
+
+        // Create background starfield
+        setLoadingMessage("Creating starfield...");
+        this._backgroundStars = new BackgroundStars(DefaultScene.MainScene, {
+            count: 5000,
+            radius: 5000,
+            minBrightness: 0.3,
+            maxBrightness: 1.0,
+            pointSize: 2
+        });
+
+        // Set up camera follow for stars (keeps stars at infinite distance)
+        DefaultScene.MainScene.onBeforeRenderObservable.add(() => {
+            if (this._backgroundStars && DefaultScene.XR.baseExperience.camera) {
+                this._backgroundStars.followCamera(DefaultScene.XR.baseExperience.camera.position);
+            }
+        });
 
         this._initialized = true;
 

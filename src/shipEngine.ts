@@ -17,15 +17,14 @@ export class ShipEngine {
     private _ship: TransformNode;
     private _leftMainEngine: MainEngine;
     private _rightMainEngine: MainEngine;
-    private _gl: GlowLayer;
+
     constructor(ship: TransformNode) {
         this._ship = ship;
         this.initialize();
     }
 
     private initialize() {
-        this._gl = new GlowLayer("glow", DefaultScene.MainScene);
-        this._gl.intensity =1;
+
         this._leftMainEngine = this.createEngine(new Vector3(-.44, .37, -1.1));
         this._rightMainEngine = this.createEngine(new Vector3(.44, .37, -1.1));
     }
@@ -52,7 +51,7 @@ export class ShipEngine {
         engine.parent = this._ship;
         engine.position = position;
         const leftDisc = MeshBuilder.CreateIcoSphere("engineSphere", {radius: .07}, DefaultScene.MainScene);
-        this._gl.addIncludedOnlyMesh(leftDisc);
+
         const material = new StandardMaterial("material", DefaultScene.MainScene);
         material.emissiveColor = new Color3(.5, .5, .1);
         leftDisc.material = material;
