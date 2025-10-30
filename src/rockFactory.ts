@@ -19,6 +19,7 @@ import {Debug} from "@babylonjs/core/Legacy/legacy";
 import {createSphereLightmap} from "./sphereLightmap";
 import { GameConfig } from "./gameConfig";
 import { MaterialFactory } from "./materialFactory";
+import { ExplosionManager } from "./explosionManager";
 let _particleData: any = null;
 
 export class Rock {
@@ -38,20 +39,17 @@ export class RockFactory {
     private static _rockMesh: AbstractMesh;
     private static _rockMaterial: PBRMaterial;
     private static _originalMaterial: PBRMaterial = null;
-    private static _explosionPool: ParticleSystemSet[] = [];
-    private static _poolSize: number = 10;
+    private static _explosionManager: ExplosionManager;
     private static _viewer: PhysicsViewer = null;
+
     public static async init() {
-        // Pre-create explosion particle systems for pooling
-        console.log("Pre-creating explosion particle systems...");
-        for (let i = 0; i < this._poolSize; i++) {
-            const set = await ParticleHelper.CreateAsync("explosion", DefaultScene.MainScene);
-            set.systems.forEach((system) => {
-                system.renderingGroupId =1;
-            })
-            this._explosionPool.push(set);
-        }
-        console.log(`Created ${this._poolSize} explosion particle systems in pool`);
+        // Initialize explosion manager
+        this._explosionManager = new ExplosionManager(DefaultScene.MainScene, {
+            poolSize: 10,
+            duration: 2000,
+            renderingGroupId: 1
+        });
+        await this._explosionManager.initialize();
 
         if (!this._rockMesh) {
             await this.loadMesh();
@@ -84,16 +82,6 @@ export class RockFactory {
             importMesh.meshes[1].dispose(false, true);
             importMesh.meshes[0].dispose();
         }
-    }
-    private static getExplosionFromPool(): ParticleSystemSet | null {
-        return this._explosionPool.pop() || null;
-    }
-
-    private static returnExplosionToPool(explosion: ParticleSystemSet) {
-        explosion.dispose();
-        ParticleHelper.CreateAsync("explosion", DefaultScene.MainScene).then((set) => {
-            this._explosionPool.push(set);
-        })
     }
 
     public static async createRock(i: number, position: Vector3, size: Vector3,
@@ -145,46 +133,8 @@ export class RockFactory {
                         eventData.collidedAgainst.transformNode.dispose();
                         eventData.collidedAgainst.dispose();
 
-                        // Get explosion from pool (or create new if pool empty)
-                        let explosion = RockFactory.getExplosionFromPool();
-
-                        if (!explosion) {
-                            console.log("Pool empty, creating new explosion");
-                            ParticleHelper.CreateAsync("explosion", DefaultScene.MainScene).then((set) => {
-                                const point = MeshBuilder.CreateSphere("point", {diameter: 0.1}, DefaultScene.MainScene);
-                                point.position = position.clone();
-                                point.isVisible = false;
-
-                                set.start(point);
-
-                                setTimeout(() => {
-                                    set.dispose();
-                                    point.dispose();
-                                }, 2000);
-                            });
-                        } else {
-                            // Use pooled explosion
-                            const point = MeshBuilder.CreateSphere("point", {diameter: 10}, DefaultScene.MainScene);
-                            point.position = position.clone();
-                            point.isVisible = false;
-                            point.scaling = scaling.multiplyByFloats(.2,.3,.2);
-                            console.log("Using pooled explosion with", explosion.systems.length, "systems at", position);
-
-                            // Set emitter and start each system individually
-                            explosion.systems.forEach((system: ParticleSystem, idx: number) => {
-                                system.emitter = point;  // Set emitter to the collision point
-                                system.start();  // Start this specific system
-                                console.log(`  System ${idx}: emitter set to`, system.emitter, "activeCount=", system.getActiveCount());
-                            });
-
-                            setTimeout(() => {
-                                explosion.systems.forEach((system: ParticleSystem) => {
-                                    system.stop();
-                                });
-                                RockFactory.returnExplosionToPool(explosion);
-                                point.dispose();
-                            }, 2000);
-                        }
+                        // Play explosion using ExplosionManager
+                        RockFactory._explosionManager.playExplosion(position, scaling);
                     }
                 }
             });
