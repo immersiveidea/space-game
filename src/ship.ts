@@ -22,6 +22,7 @@ import {
 import type {AudioEngineV2, StaticSound} from "@babylonjs/core";
 import {DefaultScene} from "./defaultScene";
 import { GameConfig } from "./gameConfig";
+import { Sight } from "./sight";
 const MAX_FORWARD_THRUST = 40;
 
 const controllerComponents = [
@@ -69,6 +70,7 @@ export class Ship {
     private _controllerMode: ControllerStickMode;
     private _active = false;
     private _audioEngine: AudioEngineV2;
+    private _sight: Sight;
     constructor(mode: ControllerStickMode = ControllerStickMode.BEGINNER, audioEngine?: AudioEngineV2) {
         this._controllerMode = mode;
         this._audioEngine = audioEngine;
@@ -154,7 +156,7 @@ export class Ship {
         }
         this._ammoMaterial = new StandardMaterial("ammoMaterial", DefaultScene.MainScene);
         this._ammoMaterial.emissiveColor = new Color3(1, 1, 0);
-        this._ammoBaseMesh = MeshBuilder.CreateSphere("bullet", {diameter: .2}, DefaultScene.MainScene);
+        this._ammoBaseMesh = MeshBuilder.CreateIcoSphere("bullet", {radius: .1, subdivisions: 2}, DefaultScene.MainScene);
         this._ammoBaseMesh.material = this._ammoMaterial;
         this._ammoBaseMesh.setEnabled(false);
 
@@ -180,17 +182,17 @@ export class Ship {
 
         DefaultScene.MainScene.setActiveCameraByName("Flat Camera");
 
-        //const sightPos = this._forwardNode.position.scale(30);
-        const sight = MeshBuilder.CreateDisc("sight", {radius: 2 }, DefaultScene.MainScene);
+        // Create sight reticle
+        this._sight = new Sight(DefaultScene.MainScene, this._ship, {
+            position: new Vector3(0, 2, 125),
+            circleRadius: 2,
+            crosshairLength: 1.5,
+            lineThickness: 0.1,
+            color: Color3.Green(),
+            renderingGroupId: 3,
+            centerGap: 0.5
+        });
 
-        sight.parent = this._ship
-        //sight.rotation.x = -Math.PI / 2;
-        const signtMaterial = new StandardMaterial("sightMaterial", DefaultScene.MainScene);
-        signtMaterial.emissiveColor = Color3.Yellow();
-        signtMaterial.ambientColor = Color3.Yellow();
-        sight.material = signtMaterial;
-        sight.position = new Vector3(0, 2, 125);
-        sight.renderingGroupId = 3;
         let i = 0;
         DefaultScene.MainScene.onBeforeRenderObservable.add(() => {
             if (i++ % 10 == 0) {
@@ -526,6 +528,16 @@ export class Ship {
                 });
             }
         });
+    }
+
+    /**
+     * Dispose of ship resources
+     */
+    public dispose(): void {
+        if (this._sight) {
+            this._sight.dispose();
+        }
+        // Add other cleanup as needed
     }
 }
 function decrementValue(value: number, increment: number = .8): number {

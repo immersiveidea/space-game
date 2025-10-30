@@ -1,4 +1,4 @@
-import {Color3, Color4, PointsCloudSystem, Scene, Vector3} from "@babylonjs/core";
+import {Color3, Color4, PointsCloudSystem, Scene, StandardMaterial, Vector3} from "@babylonjs/core";
 
 /**
  * Configuration options for background stars
@@ -95,11 +95,12 @@ export class BackgroundStars {
             const mesh = this.pcs.mesh;
             if (mesh) {
                 // Stars should not receive lighting
-                mesh.material.disableLighting = true;
-                mesh.material.emissiveColor = new Color3(1,1,1);
+                const mat = (mesh.material as StandardMaterial)
+                mat.disableLighting = true;
+                mat.emissiveColor = new Color3(1,1,1);
 
                 // Disable depth write so stars don't occlude other objects
-                mesh.material.disableDepthWrite = true;
+                mat.disableDepthWrite = true;
 
                 // Stars should be in the background
                 mesh.renderingGroupId = 0;

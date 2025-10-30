@@ -14,7 +14,7 @@ import {
 import type {AudioEngineV2} from "@babylonjs/core";
 import {Ship} from "./ship";
 
-import {RockFactory} from "./starfield";
+import {RockFactory} from "./rockFactory";
 import Level from "./level";
 import {Scoreboard} from "./scoreboard";
 import setLoadingMessage from "./setLoadingMessage";

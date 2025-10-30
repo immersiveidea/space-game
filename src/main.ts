@@ -19,7 +19,7 @@ import {Level1} from "./level1";
 import Demo from "./demo";
 import Level from "./level";
 import setLoadingMessage from "./setLoadingMessage";
-import {RockFactory} from "./starfield";
+import {RockFactory} from "./rockFactory";
 import {ControllerDebug} from "./controllerDebug";
 import {router, showView} from "./router";
 import {populateLevelSelector, hasSavedLevels} from "./levelSelector";

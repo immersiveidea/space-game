@@ -119,7 +119,7 @@ src/
   level.ts             - Level interface
   level1.ts            - Main game level implementation
   ship.ts              - Player ship, controls, weapons
-  starfield.ts         - Rock factory and collision handling
+  rockFactory.ts         - Rock factory and collision handling
   scoreboard.ts        - In-cockpit HUD display
   createSun.ts         - Sun mesh generation
   createPlanets.ts     - Procedural planet generation

@@ -13,7 +13,7 @@ import {
     Vector3
 } from "@babylonjs/core";
 import { DefaultScene } from "./defaultScene";
-import { RockFactory } from "./starfield";
+import { RockFactory } from "./rockFactory";
 import { ScoreEvent } from "./scoreboard";
 import {
     LevelConfig,
