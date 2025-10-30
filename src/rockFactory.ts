@@ -45,9 +45,9 @@ export class RockFactory {
     public static async init() {
         // Initialize explosion manager
         this._explosionManager = new ExplosionManager(DefaultScene.MainScene, {
-            poolSize: 10,
-            duration: 2000,
-            renderingGroupId: 1
+            duration: 500,
+            explosionForce: 15.0,
+            frameRate: 60
         });
         await this._explosionManager.initialize();
 
@@ -117,24 +117,24 @@ export class RockFactory {
             body.setLinearDamping(0)
             body.setMotionType(PhysicsMotionType.DYNAMIC);
             body.setCollisionCallbackEnabled(true);
-            let scaling = Vector3.One();
             body.getCollisionObservable().add((eventData) => {
                 if (eventData.type == 'COLLISION_STARTED') {
                     if ( eventData.collidedAgainst.transformNode.id == 'ammo') {
                         score.notifyObservers({score: 1, remaining: -1, message: "Asteroid Destroyed"});
-                        const position = eventData.point;
 
+                        // Get the asteroid mesh before disposing
+                        const asteroidMesh = eventData.collider.transformNode as AbstractMesh;
+
+                        // Play explosion using ExplosionManager (clones mesh internally)
+                        RockFactory._explosionManager.playExplosion(asteroidMesh);
+
+                        // Now dispose the physics objects and original mesh
                         eventData.collider.shape.dispose();
                         eventData.collider.transformNode.dispose();
                         eventData.collider.dispose();
-                        scaling = eventData.collider.transformNode.scaling.clone();
-                        console.log(scaling);
                         eventData.collidedAgainst.shape.dispose();
                         eventData.collidedAgainst.transformNode.dispose();
                         eventData.collidedAgainst.dispose();
-
-                        // Play explosion using ExplosionManager
-                        RockFactory._explosionManager.playExplosion(position, scaling);
                     }
                 }
             });

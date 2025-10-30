@@ -1,37 +1,38 @@
 import {
-    MeshBuilder,
-    ParticleHelper,
-    ParticleSystem,
-    ParticleSystemSet,
+    AbstractMesh,
+    Animation, Color3,
+    Mesh, MeshBuilder,
+    MeshExploder,
     Scene,
-    Vector3
+    Vector3,
+    VertexData
 } from "@babylonjs/core";
+import {DefaultScene} from "./defaultScene";
 
 /**
  * Configuration for explosion effects
  */
 export interface ExplosionConfig {
-    /** Size of the explosion pool */
-    poolSize?: number;
     /** Duration of explosion in milliseconds */
     duration?: number;
-    /** Rendering group ID for particles */
-    renderingGroupId?: number;
+    /** Maximum explosion force (how far pieces spread) */
+    explosionForce?: number;
+    /** Frame rate for explosion animation */
+    frameRate?: number;
 }
 
 /**
- * Manages explosion particle effects with pooling for performance
+ * Manages mesh explosion effects using BabylonJS MeshExploder
  */
 export class ExplosionManager {
-    private explosionPool: ParticleSystemSet[] = [];
     private scene: Scene;
     private config: Required<ExplosionConfig>;
 
     // Default configuration
     private static readonly DEFAULT_CONFIG: Required<ExplosionConfig> = {
-        poolSize: 10,
-        duration: 2000,
-        renderingGroupId: 1
+        duration: 1000,
+        explosionForce: 5,
+        frameRate: 60
     };
 
     constructor(scene: Scene, config?: ExplosionConfig) {
@@ -40,108 +41,177 @@ export class ExplosionManager {
     }
 
     /**
-     * Initialize the explosion pool by pre-creating particle systems
+     * Initialize the explosion manager (no longer needed for MeshExploder, but kept for API compatibility)
      */
     public async initialize(): Promise<void> {
-        console.log(`Pre-creating ${this.config.poolSize} explosion particle systems...`);
+        console.log("ExplosionManager initialized with MeshExploder");
+    }
 
-        for (let i = 0; i < this.config.poolSize; i++) {
-            const set = await ParticleHelper.CreateAsync("explosion", this.scene);
-            set.systems.forEach((system) => {
-                system.renderingGroupId = this.config.renderingGroupId;
-            });
-            this.explosionPool.push(set);
+    /**
+     * Create sphere debris pieces for explosion
+     * MeshExploder requires an array of separate meshes
+     * @param mesh The mesh to explode (used for position/scale)
+     * @param pieces Number of pieces to create
+     * @returns Array of sphere mesh objects
+     */
+    private splitIntoSeparateMeshes(mesh: Mesh, pieces: number = 32): Mesh[] {
+        console.log(`Creating ${pieces} sphere debris pieces`);
+
+        const meshPieces: Mesh[] = [];
+        const basePosition = mesh.position.clone();
+        const baseScale = mesh.scaling.clone();
+
+        // Create material for debris
+        const material = mesh.material?.clone('debris-material');
+        if (material) {
+            //(material as any).emissiveColor = Color3.Yellow();
         }
 
-        console.log(`Created ${this.config.poolSize} explosion particle systems in pool`);
+        // Create sphere debris scattered around the original mesh position
+        const avgScale = (baseScale.x + baseScale.y + baseScale.z) / 3;
+        const debrisSize = avgScale * 0.3; // Size relative to asteroid
+
+        for (let i = 0; i < pieces; i++) {
+            // Create a small sphere for debris
+            const sphere = MeshBuilder.CreateIcoSphere(
+                `${mesh.name}_debris_${i}`,
+                {
+                 radius: debrisSize,
+                    subdivisions:  2
+                }, DefaultScene.MainScene
+            );
+
+            // Position spheres in a small cluster around the original position
+            const offsetRadius = avgScale * 0.5;
+            const angle1 = (i / pieces) * Math.PI * 2;
+            const angle2 = Math.random() * Math.PI;
+
+            sphere.position = new Vector3(
+                basePosition.x + Math.sin(angle2) * Math.cos(angle1) * offsetRadius,
+                basePosition.y + Math.sin(angle2) * Math.sin(angle1) * offsetRadius,
+                basePosition.z + Math.cos(angle2) * offsetRadius
+            );
+
+            sphere.material = material;
+            sphere.isVisible = true;
+            sphere.setEnabled(true);
+
+            meshPieces.push(sphere);
+        }
+
+        console.log(`Created ${meshPieces.length} sphere debris pieces`);
+        return meshPieces;
     }
 
     /**
-     * Get an explosion from the pool
+     * Explode a mesh by breaking it into pieces and animating them outward
+     * @param mesh The mesh to explode (will be cloned internally)
      */
-    private getExplosionFromPool(): ParticleSystemSet | null {
-        return this.explosionPool.pop() || null;
-    }
-
-    /**
-     * Return an explosion to the pool after use
-     */
-    private returnExplosionToPool(explosion: ParticleSystemSet): void {
-        explosion.dispose();
-        ParticleHelper.CreateAsync("explosion", this.scene).then((set) => {
-            set.systems.forEach((system) => {
-                system.renderingGroupId = this.config.renderingGroupId;
-            });
-            this.explosionPool.push(set);
-        });
-    }
-
-    /**
-     * Play an explosion at the specified position with optional scaling
-     */
-    public playExplosion(position: Vector3, scaling: Vector3 = Vector3.One()): void {
-        const explosion = this.getExplosionFromPool();
-
-        if (!explosion) {
-            // Pool is empty, create explosion on the fly
-            console.log("Explosion pool empty, creating new explosion on demand");
-            ParticleHelper.CreateAsync("explosion", this.scene).then((set) => {
-                const point = MeshBuilder.CreateSphere("explosionPoint", {
-                    diameter: 0.1
-                }, this.scene);
-                point.position = position.clone();
-                point.isVisible = false;
-
-                set.start(point);
-
-                setTimeout(() => {
-                    set.dispose();
-                    point.dispose();
-                }, this.config.duration);
-            });
+    public playExplosion(mesh: AbstractMesh): void {
+        // Get the source mesh if this is an instanced mesh
+        let sourceMesh: Mesh;
+        if ((mesh as any).sourceMesh) {
+            sourceMesh = (mesh as any).sourceMesh as Mesh;
         } else {
-            // Use pooled explosion
-            const point = MeshBuilder.CreateSphere("explosionPoint", {
-                diameter: 10
-            }, this.scene);
-            point.position = position.clone();
-            point.isVisible = false;
-            point.scaling = scaling.multiplyByFloats(0.2, 0.3, 0.2);
+            sourceMesh = mesh as Mesh;
+        }
 
-            console.log("Using pooled explosion with", explosion.systems.length, "systems at", position);
+        // Clone the source mesh so we don't affect the original
+        const meshToExplode = sourceMesh.clone("exploding-" + mesh.name, null, true, false);
+        if (!meshToExplode) {
+            console.warn("Failed to clone mesh for explosion");
+            return;
+        }
 
-            // Set emitter and start each system individually
-            explosion.systems.forEach((system: ParticleSystem, idx: number) => {
-                system.emitter = point;
-                system.start();
-                console.log(`  System ${idx}: emitter set to`, system.emitter, "activeCount=", system.getActiveCount());
+        // Apply the instance's transformation to the cloned mesh
+        meshToExplode.position = mesh.getAbsolutePosition().clone();
+        meshToExplode.rotation = mesh.rotation.clone();
+        meshToExplode.scaling = mesh.scaling.clone();
+        meshToExplode.setEnabled(true);
+
+        // Force world matrix computation
+        meshToExplode.computeWorldMatrix(true);
+
+        // Check if mesh has proper geometry
+        if (!meshToExplode.getTotalVertices || meshToExplode.getTotalVertices() === 0) {
+            console.warn("Mesh has no vertices, cannot explode");
+            meshToExplode.dispose();
+            return;
+        }
+
+        console.log(`Exploding mesh: ${meshToExplode.name}, vertices: ${meshToExplode.getTotalVertices()}`);
+
+        // Split the mesh into separate mesh objects (MeshExploder requirement)
+        const meshPieces = this.splitIntoSeparateMeshes(meshToExplode, 12);
+
+        if (meshPieces.length === 0) {
+            console.warn("Failed to split mesh into pieces");
+            meshToExplode.dispose();
+            return;
+        }
+
+        // Original mesh is no longer needed - the pieces replace it
+        meshToExplode.dispose();
+
+        // Create the exploder with the array of separate meshes
+        // The second parameter is optional - it's the center mesh to explode from
+        // If not provided, MeshExploder will auto-calculate the center
+        const exploder = new MeshExploder(meshPieces);
+
+        console.log(`Starting explosion animation for ${meshPieces.length} mesh pieces`);
+
+        // Animate the explosion by calling explode() each frame with increasing values
+        const startTime = Date.now();
+        const animationDuration = this.config.duration;
+        const maxForce = this.config.explosionForce;
+
+        const animate = () => {
+            const elapsed = Date.now() - startTime;
+            const progress = Math.min(elapsed / animationDuration, 1.0);
+
+            // Calculate current explosion value (0 to maxForce)
+            const currentValue = progress * maxForce;
+            exploder.explode(currentValue);
+
+            // Animate debris size to zero (1.0 to 0.0)
+            const scale = 1.0 - progress;
+            meshPieces.forEach(piece => {
+                piece.scaling.set(scale, scale, scale);
             });
 
-            // Stop and return to pool after duration
-            setTimeout(() => {
-                explosion.systems.forEach((system: ParticleSystem) => {
-                    system.stop();
-                });
-                this.returnExplosionToPool(explosion);
-                point.dispose();
-            }, this.config.duration);
-        }
+            // Continue animation if not complete
+            if (progress < 1.0) {
+                requestAnimationFrame(animate);
+            } else {
+                // Animation complete - clean up
+                console.log(`Explosion animation complete, cleaning up`);
+                this.cleanupExplosion(meshPieces);
+            }
+        };
+
+        // Start the animation
+        animate();
     }
 
     /**
-     * Get the current number of available explosions in the pool
+     * Clean up explosion meshes
      */
-    public getPoolSize(): number {
-        return this.explosionPool.length;
+    private cleanupExplosion(meshPieces: Mesh[]): void {
+        // Dispose all the mesh pieces
+        meshPieces.forEach(mesh => {
+            if (mesh && !mesh.isDisposed()) {
+                mesh.dispose();
+            }
+        });
+
+        console.log(`Explosion cleaned up - disposed ${meshPieces.length} pieces`);
     }
 
     /**
-     * Dispose of all pooled explosions
+     * Dispose of the explosion manager
      */
     public dispose(): void {
-        this.explosionPool.forEach(explosion => {
-            explosion.dispose();
-        });
-        this.explosionPool = [];
+        // Nothing to dispose with MeshExploder approach
+        console.log("ExplosionManager disposed");
     }
 }
