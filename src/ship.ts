@@ -123,6 +123,14 @@ export class Ship {
 
     public set position(newPosition: Vector3) {
         const body = this._ship.physicsBody;
+
+        // Physics body might not exist yet if called before initialize() completes
+        if (!body) {
+            // Just set position directly on transform node
+            this._ship.position.copyFrom(newPosition);
+            return;
+        }
+
         body.disablePreStep = false;
         body.transformNode.position.copyFrom(newPosition);
         DefaultScene.MainScene.onAfterRenderObservable.addOnce(() => {
@@ -150,17 +158,9 @@ export class Ship {
         //const landingLight = new SpotLight("landingLight", new Vector3(0, 0, 0), new Vector3(0, -.5, .5), 1.5, .5, DefaultScene.MainScene);
        // landingLight.parent = this._ship;
        // landingLight.position.z = 5;
-        const agg = new PhysicsAggregate(this._ship, PhysicsShapeType.BOX, {
-            mass: 100,
-            extents: new Vector3(4, 4, 7.4),
-            center: new Vector3(0, 1, 1.8)
-        }, DefaultScene.MainScene);
 
-        agg.body.setMotionType(PhysicsMotionType.DYNAMIC);
-        agg.body.setLinearDamping(.1);
-        agg.body.setAngularDamping(.2);
-        agg.body.setAngularVelocity(new Vector3(0, 0, 0));
-        agg.body.setCollisionCallbackEnabled(true);
+        // Physics will be set up after mesh loads in initialize()
+
         this.setupKeyboard();
         this.setupMouse();
         this._controllerObservable.add(this.controllerCallback);
@@ -201,6 +201,40 @@ export class Ship {
         shipMesh.id = "shipMesh";
         shipMesh.name = "shipMesh";
         shipMesh.parent = this._ship;
+
+        // Create physics aggregate based on the loaded mesh
+        // Find the actual geometry mesh (usually meshes[1] or a child)
+        //const geometryMesh = importMesh.meshes.find(m => m instanceof Mesh && m.getTotalVertices() > 0) as Mesh;
+        const geo = shipMesh.getChildMeshes()[0]
+        if (geo) {
+
+
+            // Create physics aggregate on the ship TransformNode using the mesh shape
+            const agg = new PhysicsAggregate(this._ship, PhysicsShapeType.CONVEX_HULL, {
+                mass: 100,
+                mesh: (geo as Mesh)  // Use the actual ship geometry
+            }, DefaultScene.MainScene);
+
+            agg.body.setMotionType(PhysicsMotionType.DYNAMIC);
+            agg.body.setLinearDamping(.1);
+            agg.body.setAngularDamping(.2);
+            agg.body.setAngularVelocity(new Vector3(0, 0, 0));
+            agg.body.setCollisionCallbackEnabled(true);
+        } else {
+            console.warn("No geometry mesh found in ship1.glb, falling back to box shape");
+            // Fallback to box shape if mesh not found
+            const agg = new PhysicsAggregate(this._ship, PhysicsShapeType.BOX, {
+                mass: 100,
+                extents: new Vector3(4, 4, 7.4),
+                center: new Vector3(0, 1, 1.8)
+            }, DefaultScene.MainScene);
+
+            agg.body.setMotionType(PhysicsMotionType.DYNAMIC);
+            agg.body.setLinearDamping(.1);
+            agg.body.setAngularDamping(.2);
+            agg.body.setAngularVelocity(new Vector3(0, 0, 0));
+            agg.body.setCollisionCallbackEnabled(true);
+        }
         //shipMesh.rotation.y = Angle.FromDegrees(90).radians();
         //shipMesh.rotation.y = Math.PI;
         //shipMesh.position.y = 1;

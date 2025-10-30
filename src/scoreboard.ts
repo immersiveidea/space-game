@@ -21,11 +21,7 @@ export class Scoreboard {
     private _done = false;
     public readonly onScoreObservable: Observable<ScoreEvent> = new Observable<ScoreEvent>();
     constructor() {
-        DefaultScene.MainScene.onNewMeshAddedObservable.add((mesh) => {
-           if (mesh.id == 'RightUpperDisplay') {
-               this.initialize();
-           }
-        });
+        this.initialize();
     }
     public get done() {
         return this._done;
@@ -39,18 +35,20 @@ export class Scoreboard {
     private initialize() {
         const scene = DefaultScene.MainScene;
 
-        const parent = scene.getMeshById('RightUpperDisplay');
+        const parent = scene.getNodeById('ship');
+        console.log('Scoreboard parent:', parent);
+        console.log('Initializing scoreboard');
         const scoreboard = MeshBuilder.CreatePlane("scoreboard", {width: 1, height: 1}, scene);
         scoreboard.renderingGroupId = 3;
         const material = new StandardMaterial("scoreboard", scene);
 
         scoreboard.parent =parent;
-        scoreboard.position.x = -.76;
-        scoreboard.position.y = 4.19;
-        scoreboard.position.z = .53;
-        scoreboard.rotation.x = Angle.FromDegrees(104).radians();
-        scoreboard.rotation.z = Math.PI;
-        scoreboard.scaling = new Vector3(.3, .3, .3);
+
+        scoreboard.position.y = 1.05;
+        scoreboard.position.z = 2.1;
+        scoreboard.visibility = .5;
+
+        scoreboard.scaling = new Vector3(.4, .4, .4);
 
         const advancedTexture = AdvancedDynamicTexture.CreateForMesh(scoreboard, 512, 512);
         advancedTexture.background = "black";

@@ -138,9 +138,11 @@ export class LevelDeserializer {
         const sunPosition = this.arrayToVector3(this.config.sun.position);
 
         for (const planetConfig of this.config.planets) {
+            // Use fewer segments for better performance - planets are background objects
+            // 16 segments = ~256 vertices vs 32 segments = ~1024 vertices
             const planet = MeshBuilder.CreateSphere(planetConfig.name, {
                 diameter: planetConfig.diameter,
-                segments: 32
+                segments: 12  // Reduced from 32 for performance
             }, this.scene);
 
             const planetPosition = this.arrayToVector3(planetConfig.position);
@@ -156,7 +158,7 @@ export class LevelDeserializer {
             // Create lightmap with bright light pointing toward sun
             const lightmap = createSphereLightmap(
                 planetConfig.name + "-lightmap",
-                512,                              // texture size
+                256,                              // texture size
                 DefaultScene.MainScene,
                 toSun,                           // bright light from sun direction
                 1,                               // bright intensity
