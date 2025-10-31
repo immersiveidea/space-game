@@ -28,6 +28,7 @@ import {
 import { FireProceduralTexture } from "@babylonjs/procedural-textures";
 import {createSphereLightmap} from "./sphereLightmap";
 import { GameConfig } from "./gameConfig";
+import buildStarBase from "./starBase";
 import { MaterialFactory } from "./materialFactory";
 import debugLog from './debug';
 
@@ -60,7 +61,7 @@ export class LevelDeserializer {
         debugLog('Deserializing level:', this.config.difficulty);
 
         // Create entities
-        const startBase = this.createStartBase();
+        const startBase = await this.createStartBase();
         const sun = this.createSun();
         const planets = this.createPlanets();
         const asteroids = await this.createAsteroids(scoreObservable);
@@ -76,33 +77,14 @@ export class LevelDeserializer {
     /**
      * Create the start base from config
      */
-    private createStartBase(): AbstractMesh {
+    private async createStartBase(): Promise<AbstractMesh> {
         const config = this.config.startBase;
+        const position = this.arrayToVector3(config.position);
 
-        const mesh = MeshBuilder.CreateCylinder("startBase", {
-            diameter: config.diameter,
-            height: config.height,
-            tessellation: 72
-        }, this.scene);
+        // Call the buildStarBase function to load and configure the base
+        const baseMesh = await buildStarBase(position);
 
-        mesh.position = this.arrayToVector3(config.position);
-
-        const material = new StandardMaterial("startBaseMaterial", this.scene);
-        if (config.color) {
-            material.diffuseColor = new Color3(config.color[0], config.color[1], config.color[2]);
-        } else {
-            material.diffuseColor = new Color3(1, 1, 0); // Default yellow
-        }
-        mesh.material = material;
-
-        // Only create physics if enabled in config
-        const gameConfig = GameConfig.getInstance();
-        if (gameConfig.physicsEnabled) {
-            const agg = new PhysicsAggregate(mesh, PhysicsShapeType.CONVEX_HULL, { mass: 0 }, this.scene);
-            agg.body.setMotionType(PhysicsMotionType.ANIMATED);
-        }
-
-        return mesh;
+        return baseMesh;
     }
 
     /**
