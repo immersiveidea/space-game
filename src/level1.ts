@@ -38,7 +38,7 @@ export class Level1 implements Level {
         this._levelConfig = levelConfig;
         this._audioEngine = audioEngine;
         this._deserializer = new LevelDeserializer(levelConfig);
-        this._ship = new Ship(undefined, audioEngine);
+        this._ship = new Ship(audioEngine);
         this._scoreboard = new Scoreboard();
         const xr = DefaultScene.XR;
 

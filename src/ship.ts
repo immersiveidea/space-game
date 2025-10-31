@@ -1,16 +1,14 @@
 import {
-    AbstractMesh, Angle,
+    AbstractMesh,
     Color3,
-    DirectionalLight,
     FreeCamera,
-    GlowLayer, InstancedMesh, Mesh,
+    InstancedMesh, Mesh,
     MeshBuilder,
     Observable,
     PhysicsAggregate,
     PhysicsMotionType,
     PhysicsShapeType, PointLight,
     SceneLoader,
-    SpotLight,
     StandardMaterial,
     TransformNode,
     Vector2,
@@ -23,7 +21,10 @@ import type {AudioEngineV2, StaticSound} from "@babylonjs/core";
 import {DefaultScene} from "./defaultScene";
 import { GameConfig } from "./gameConfig";
 import { Sight } from "./sight";
-const MAX_FORWARD_THRUST = 40;
+const MAX_LINEAR_VELOCITY = 80;
+const MAX_ANGULAR_VELOCITY = 1.8;
+const LINEAR_FORCE_MULTIPLIER = 800;
+const ANGULAR_FORCE_MULTIPLIER = 20;
 
 const controllerComponents = [
     'a-button',
@@ -47,18 +48,11 @@ type ControllerEvent = {
 
 }
 
-enum ControllerStickMode {
-    BEGINNER,
-    ARCADE,
-    REALISTIC
-}
 
 export class Ship {
     private _ship: TransformNode;
     private _controllerObservable: Observable<ControllerEvent> = new Observable<ControllerEvent>();
     private _ammoMaterial: StandardMaterial;
-    private _forwardNode: TransformNode;
-    private _rotationNode: TransformNode;
     private _primaryThrustVectorSound: StaticSound;
     private _secondaryThrustVectorSound: StaticSound;
     private _shot: StaticSound;
@@ -67,18 +61,13 @@ export class Ship {
     private _shooting: boolean = false;
     private _camera: FreeCamera;
     private _ammoBaseMesh: AbstractMesh;
-    private _controllerMode: ControllerStickMode;
-    private _active = false;
     private _audioEngine: AudioEngineV2;
     private _sight: Sight;
-    constructor(mode: ControllerStickMode = ControllerStickMode.BEGINNER, audioEngine?: AudioEngineV2) {
-        this._controllerMode = mode;
+
+    constructor( audioEngine?: AudioEngineV2) {
         this._audioEngine = audioEngine;
         this.setup();
         this.initialize();
-    }
-    public set controllerMode(mode: ControllerStickMode) {
-        this._controllerMode = mode;
     }
 
     private async initializeSounds() {
@@ -171,10 +160,6 @@ export class Ship {
         this.setupKeyboard();
         this.setupMouse();
         this._controllerObservable.add(this.controllerCallback);
-        this._forwardNode = new TransformNode("forward", DefaultScene.MainScene);
-        this._rotationNode = new TransformNode("rotation", DefaultScene.MainScene);
-        this._forwardNode.parent = this._ship;
-        this._rotationNode.parent = this._ship;
         this._camera = new FreeCamera("Flat Camera",
             new Vector3(0, .5, 0),
             DefaultScene.MainScene);
@@ -193,17 +178,11 @@ export class Ship {
             centerGap: 0.5
         });
 
-        let i = 0;
-        DefaultScene.MainScene.onBeforeRenderObservable.add(() => {
-            if (i++ % 10 == 0) {
-                this.applyForce();
-            }
-        });
-
-        this._active = true;
     }
+
+
     private async initialize() {
-        const importMesh = await SceneLoader.ImportMeshAsync(null, "./", "ship1.glb", DefaultScene.MainScene);
+        const importMesh = await SceneLoader.ImportMeshAsync(null, "./", "ship2.glb", DefaultScene.MainScene);
         const shipMesh = importMesh.meshes[0];
         shipMesh.id = "shipMesh";
         shipMesh.name = "shipMesh";
@@ -224,9 +203,10 @@ export class Ship {
                     mesh: (geo as Mesh)  // Use the actual ship geometry
                 }, DefaultScene.MainScene);
 
+
                 agg.body.setMotionType(PhysicsMotionType.DYNAMIC);
-                agg.body.setLinearDamping(.1);
-                agg.body.setAngularDamping(.2);
+                agg.body.setLinearDamping(.2);
+                agg.body.setAngularDamping(.3);
                 agg.body.setAngularVelocity(new Vector3(0, 0, 0));
                 agg.body.setCollisionCallbackEnabled(true);
             } else {
@@ -249,12 +229,12 @@ export class Ship {
         //shipMesh.rotation.y = Math.PI;
         //shipMesh.position.y = 1;
         shipMesh.position.z = -1;
-        shipMesh.renderingGroupId = 3;
+        // shipMesh.renderingGroupId = 3;
         const light = new PointLight("ship.light", new Vector3(0, .5, .1), DefaultScene.MainScene);
         light.intensity = 4;
         light.includedOnlyMeshes = [shipMesh];
         for (const mesh of shipMesh.getChildMeshes()) {
-            mesh.renderingGroupId = 3;
+            // mesh.renderingGroupId = 3;
             if (mesh.material.id.indexOf('glass') === -1) {
                 light.includedOnlyMeshes.push(mesh);
             }
@@ -266,10 +246,6 @@ export class Ship {
 
     private _leftStickVector = Vector2.Zero().clone();
     private _rightStickVector = Vector2.Zero().clone();
-    private _forwardValue = 0;
-    private _yawValue = 0;
-    private _rollValue = 0;
-    private _pitchValue = 0;
     private _mouseDown = false;
     private _mousePos = new Vector2(0, 0);
 
@@ -277,73 +253,90 @@ export class Ship {
         return this._ship;
     }
 
-
-    private applyForce() {
+    private applyForces() {
         if (!this?._ship?.physicsBody) {
             return;
         }
         const body = this._ship.physicsBody;
-        //If we're moving over MAX_FORWARD_THRUST, we can't add any more thrust,
-        //just continue at MAX_FORWARD_THRUST
-        if (Math.abs(this._forwardValue) > MAX_FORWARD_THRUST) {
-            this._forwardValue = Math.sign(this._forwardValue) * MAX_FORWARD_THRUST;
-        }
 
-        //if forward thrust is under 40 we can apply more thrust
-        if (Math.abs(this._forwardValue) <= MAX_FORWARD_THRUST) {
-            if (Math.abs(this._leftStickVector.y) > .1) {
-                if (this._primaryThrustVectorSound && !this._primaryThrustPlaying) {
-                    this._primaryThrustVectorSound.play();
-                    this._primaryThrustPlaying = true;
-                }
-                if (this._primaryThrustVectorSound) {
-                    this._primaryThrustVectorSound.volume = Math.abs(this._leftStickVector.y);
-                }
-                this._forwardValue += this._leftStickVector.y * .8;
-            } else {
-                if (this._primaryThrustVectorSound && this._primaryThrustPlaying) {
-                    this._primaryThrustVectorSound.stop();
-                    this._primaryThrustPlaying = false;
-                }
-                this._forwardValue = decrementValue(this._forwardValue, .98);
+        // Get current velocities for velocity cap checks
+        const currentLinearVelocity = body.getLinearVelocity();
+        const currentAngularVelocity = body.getAngularVelocity();
+        const currentSpeed = currentLinearVelocity.length();
+
+        // Apply linear force from left stick Y (forward/backward)
+        if (Math.abs(this._leftStickVector.y) > .1) {
+            // Only apply force if we haven't reached max velocity
+            if (currentSpeed < MAX_LINEAR_VELOCITY) {
+                // Get local direction (Z-axis for forward/backward thrust)
+                const localDirection = new Vector3(0, 0, -this._leftStickVector.y);
+                // Transform to world space - TransformNode vectors are in local space!
+                const worldDirection = Vector3.TransformNormal(localDirection, this._ship.getWorldMatrix());
+                const force = worldDirection.scale(LINEAR_FORCE_MULTIPLIER);
+                body.applyForce(force, this._ship.physicsBody.transformNode.absolutePosition);
+
+            }
+
+            // Handle primary thrust sound
+            if (this._primaryThrustVectorSound && !this._primaryThrustPlaying) {
+                this._primaryThrustVectorSound.play();
+                this._primaryThrustPlaying = true;
+            }
+            if (this._primaryThrustVectorSound) {
+                this._primaryThrustVectorSound.volume = Math.abs(this._leftStickVector.y);
+            }
+        } else {
+            // Stop thrust sound when no input
+            if (this._primaryThrustVectorSound && this._primaryThrustPlaying) {
+                this._primaryThrustVectorSound.stop();
+                this._primaryThrustPlaying = false;
             }
         }
 
-        this._yawValue = adjustStickValue(this._leftStickVector.x, this._yawValue);
-        this._rollValue = adjustStickValue(this._rightStickVector.x, this._rollValue);
-        this._pitchValue = adjustStickValue(this._rightStickVector.y, this._pitchValue);
-
-        this._forwardNode.position.z = this._forwardValue;
-        this._rotationNode.position.y = this._yawValue;
-        this._rotationNode.position.z = -this._rollValue;
-        this._rotationNode.position.x = -this._pitchValue;
-
-        const thrust2 = Math.abs(this._rightStickVector.y) +
+        // Calculate rotation magnitude for torque and sound
+        const rotationMagnitude = Math.abs(this._rightStickVector.y) +
             Math.abs(this._rightStickVector.x) +
             Math.abs(this._leftStickVector.x);
 
-        if (thrust2 > .01) {
+        // Apply angular forces if any stick has significant rotation input
+        if (rotationMagnitude > .1) {
+            const currentAngularSpeed = currentAngularVelocity.length();
+
+            // Only apply torque if we haven't reached max angular velocity
+            if (currentAngularSpeed < MAX_ANGULAR_VELOCITY) {
+                const yaw = this._leftStickVector.x;
+                const pitch = -this._rightStickVector.y;
+                const roll = -this._rightStickVector.x;
+
+                // Create torque in local space, then transform to world space
+                const localTorque = new Vector3(pitch, yaw, roll).scale(ANGULAR_FORCE_MULTIPLIER);
+                const worldTorque = Vector3.TransformNormal(localTorque, this._ship.getWorldMatrix());
+
+                body.applyAngularImpulse(worldTorque);
+
+                // Debug visualization for angular forces
+            }
+
+            // Handle secondary thrust sound for rotation
             if (this._secondaryThrustVectorSound && !this._secondaryThrustPlaying) {
                 this._secondaryThrustVectorSound.play();
                 this._secondaryThrustPlaying = true;
             }
             if (this._secondaryThrustVectorSound) {
-                this._secondaryThrustVectorSound.volume = thrust2 * .4;
+                this._secondaryThrustVectorSound.volume = rotationMagnitude * .4;
             }
         } else {
+            // Stop rotation thrust sound when no input
             if (this._secondaryThrustVectorSound && this._secondaryThrustPlaying) {
                 this._secondaryThrustVectorSound.stop();
                 this._secondaryThrustPlaying = false;
             }
-
         }
-        body.setAngularVelocity(this._rotationNode.absolutePosition.subtract(this._ship.absolutePosition));
-        body.setLinearVelocity(this._forwardNode.absolutePosition.subtract(this._ship.absolutePosition).scale(-1));
     }
+
 
     private controllerCallback = (controllerEvent: ControllerEvent) => {
         // Log first few events to verify they're firing
-
 
         if (controllerEvent.type == 'thumbstick') {
             if (controllerEvent.hand == 'left') {
@@ -354,9 +347,8 @@ export class Ship {
             if (controllerEvent.hand == 'right') {
                 this._rightStickVector.x = controllerEvent.axisData.x;
                 this._rightStickVector.y = controllerEvent.axisData.y;
-
             }
-            this.applyForce();
+            this.applyForces();
         }
         if (controllerEvent.type == 'button') {
             if (controllerEvent.component.type == 'trigger') {
@@ -401,6 +393,7 @@ export class Ship {
             } else {
                 this._rightStickVector.y = Math.sign(yInc);
             }
+            this.applyForces();
 
         };
     }
@@ -443,6 +436,7 @@ export class Ship {
                     break;
 
             }
+            this.applyForces();
         };
     }
 
@@ -534,21 +528,7 @@ export class Ship {
         if (this._sight) {
             this._sight.dispose();
         }
-        // Add other cleanup as needed
-    }
-}
-function decrementValue(value: number, increment: number = .8): number {
-    if (Math.abs(value) < .01) {
-        return 0;
-    } else {
-        return value * increment;
-    }
-}
 
-function adjustStickValue(stickVector: number, thrustValue: number): number {
-    if (Math.abs(stickVector) > .03) {
-        return thrustValue + (Math.pow(stickVector, 3) * .1);
-    } else {
-        return decrementValue(thrustValue, .85);
+        // Add other cleanup as needed
     }
 }

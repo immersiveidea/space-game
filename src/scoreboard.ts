@@ -39,7 +39,7 @@ export class Scoreboard {
         console.log('Scoreboard parent:', parent);
         console.log('Initializing scoreboard');
         const scoreboard = MeshBuilder.CreatePlane("scoreboard", {width: 1, height: 1}, scene);
-        scoreboard.renderingGroupId = 3;
+        // scoreboard.renderingGroupId = 3;
         const material = new StandardMaterial("scoreboard", scene);
 
         scoreboard.parent =parent;

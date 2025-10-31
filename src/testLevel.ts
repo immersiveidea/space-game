@@ -157,7 +157,6 @@ export class TestLevel implements Level {
     public async initialize() {
         console.log('[TestLevel] initialize() called');
         console.log('[TestLevel] Scene info:', {
-            name: DefaultScene.MainScene.name,
             meshCount: DefaultScene.MainScene.meshes.length,
             lightCount: DefaultScene.MainScene.lights.length
         });

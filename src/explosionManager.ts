@@ -213,13 +213,13 @@ export class ExplosionManager {
                 maxForce: this.config.explosionForce
             });
 
-            // Animate the explosion by calling explode() each frame with increasing values
+            // Animate the explosion using Babylon's render loop instead of requestAnimationFrame
             const startTime = Date.now();
             const animationDuration = this.config.duration;
             const maxForce = this.config.explosionForce;
             let frameCount = 0;
 
-            const animate = () => {
+            const animationObserver = this.scene.onBeforeRenderObservable.add(() => {
                 const elapsed = Date.now() - startTime;
                 const progress = Math.min(elapsed / animationDuration, 1.0);
 
@@ -254,18 +254,16 @@ export class ExplosionManager {
                 }
 
                 // Continue animation if not complete
-                if (progress < 1.0) {
-                    requestAnimationFrame(animate);
-                } else {
-                    // Animation complete - clean up
+                if (progress >= 1.0) {
+                    // Animation complete - remove observer and clean up
                     console.log(`[ExplosionManager] Animation complete after ${frameCount} frames, cleaning up`);
+                    this.scene.onBeforeRenderObservable.remove(animationObserver);
                     this.cleanupExplosion(meshPieces);
                 }
-            };
+            });
 
-            // Start the animation
+            // Log that animation loop is registered
             console.log('[ExplosionManager] Starting animation loop...');
-            animate();
         } catch (error) {
             console.error('[ExplosionManager] ERROR creating MeshExploder:', error);
             // Clean up pieces if exploder failed

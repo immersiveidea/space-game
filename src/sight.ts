@@ -79,7 +79,7 @@ export class Sight {
         }, this.scene);
         this.circle.parent = this.reticleGroup;
         this.circle.material = material;
-        this.circle.renderingGroupId = this.config.renderingGroupId;
+        // this.circle.renderingGroupId = this.config.renderingGroupId;
 
         // Create crosshair lines (4 lines extending from center gap)
         this.createCrosshairLines(material);
@@ -102,7 +102,7 @@ export class Sight {
         topLine.parent = this.reticleGroup;
         topLine.position.y = gap + length / 2;
         topLine.material = material;
-        topLine.renderingGroupId = this.config.renderingGroupId;
+        // topLine.renderingGroupId = this.config.renderingGroupId;
         this.crosshairLines.push(topLine);
 
         // Bottom line
@@ -114,7 +114,7 @@ export class Sight {
         bottomLine.parent = this.reticleGroup;
         bottomLine.position.y = -(gap + length / 2);
         bottomLine.material = material;
-        bottomLine.renderingGroupId = this.config.renderingGroupId;
+        // bottomLine.renderingGroupId = this.config.renderingGroupId;
         this.crosshairLines.push(bottomLine);
 
         // Left line
@@ -126,7 +126,7 @@ export class Sight {
         leftLine.parent = this.reticleGroup;
         leftLine.position.x = -(gap + length / 2);
         leftLine.material = material;
-        leftLine.renderingGroupId = this.config.renderingGroupId;
+        // leftLine.renderingGroupId = this.config.renderingGroupId;
         this.crosshairLines.push(leftLine);
 
         // Right line
@@ -138,7 +138,7 @@ export class Sight {
         rightLine.parent = this.reticleGroup;
         rightLine.position.x = gap + length / 2;
         rightLine.material = material;
-        rightLine.renderingGroupId = this.config.renderingGroupId;
+        // rightLine.renderingGroupId = this.config.renderingGroupId;
         this.crosshairLines.push(rightLine);
 
         // Center dot (optional, very small)
@@ -147,7 +147,7 @@ export class Sight {
         }, this.scene);
         centerDot.parent = this.reticleGroup;
         centerDot.material = material;
-        centerDot.renderingGroupId = this.config.renderingGroupId;
+        // centerDot.renderingGroupId = this.config.renderingGroupId;
         this.crosshairLines.push(centerDot);
     }
 

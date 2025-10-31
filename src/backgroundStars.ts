@@ -103,7 +103,7 @@ export class BackgroundStars {
                 mat.disableDepthWrite = true;
 
                 // Stars should be in the background
-                mesh.renderingGroupId = 0;
+                // mesh.renderingGroupId = 0;
 
                 // Make stars always render behind everything else
                 mesh.isPickable = false;
