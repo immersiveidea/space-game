@@ -28,6 +28,7 @@ import {router, showView} from "./router";
 import {hasSavedLevels, populateLevelSelector} from "./levelSelector";
 import {LevelConfig} from "./levelConfig";
 import {generateDefaultLevels} from "./levelEditor";
+import debugLog from './debug';
 
 // Set to true to run minimal controller debug test
 const DEBUG_CONTROLLERS = false;
@@ -53,7 +54,7 @@ export class Main {
         window.addEventListener('levelSelected', async (e: CustomEvent) => {
             const {levelName, config} = e.detail as {levelName: string, config: LevelConfig};
 
-            console.log(`Starting level: ${levelName}`);
+            debugLog(`Starting level: ${levelName}`);
 
             // Show loading UI again
             const mainDiv = document.querySelector('#mainDiv');
@@ -85,64 +86,64 @@ export class Main {
 
         // Listen for test level button click
         window.addEventListener('DOMContentLoaded', () => {
-            console.log('[Main] DOMContentLoaded fired, looking for test button...');
+            debugLog('[Main] DOMContentLoaded fired, looking for test button...');
             const testLevelBtn = document.querySelector('#testLevelBtn');
-            console.log('[Main] Test button found:', !!testLevelBtn);
+            debugLog('[Main] Test button found:', !!testLevelBtn);
 
             if (testLevelBtn) {
                 testLevelBtn.addEventListener('click', async () => {
-                    console.log('[Main] ========== TEST LEVEL BUTTON CLICKED ==========');
+                    debugLog('[Main] ========== TEST LEVEL BUTTON CLICKED ==========');
 
                     // Show loading UI
                     const mainDiv = document.querySelector('#mainDiv');
                     const levelSelect = document.querySelector('#levelSelect') as HTMLElement;
-                    console.log('[Main] mainDiv exists:', !!mainDiv);
-                    console.log('[Main] levelSelect exists:', !!levelSelect);
+                    debugLog('[Main] mainDiv exists:', !!mainDiv);
+                    debugLog('[Main] levelSelect exists:', !!levelSelect);
 
                     if (levelSelect) {
                         levelSelect.style.display = 'none';
-                        console.log('[Main] levelSelect hidden');
+                        debugLog('[Main] levelSelect hidden');
                     }
                     setLoadingMessage("Initializing Test Scene...");
 
                     // Unlock audio engine on user interaction
                     if (this._audioEngine) {
-                        console.log('[Main] Unlocking audio engine...');
+                        debugLog('[Main] Unlocking audio engine...');
                         await this._audioEngine.unlockAsync();
-                        console.log('[Main] Audio engine unlocked');
+                        debugLog('[Main] Audio engine unlocked');
                     }
 
                     // Create test level
-                    console.log('[Main] Creating TestLevel...');
+                    debugLog('[Main] Creating TestLevel...');
                     this._currentLevel = new TestLevel(this._audioEngine);
-                    console.log('[Main] TestLevel created:', !!this._currentLevel);
+                    debugLog('[Main] TestLevel created:', !!this._currentLevel);
 
                     // Wait for level to be ready
-                    console.log('[Main] Registering ready observable...');
+                    debugLog('[Main] Registering ready observable...');
                     this._currentLevel.getReadyObservable().add(() => {
-                        console.log('[Main] ========== TEST LEVEL READY OBSERVABLE FIRED ==========');
+                        debugLog('[Main] ========== TEST LEVEL READY OBSERVABLE FIRED ==========');
                         setLoadingMessage("Test Scene Ready! Entering VR...");
-                        console.log('[Main] Setting timeout to enter VR...');
+                        debugLog('[Main] Setting timeout to enter VR...');
 
                         // Small delay to show message
                         setTimeout(() => {
-                            console.log('[Main] Timeout fired, removing mainDiv and calling play()');
+                            debugLog('[Main] Timeout fired, removing mainDiv and calling play()');
                             if (mainDiv) {
                                 mainDiv.remove();
-                                console.log('[Main] mainDiv removed');
+                                debugLog('[Main] mainDiv removed');
                             }
-                            console.log('[Main] About to call this.play()...');
+                            debugLog('[Main] About to call this.play()...');
                             this.play();
                         }, 500);
                     });
-                    console.log('[Main] Ready observable registered');
+                    debugLog('[Main] Ready observable registered');
 
                     // Now initialize the level (after observable is registered)
-                    console.log('[Main] Calling TestLevel.initialize()...');
+                    debugLog('[Main] Calling TestLevel.initialize()...');
                     await this._currentLevel.initialize();
-                    console.log('[Main] TestLevel.initialize() completed');
+                    debugLog('[Main] TestLevel.initialize() completed');
                 });
-                console.log('[Main] Click listener added to test button');
+                debugLog('[Main] Click listener added to test button');
             } else {
                 console.warn('[Main] Test level button not found in DOM');
             }
@@ -150,14 +151,14 @@ export class Main {
     }
     private _started = false;
     public async play() {
-        console.log('[Main] play() called');
-        console.log('[Main] Current level exists:', !!this._currentLevel);
+        debugLog('[Main] play() called');
+        debugLog('[Main] Current level exists:', !!this._currentLevel);
         this._gameState = GameState.PLAY;
 
         if (this._currentLevel) {
-            console.log('[Main] Calling level.play()...');
+            debugLog('[Main] Calling level.play()...');
             await this._currentLevel.play();
-            console.log('[Main] level.play() completed');
+            debugLog('[Main] level.play() completed');
         } else {
             console.error('[Main] ERROR: No current level to play!');
         }
@@ -177,7 +178,7 @@ export class Main {
             disableDefaultUI: true
 
         });
-        console.log(WebXRFeaturesManager.GetAvailableFeatures());
+        debugLog(WebXRFeaturesManager.GetAvailableFeatures());
         //DefaultScene.XR.baseExperience.featuresManager.enableFeature(WebXRFeatureName.LAYERS, "latest", {preferMultiviewOnInit: true});
 
 
@@ -201,10 +202,10 @@ export class Main {
 
         if (webGpu) {
             this._engine = new WebGPUEngine(canvas);
-            console.log("Webgpu enabled");
+            debugLog("Webgpu enabled");
             await (this._engine as WebGPUEngine).initAsync();
         } else {
-            console.log("Standard WebGL enabled");
+            debugLog("Standard WebGL enabled");
             this._engine = new Engine(canvas, true);
         }
 
@@ -281,7 +282,7 @@ export class Main {
 router.on('/', () => {
     // Check if there are saved levels
     if (!hasSavedLevels()) {
-        console.log('No saved levels found, redirecting to editor');
+        debugLog('No saved levels found, redirecting to editor');
         router.navigate('/editor');
         return;
     }
@@ -330,7 +331,7 @@ generateDefaultLevels();
 router.start();
 
 if (DEBUG_CONTROLLERS) {
-    console.log('🔍 DEBUG MODE: Running minimal controller test');
+    debugLog('🔍 DEBUG MODE: Running minimal controller test');
     // Hide the UI elements
     const mainDiv = document.querySelector('#mainDiv');
     if (mainDiv) {

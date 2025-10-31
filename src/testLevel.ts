@@ -9,6 +9,7 @@ import {
 } from "@babylonjs/core";
 import type { AudioEngineV2 } from "@babylonjs/core";
 import Level from "./level";
+import debugLog from './debug';
 
 /**
  * Minimal test level with just a box and a light for debugging
@@ -23,7 +24,7 @@ export class TestLevel implements Level {
 
     constructor(audioEngine: AudioEngineV2) {
         this._audioEngine = audioEngine;
-        console.log('[TestLevel] Constructor called');
+        debugLog('[TestLevel] Constructor called');
         // Don't call initialize here - let Main call it after registering the observable
     }
 
@@ -32,16 +33,16 @@ export class TestLevel implements Level {
     }
 
     public async play() {
-        console.log('[TestLevel] play() called - entering XR');
-        console.log('[TestLevel] XR available:', !!DefaultScene.XR);
-        console.log('[TestLevel] XR baseExperience:', !!DefaultScene.XR?.baseExperience);
+        debugLog('[TestLevel] play() called - entering XR');
+        debugLog('[TestLevel] XR available:', !!DefaultScene.XR);
+        debugLog('[TestLevel] XR baseExperience:', !!DefaultScene.XR?.baseExperience);
 
         try {
             // Enter XR mode
             const xr = await DefaultScene.XR.baseExperience.enterXRAsync('immersive-vr', 'local-floor');
-            console.log('[TestLevel] XR mode entered successfully');
-            console.log('[TestLevel] XR session:', xr);
-            console.log('[TestLevel] Camera position:', DefaultScene.XR.baseExperience.camera.position.toString());
+            debugLog('[TestLevel] XR mode entered successfully');
+            debugLog('[TestLevel] XR session:', xr);
+            debugLog('[TestLevel] Camera position:', DefaultScene.XR.baseExperience.camera.position.toString());
             this.startBoxCreation();
         } catch (error) {
             console.error('[TestLevel] ERROR entering XR:', error);
@@ -49,13 +50,13 @@ export class TestLevel implements Level {
     }
 
     public dispose() {
-        console.log('[TestLevel] dispose() called');
+        debugLog('[TestLevel] dispose() called');
 
         // Stop box creation timer
         if (this._boxCreationInterval) {
             clearInterval(this._boxCreationInterval);
             this._boxCreationInterval = null;
-            console.log('[TestLevel] Box creation timer stopped');
+            debugLog('[TestLevel] Box creation timer stopped');
         }
     }
 
@@ -82,7 +83,7 @@ export class TestLevel implements Level {
      * Start the box creation timer that doubles the number of boxes each iteration
      */
     private startBoxCreation(): void {
-        console.log('[TestLevel] Starting box creation timer...');
+        debugLog('[TestLevel] Starting box creation timer...');
 
         const createBatch = () => {
             const boxesToCreate = Math.min(
@@ -90,7 +91,7 @@ export class TestLevel implements Level {
                 1000 - this._totalBoxesCreated
             );
 
-            console.log(`[TestLevel] Creating ${boxesToCreate} boxes (total will be: ${this._totalBoxesCreated + boxesToCreate}/1000)`);
+            debugLog(`[TestLevel] Creating ${boxesToCreate} boxes (total will be: ${this._totalBoxesCreated + boxesToCreate}/1000)`);
 
             for (let i = 0; i < boxesToCreate; i++) {
                 // Random position in a 20x20x20 cube around origin
@@ -110,7 +111,7 @@ export class TestLevel implements Level {
                 this.createBox(position, color);
             }
 
-            console.log(`[TestLevel] Created ${boxesToCreate} boxes. Total: ${this._totalBoxesCreated}/1000`);
+            debugLog(`[TestLevel] Created ${boxesToCreate} boxes. Total: ${this._totalBoxesCreated}/1000`);
 
             // Log performance metrics
             const fps = DefaultScene.MainScene.getEngine().getFps();
@@ -124,7 +125,7 @@ export class TestLevel implements Level {
             }, 0);
             const triangleCount = Math.floor(totalIndices / 3);
 
-            console.log(`[TestLevel] Performance Metrics:`, {
+            debugLog(`[TestLevel] Performance Metrics:`, {
                 fps: fps.toFixed(2),
                 triangleCount: triangleCount,
                 totalIndices: totalIndices,
@@ -135,7 +136,7 @@ export class TestLevel implements Level {
 
             // Check if we've reached 1000 boxes
             if (this._totalBoxesCreated >= 1000) {
-                console.log('[TestLevel] Reached 1000 boxes, stopping timer');
+                debugLog('[TestLevel] Reached 1000 boxes, stopping timer');
                 if (this._boxCreationInterval) {
                     clearInterval(this._boxCreationInterval);
                     this._boxCreationInterval = null;
@@ -155,14 +156,14 @@ export class TestLevel implements Level {
     }
 
     public async initialize() {
-        console.log('[TestLevel] initialize() called');
-        console.log('[TestLevel] Scene info:', {
+        debugLog('[TestLevel] initialize() called');
+        debugLog('[TestLevel] Scene info:', {
             meshCount: DefaultScene.MainScene.meshes.length,
             lightCount: DefaultScene.MainScene.lights.length
         });
 
         if (this._initialized) {
-            console.log('[TestLevel] Already initialized, skipping');
+            debugLog('[TestLevel] Already initialized, skipping');
             return;
         }
 
@@ -173,7 +174,7 @@ export class TestLevel implements Level {
             DefaultScene.MainScene
         );
         light.intensity = 1.0;
-        console.log('[TestLevel] Created directional light:', {
+        debugLog('[TestLevel] Created directional light:', {
             name: light.name,
             direction: light.direction.toString(),
             intensity: light.intensity
@@ -192,7 +193,7 @@ export class TestLevel implements Level {
         material.diffuseColor = new Color3(1, 0, 0); // Red
         material.specularColor = new Color3(0.5, 0.5, 0.5);
         box.material = material;
-        console.log('[TestLevel] Created test box:', {
+        debugLog('[TestLevel] Created test box:', {
             name: box.name,
             position: box.position.toString(),
             size: 2,
@@ -210,20 +211,20 @@ export class TestLevel implements Level {
         const groundMaterial = new StandardMaterial("groundMaterial", DefaultScene.MainScene);
         groundMaterial.diffuseColor = new Color3(0.3, 0.3, 0.3); // Grey
         ground.material = groundMaterial;
-        console.log('[TestLevel] Created ground plane:', {
+        debugLog('[TestLevel] Created ground plane:', {
             name: ground.name,
             dimensions: '10x10',
             position: ground.position.toString()
         });
 
-        console.log('[TestLevel] Final scene state:', {
+        debugLog('[TestLevel] Final scene state:', {
             totalMeshes: DefaultScene.MainScene.meshes.length,
             totalLights: DefaultScene.MainScene.lights.length,
             meshNames: DefaultScene.MainScene.meshes.map(m => m.name)
         });
 
         this._initialized = true;
-        console.log('[TestLevel] Initialization complete - scene ready for XR');
+        debugLog('[TestLevel] Initialization complete - scene ready for XR');
 
         // Notify that initialization is complete
         this._onReadyObservable.notifyObservers(this);

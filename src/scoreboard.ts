@@ -1,11 +1,11 @@
 import {AdvancedDynamicTexture, Control, StackPanel, TextBlock} from "@babylonjs/gui";
 import {DefaultScene} from "./defaultScene";
 import {
-    Angle,
     MeshBuilder,
     Observable, StandardMaterial,
     Vector3,
 } from "@babylonjs/core";
+import debugLog from './debug';
 export type ScoreEvent = {
     score: number,
     message: string,
@@ -15,8 +15,8 @@ export type ScoreEvent = {
 export class Scoreboard {
     private _score: number = 0;
     private _remaining: number = 0;
-    private _timeRemaining: number = 61;
-    private _lastMessage: string = null;
+    private _startTime: number = Date.now();
+
     private _active = false;
     private _done = false;
     public readonly onScoreObservable: Observable<ScoreEvent> = new Observable<ScoreEvent>();
@@ -36,8 +36,8 @@ export class Scoreboard {
         const scene = DefaultScene.MainScene;
 
         const parent = scene.getNodeById('ship');
-        console.log('Scoreboard parent:', parent);
-        console.log('Initializing scoreboard');
+        debugLog('Scoreboard parent:', parent);
+        debugLog('Initializing scoreboard');
         const scoreboard = MeshBuilder.CreatePlane("scoreboard", {width: 1, height: 1}, scene);
         // scoreboard.renderingGroupId = 3;
         const material = new StandardMaterial("scoreboard", scene);
@@ -76,35 +76,21 @@ export class Scoreboard {
         panel.addControl(fpsText);
         panel.addControl(hullText);
         panel.addControl(timeRemainingText);
-
         advancedTexture.addControl(panel);
-
         let i = 0;
-        let lastSecond: number = Date.now();
         const afterRender = scene.onAfterRenderObservable.add(() => {
             scoreText.text = `Score: ${this.calculateScore()}`;
             remainingText.text = `Remaining: ${this._remaining}`;
-            const now = Date.now();
-            if (this._active && (Math.floor(lastSecond / 1000) < Math.floor(now/1000))) {
-                this._timeRemaining--;
-                if (this._timeRemaining <= 0) {
-                    scene.onAfterRenderObservable.remove(afterRender);
-                }
-                lastSecond = now;
-                timeRemainingText.text = `Time: ${Math.floor(this._timeRemaining/60).toString().padStart(2,"0")}:${(this._timeRemaining%60).toString().padStart(2,"0")}`;
-            }
-            if (i++%60 == 0) {
+            const elapsed = Date.now() - this._startTime;
+            if (this._active && i++%40 == 0) {
+                timeRemainingText.text = `Time: ${Math.floor(elapsed/60).toString().padStart(2,"0")}:${(elapsed%60).toString().padStart(2,"0")}`;
                 fpsText.text = `FPS: ${Math.floor(scene.getEngine().getFps())}`;
             }
         });
 
         this.onScoreObservable.add((score: ScoreEvent) => {
-            this._score += score.score * this._timeRemaining;
+            this._score += score.score;
             this._remaining += score.remaining;
-            this._lastMessage = score.message;
-            if (score.timeRemaining) {
-                this._timeRemaining = score.timeRemaining;
-            }
         });
         this._active = true;
     }

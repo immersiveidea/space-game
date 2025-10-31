@@ -1,5 +1,6 @@
 import { LevelGenerator } from "./levelGenerator";
 import { LevelConfig, DifficultyConfig, Vector3Array, validateLevelConfig } from "./levelConfig";
+import debugLog from './debug';
 
 const STORAGE_KEY = 'space-game-levels';
 
@@ -74,7 +75,7 @@ class LevelEditor {
             if (stored) {
                 const levelsArray: [string, LevelConfig][] = JSON.parse(stored);
                 this.savedLevels = new Map(levelsArray);
-                console.log(`Loaded ${this.savedLevels.size} saved levels from localStorage`);
+                debugLog(`Loaded ${this.savedLevels.size} saved levels from localStorage`);
             }
         } catch (error) {
             console.error('Failed to load saved levels:', error);
@@ -101,7 +102,7 @@ class LevelEditor {
         const levelsArray = Array.from(this.savedLevels.entries());
         localStorage.setItem(STORAGE_KEY, JSON.stringify(levelsArray));
 
-        console.log(`Saved level: ${levelName}`);
+        debugLog(`Saved level: ${levelName}`);
         this.renderSavedLevelsList();
 
         // Show feedback
@@ -134,7 +135,7 @@ class LevelEditor {
             const levelsArray = Array.from(this.savedLevels.entries());
             localStorage.setItem(STORAGE_KEY, JSON.stringify(levelsArray));
             this.renderSavedLevelsList();
-            console.log(`Deleted level: ${levelName}`);
+            debugLog(`Deleted level: ${levelName}`);
         }
     }
 
@@ -195,7 +196,7 @@ class LevelEditor {
         // Display the JSON
         this.displayJSON();
 
-        console.log(`Loaded level: ${levelName}`);
+        debugLog(`Loaded level: ${levelName}`);
     }
 
     /**
@@ -509,7 +510,7 @@ class LevelEditor {
             // Update message
             messageDiv.innerHTML = '<div style="color: #4CAF50; padding: 10px; background: rgba(76, 175, 80, 0.1); border-radius: 5px;">✓ Edited JSON saved successfully!</div>';
 
-            console.log('Saved edited JSON');
+            debugLog('Saved edited JSON');
         } catch (error) {
             alert(`Failed to save: ${error.message}`);
         }
@@ -540,7 +541,7 @@ class LevelEditor {
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
 
-        console.log(`Downloaded: ${filename}`);
+        debugLog(`Downloaded: ${filename}`);
     }
 
     /**
@@ -609,11 +610,11 @@ export function getSavedLevel(name: string): LevelConfig | null {
 export function generateDefaultLevels(): void {
     const existing = getSavedLevels();
     if (existing.size > 0) {
-        console.log('Levels already exist in localStorage, skipping default generation');
+        debugLog('Levels already exist in localStorage, skipping default generation');
         return;
     }
 
-    console.log('No saved levels found, generating 4 default levels...');
+    debugLog('No saved levels found, generating 4 default levels...');
 
     const difficulties = ['recruit', 'pilot', 'captain', 'commander'];
     const levelsMap = new Map<string, LevelConfig>();
@@ -629,14 +630,14 @@ export function generateDefaultLevels(): void {
         };
 
         levelsMap.set(difficulty, config);
-        console.log(`Generated default level: ${difficulty}`);
+        debugLog(`Generated default level: ${difficulty}`);
     }
 
     // Save all levels to localStorage
     const levelsArray = Array.from(levelsMap.entries());
     localStorage.setItem(STORAGE_KEY, JSON.stringify(levelsArray));
 
-    console.log('Default levels saved to localStorage');
+    debugLog('Default levels saved to localStorage');
 }
 
 // Export for manual initialization if needed

@@ -7,6 +7,7 @@ import {
 } from "@babylonjs/core";
 import { DefaultScene } from "./defaultScene";
 import { getRandomPlanetTexture } from "./planetTextures";
+import debugLog from './debug';
 
 /**
  * Creates multiple planets with random textures, sizes, and positions
@@ -66,7 +67,7 @@ export function createPlanets(
         planets.push(planet);
     }
 
-    console.log(`Created ${count} planets with diameters ${minDiameter}-${maxDiameter} at distances ${minDistance}-${maxDistance}`);
+    debugLog(`Created ${count} planets with diameters ${minDiameter}-${maxDiameter} at distances ${minDistance}-${maxDistance}`);
     return planets;
 }
 
@@ -128,6 +129,6 @@ export function createPlanetsOrbital(
         planets.push(planet);
     }
 
-    console.log(`Created ${count} planets in orbital pattern with diameters ${minDiameter}-${maxDiameter} at distances ${minDistance}-${maxDistance}`);
+    debugLog(`Created ${count} planets in orbital pattern with diameters ${minDiameter}-${maxDiameter} at distances ${minDistance}-${maxDistance}`);
     return planets;
 }

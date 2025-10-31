@@ -1,5 +1,6 @@
 import { getSavedLevels } from "./levelEditor";
 import { LevelConfig } from "./levelConfig";
+import debugLog from './debug';
 
 const SELECTED_LEVEL_KEY = 'space-game-selected-level';
 
@@ -107,7 +108,7 @@ export function selectLevel(levelName: string): void {
     // Store selected level name
     sessionStorage.setItem(SELECTED_LEVEL_KEY, levelName);
 
-    console.log(`Selected level: ${levelName}`);
+    debugLog(`Selected level: ${levelName}`);
 
     // Trigger level start (the existing code will pick this up)
     const event = new CustomEvent('levelSelected', { detail: { levelName, config } });

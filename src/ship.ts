@@ -21,6 +21,7 @@ import type {AudioEngineV2, StaticSound} from "@babylonjs/core";
 import {DefaultScene} from "./defaultScene";
 import { GameConfig } from "./gameConfig";
 import { Sight } from "./sight";
+import debugLog from './debug';
 const MAX_LINEAR_VELOCITY = 80;
 const MAX_ANGULAR_VELOCITY = 1.8;
 const LINEAR_FORCE_MULTIPLIER = 800;
@@ -444,50 +445,50 @@ export class Ship {
     private _rightInputSource: WebXRInputSource;
 
     public addController(controller: WebXRInputSource) {
-        console.log('Ship.addController called for:', controller.inputSource.handedness);
+        debugLog('Ship.addController called for:', controller.inputSource.handedness);
 
         if (controller.inputSource.handedness == "left") {
-            console.log('Adding left controller');
+            debugLog('Adding left controller');
             this._leftInputSource = controller;
             this._leftInputSource.onMotionControllerInitObservable.add((motionController) => {
-                console.log('Left motion controller initialized:', motionController.handness);
+                debugLog('Left motion controller initialized:', motionController.handness);
                 this.mapMotionController(motionController);
             });
 
             // Check if motion controller is already initialized
             if (controller.motionController) {
-                console.log('Left motion controller already initialized, mapping now');
+                debugLog('Left motion controller already initialized, mapping now');
                 this.mapMotionController(controller.motionController);
             }
         }
         if (controller.inputSource.handedness == "right") {
-            console.log('Adding right controller');
+            debugLog('Adding right controller');
             this._rightInputSource = controller;
             this._rightInputSource.onMotionControllerInitObservable.add((motionController) => {
-                console.log('Right motion controller initialized:', motionController.handness);
+                debugLog('Right motion controller initialized:', motionController.handness);
                 this.mapMotionController(motionController);
             });
 
             // Check if motion controller is already initialized
             if (controller.motionController) {
-                console.log('Right motion controller already initialized, mapping now');
+                debugLog('Right motion controller already initialized, mapping now');
                 this.mapMotionController(controller.motionController);
             }
         }
     }
 
     private mapMotionController(controller: WebXRAbstractMotionController) {
-        console.log('Mapping motion controller:', controller.handness, 'Profile:', controller.profileId);
+        debugLog('Mapping motion controller:', controller.handness, 'Profile:', controller.profileId);
 
         controllerComponents.forEach((component) => {
             const comp = controller.components[component];
 
             if (!comp) {
-                console.log(`  Component ${component} not found on ${controller.handness} controller`);
+                debugLog(`  Component ${component} not found on ${controller.handness} controller`);
                 return;
             }
 
-            console.log(`  Found component ${component} on ${controller.handness} controller`);
+            debugLog(`  Found component ${component} on ${controller.handness} controller`);
             const observable = this._controllerObservable;
 
             if (comp && comp.onAxisValueChangedObservable) {

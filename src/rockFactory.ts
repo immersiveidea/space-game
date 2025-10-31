@@ -1,26 +1,21 @@
 import {
     AbstractMesh,
-    Color3, InstancedMesh,
+    InstancedMesh,
     Mesh,
-    MeshBuilder, NoiseProceduralTexture, Observable,
-    ParticleHelper,
-    ParticleSystem,
-    ParticleSystemSet,
+    Observable,
     PBRMaterial,
     PhysicsAggregate, PhysicsBody,
     PhysicsMotionType,
     PhysicsShapeType, PhysicsViewer,
-    SceneLoader, StandardMaterial,
+    SceneLoader,
     Vector3
 } from "@babylonjs/core";
 import {DefaultScene} from "./defaultScene";
 import {ScoreEvent} from "./scoreboard";
-import {Debug} from "@babylonjs/core/Legacy/legacy";
-import {createSphereLightmap} from "./sphereLightmap";
 import { GameConfig } from "./gameConfig";
 import { MaterialFactory } from "./materialFactory";
 import { ExplosionManager } from "./explosionManager";
-let _particleData: any = null;
+import debugLog from './debug';
 
 export class Rock {
     private _rockMesh: AbstractMesh;
@@ -56,18 +51,18 @@ export class RockFactory {
         }
     }
     private static async loadMesh() {
-        console.log('loading mesh');
+        debugLog('loading mesh');
         const importMesh = await SceneLoader.ImportMeshAsync(null, "./", "asteroid3.glb", DefaultScene.MainScene);
         this._rockMesh = importMesh.meshes[1].clone("asteroid", null, false);
         this._rockMesh.setParent(null);
         this._rockMesh.setEnabled(false);
 
         //importMesh.meshes[1].dispose();
-        console.log(importMesh.meshes);
+        debugLog(importMesh.meshes);
         if (!this._rockMaterial) {
             // Clone the original material from GLB to preserve all textures
             this._originalMaterial = this._rockMesh.material.clone("asteroid-original") as PBRMaterial;
-            console.log('Cloned original material from GLB:', this._originalMaterial);
+            debugLog('Cloned original material from GLB:', this._originalMaterial);
 
             // Create material using GameConfig texture level
             const config = GameConfig.getInstance();
@@ -89,7 +84,7 @@ export class RockFactory {
                                    score: Observable<ScoreEvent>): Promise<Rock> {
 
         const rock = new InstancedMesh("asteroid-" +i, this._rockMesh as Mesh);
-        console.log(rock.id);
+        debugLog(rock.id);
         rock.scaling = size;
         rock.position = position;
         //rock.material = this._rockMaterial;
@@ -120,37 +115,37 @@ export class RockFactory {
             body.setCollisionCallbackEnabled(true);
             body.getCollisionObservable().add((eventData) => {
                 if (eventData.type == 'COLLISION_STARTED') {
-                    console.log('[RockFactory] Collision detected:', {
+                    debugLog('[RockFactory] Collision detected:', {
                         collidedWith: eventData.collidedAgainst.transformNode.id,
                         asteroidName: eventData.collider.transformNode.name
                     });
 
                     if ( eventData.collidedAgainst.transformNode.id == 'ammo') {
-                        console.log('[RockFactory] ASTEROID HIT! Triggering explosion...');
+                        debugLog('[RockFactory] ASTEROID HIT! Triggering explosion...');
                         score.notifyObservers({score: 1, remaining: -1, message: "Asteroid Destroyed"});
 
                         // Get the asteroid mesh before disposing
                         const asteroidMesh = eventData.collider.transformNode as AbstractMesh;
-                        console.log('[RockFactory] Asteroid mesh to explode:', {
+                        debugLog('[RockFactory] Asteroid mesh to explode:', {
                             name: asteroidMesh.name,
                             id: asteroidMesh.id,
                             position: asteroidMesh.position.toString()
                         });
 
                         // Play explosion using ExplosionManager (clones mesh internally)
-                        console.log('[RockFactory] Calling ExplosionManager.playExplosion()...');
+                        debugLog('[RockFactory] Calling ExplosionManager.playExplosion()...');
                         RockFactory._explosionManager.playExplosion(asteroidMesh);
-                        console.log('[RockFactory] Explosion call completed');
+                        debugLog('[RockFactory] Explosion call completed');
 
                         // Now dispose the physics objects and original mesh
-                        console.log('[RockFactory] Disposing physics objects and meshes...');
+                        debugLog('[RockFactory] Disposing physics objects and meshes...');
                         eventData.collider.shape.dispose();
                         eventData.collider.transformNode.dispose();
                         eventData.collider.dispose();
                         eventData.collidedAgainst.shape.dispose();
                         eventData.collidedAgainst.transformNode.dispose();
                         eventData.collidedAgainst.dispose();
-                        console.log('[RockFactory] Disposal complete');
+                        debugLog('[RockFactory] Disposal complete');
                     }
                 }
             });

@@ -21,6 +21,7 @@ import setLoadingMessage from "./setLoadingMessage";
 import {LevelConfig} from "./levelConfig";
 import {LevelDeserializer} from "./levelDeserializer";
 import {BackgroundStars} from "./backgroundStars";
+import debugLog from './debug';
 
 export class Level1 implements Level {
     private _ship: Ship;
@@ -42,15 +43,15 @@ export class Level1 implements Level {
         this._scoreboard = new Scoreboard();
         const xr = DefaultScene.XR;
 
-        console.log('Level1 constructor - Setting up XR observables');
-        console.log('XR input exists:', !!xr.input);
-        console.log('onControllerAddedObservable exists:', !!xr.input?.onControllerAddedObservable);
+        debugLog('Level1 constructor - Setting up XR observables');
+        debugLog('XR input exists:', !!xr.input);
+        debugLog('onControllerAddedObservable exists:', !!xr.input?.onControllerAddedObservable);
 
         xr.baseExperience.onInitialXRPoseSetObservable.add(() => {
             xr.baseExperience.camera.parent = this._ship.transformNode;
             xr.baseExperience.camera.position = new Vector3(0, 0, 0);
             const observer = xr.input.onControllerAddedObservable.add((controller) => {
-                console.log('🎮 onControllerAddedObservable FIRED for:', controller.inputSource.handedness);
+                debugLog('🎮 onControllerAddedObservable FIRED for:', controller.inputSource.handedness);
                 this._ship.addController(controller);
             });
         });
@@ -78,18 +79,18 @@ export class Level1 implements Level {
         // Enter XR mode
         const xr = await DefaultScene.XR.baseExperience.enterXRAsync('immersive-vr', 'local-floor');
         // Check for controllers that are already connected after entering XR
-        console.log('Checking for controllers after entering XR. Count:', DefaultScene.XR.input.controllers.length);
+        debugLog('Checking for controllers after entering XR. Count:', DefaultScene.XR.input.controllers.length);
         DefaultScene.XR.input.controllers.forEach((controller, index) => {
-            console.log(`Controller ${index} - handedness: ${controller.inputSource.handedness}`);
+            debugLog(`Controller ${index} - handedness: ${controller.inputSource.handedness}`);
             this._ship.addController(controller);
         });
 
         // Wait and check again after a delay (controllers might connect later)
-        console.log('Waiting 2 seconds to check for controllers again...');
+        debugLog('Waiting 2 seconds to check for controllers again...');
         setTimeout(() => {
-            console.log('After 2 second delay - controller count:', DefaultScene.XR.input.controllers.length);
+            debugLog('After 2 second delay - controller count:', DefaultScene.XR.input.controllers.length);
             DefaultScene.XR.input.controllers.forEach((controller, index) => {
-                console.log(`  Late controller ${index} - handedness: ${controller.inputSource.handedness}`);
+                debugLog(`  Late controller ${index} - handedness: ${controller.inputSource.handedness}`);
             });
         }, 2000);
     }
@@ -101,7 +102,7 @@ export class Level1 implements Level {
         }
     }
     public async initialize() {
-        console.log('Initializing level from config:', this._levelConfig.difficulty);
+        debugLog('Initializing level from config:', this._levelConfig.difficulty);
         if (this._initialized) {
             return;
         }
@@ -116,7 +117,7 @@ export class Level1 implements Level {
 
         // Initialize scoreboard with total asteroid count
         this._scoreboard.setRemainingCount(entities.asteroids.length);
-        console.log(`Initialized scoreboard with ${entities.asteroids.length} asteroids`);
+        debugLog(`Initialized scoreboard with ${entities.asteroids.length} asteroids`);
 
         // Position ship from config
         const shipConfig = this._deserializer.getShipConfig();

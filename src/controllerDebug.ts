@@ -7,6 +7,7 @@ import {
     WebXRDefaultExperience,
     Color3
 } from "@babylonjs/core";
+import debugLog from './debug';
 
 /**
  * Minimal standalone class to debug WebXR controller detection
@@ -17,7 +18,7 @@ export class ControllerDebug {
     private scene: Scene;
 
     constructor() {
-        console.log('🔍 ControllerDebug: Starting minimal test...');
+        debugLog('🔍 ControllerDebug: Starting minimal test...');
         this.init();
     }
 
@@ -26,11 +27,11 @@ export class ControllerDebug {
         const canvas = document.querySelector('#gameCanvas') as HTMLCanvasElement;
 
         // Create engine (no antialiasing for Quest compatibility)
-        console.log('🔍 Creating engine...');
+        debugLog('🔍 Creating engine...');
         this.engine = new Engine(canvas, false);
 
         // Create scene
-        console.log('🔍 Creating scene...');
+        debugLog('🔍 Creating scene...');
         this.scene = new Scene(this.engine);
         this.scene.clearColor = new Color3(0.1, 0.1, 0.2).toColor4();
 
@@ -50,24 +51,24 @@ export class ControllerDebug {
             disableHandTracking: true
         });
 
-        console.log('🔍 WebXR created successfully');
-        console.log('🔍 XR input exists:', !!xr.input);
-        console.log('🔍 XR input controllers:', xr.input.controllers.length);
+        debugLog('🔍 WebXR created successfully');
+        debugLog('🔍 XR input exists:', !!xr.input);
+        debugLog('🔍 XR input controllers:', xr.input.controllers.length);
 
         // Set up controller observable
-        console.log('🔍 Setting up onControllerAddedObservable...');
+        debugLog('🔍 Setting up onControllerAddedObservable...');
 
 
         xr.input.onControllerAddedObservable.add((controller) => {
-            console.log('✅ CONTROLLER ADDED! Handedness:', controller.inputSource.handedness);
-            console.log('  - Input source:', controller.inputSource);
-            console.log('  - Has motion controller:', !!controller.motionController);
+            debugLog('✅ CONTROLLER ADDED! Handedness:', controller.inputSource.handedness);
+            debugLog('  - Input source:', controller.inputSource);
+            debugLog('  - Has motion controller:', !!controller.motionController);
 
             // Wait for motion controller
             controller.onMotionControllerInitObservable.add((motionController) => {
-                console.log('✅ MOTION CONTROLLER INITIALIZED:', motionController.handness);
-                console.log('  - Profile:', motionController.profileId);
-                console.log('  - Components:', Object.keys(motionController.components));
+                debugLog('✅ MOTION CONTROLLER INITIALIZED:', motionController.handness);
+                debugLog('  - Profile:', motionController.profileId);
+                debugLog('  - Components:', Object.keys(motionController.components));
 
                 // Log when any component changes
                 Object.keys(motionController.components).forEach(componentId => {
@@ -75,13 +76,13 @@ export class ControllerDebug {
 
                     if (component.onAxisValueChangedObservable) {
                         component.onAxisValueChangedObservable.add((axes) => {
-                            console.log(`📍 ${motionController.handness} ${componentId} axes:`, axes);
+                            debugLog(`📍 ${motionController.handness} ${componentId} axes:`, axes);
                         });
                     }
 
                     if (component.onButtonStateChangedObservable) {
                         component.onButtonStateChangedObservable.add((state) => {
-                            console.log(`🔘 ${motionController.handness} ${componentId} button:`, {
+                            debugLog(`🔘 ${motionController.handness} ${componentId} button:`, {
                                 pressed: state.pressed,
                                 touched: state.touched,
                                 value: state.value
@@ -92,7 +93,7 @@ export class ControllerDebug {
             });
         });
 
-        console.log('🔍 Observable registered. Waiting for controllers...');
+        debugLog('🔍 Observable registered. Waiting for controllers...');
 
         // Render loop
         this.engine.runRenderLoop(() => {
@@ -122,7 +123,7 @@ export class ControllerDebug {
         `;
 
         button.onclick = async () => {
-            console.log('🔍 Button clicked - Entering VR mode...');
+            debugLog('🔍 Button clicked - Entering VR mode...');
             button.remove();
 
             try {
@@ -130,23 +131,23 @@ export class ControllerDebug {
                     requiredFeatures: ['local-floor'],
 
                 });
-                console.log(xr.baseExperience.featuresManager.getEnabledFeatures());
+                debugLog(xr.baseExperience.featuresManager.getEnabledFeatures());
                 //await xr.baseExperience.exitXRAsync();
                 //await xr.baseExperience.enterXRAsync('immersive-vr', 'local-floor');
-                console.log('🔍 ✅ Entered VR mode successfully');
-                console.log('🔍 Controllers after entering VR:', xr.input.controllers.length);
+                debugLog('🔍 ✅ Entered VR mode successfully');
+                debugLog('🔍 Controllers after entering VR:', xr.input.controllers.length);
 
                 // Check again after delays
                 setTimeout(() => {
-                    console.log('🔍 [+1s after VR] Controller count:', xr.input.controllers.length);
+                    debugLog('🔍 [+1s after VR] Controller count:', xr.input.controllers.length);
                 }, 1000);
 
                 setTimeout(() => {
-                    console.log('🔍 [+3s after VR] Controller count:', xr.input.controllers.length);
+                    debugLog('🔍 [+3s after VR] Controller count:', xr.input.controllers.length);
                 }, 3000);
 
                 setTimeout(() => {
-                    console.log('🔍 [+5s after VR] Controller count:', xr.input.controllers.length);
+                    debugLog('🔍 [+5s after VR] Controller count:', xr.input.controllers.length);
                 }, 5000);
             } catch (error) {
                 console.error('🔍 ❌ Failed to enter VR:', error);
@@ -154,6 +155,6 @@ export class ControllerDebug {
         };
 
         document.body.appendChild(button);
-        console.log('🔍 Click the button to enter VR mode');
+        debugLog('🔍 Click the button to enter VR mode');
     }
 }

@@ -11,6 +11,7 @@ export function initializeSettingsScreen(): void {
     const asteroidTextureSelect = document.getElementById('asteroidTextureLevel') as HTMLSelectElement;
     const sunTextureSelect = document.getElementById('sunTextureLevel') as HTMLSelectElement;
     const physicsEnabledCheckbox = document.getElementById('physicsEnabled') as HTMLInputElement;
+    const debugEnabledCheckbox = document.getElementById('debugEnabled') as HTMLInputElement;
 
     const saveBtn = document.getElementById('saveSettingsBtn');
     const resetBtn = document.getElementById('resetSettingsBtn');
@@ -42,6 +43,7 @@ export function initializeSettingsScreen(): void {
         if (asteroidTextureSelect) asteroidTextureSelect.value = config.asteroidTextureLevel;
         if (sunTextureSelect) sunTextureSelect.value = config.sunTextureLevel;
         if (physicsEnabledCheckbox) physicsEnabledCheckbox.checked = config.physicsEnabled;
+        if (debugEnabledCheckbox) debugEnabledCheckbox.checked = config.debug;
     }
 
     /**
@@ -52,6 +54,7 @@ export function initializeSettingsScreen(): void {
         config.asteroidTextureLevel = asteroidTextureSelect.value as TextureLevel;
         config.sunTextureLevel = sunTextureSelect.value as TextureLevel;
         config.physicsEnabled = physicsEnabledCheckbox.checked;
+        config.debug = debugEnabledCheckbox.checked;
         config.save();
     }
 

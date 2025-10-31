@@ -9,6 +9,7 @@ import {
     AsteroidConfig,
     Vector3Array
 } from "./levelConfig";
+import debugLog from './debug';
 
 /**
  * Serializes the current runtime state of a level to JSON configuration
@@ -263,7 +264,7 @@ export class LevelSerializer {
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
 
-        console.log(`Downloaded level state: ${a.download}`);
+        debugLog(`Downloaded level state: ${a.download}`);
     }
 
     /**

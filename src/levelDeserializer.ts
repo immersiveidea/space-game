@@ -29,6 +29,7 @@ import { FireProceduralTexture } from "@babylonjs/procedural-textures";
 import {createSphereLightmap} from "./sphereLightmap";
 import { GameConfig } from "./gameConfig";
 import { MaterialFactory } from "./materialFactory";
+import debugLog from './debug';
 
 /**
  * Deserializes a LevelConfig JSON object and creates all entities in the scene
@@ -56,7 +57,7 @@ export class LevelDeserializer {
         planets: AbstractMesh[];
         asteroids: AbstractMesh[];
     }> {
-        console.log('Deserializing level:', this.config.difficulty);
+        debugLog('Deserializing level:', this.config.difficulty);
 
         // Create entities
         const startBase = this.createStartBase();
@@ -174,7 +175,7 @@ export class LevelDeserializer {
             planets.push(planet);
         }
 
-        console.log(`Created ${planets.length} planets from config`);
+        debugLog(`Created ${planets.length} planets from config`);
         return planets;
     }
 
@@ -217,7 +218,7 @@ export class LevelDeserializer {
             }
         }
 
-        console.log(`Created ${asteroids.length} asteroids from config`);
+        debugLog(`Created ${asteroids.length} asteroids from config`);
         return asteroids;
     }
 

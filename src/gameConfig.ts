@@ -19,7 +19,7 @@ export class GameConfig {
     public planetTextureLevel: TextureLevel = TextureLevel.FULL_TEXTURE;
     public asteroidTextureLevel: TextureLevel = TextureLevel.FULL_TEXTURE;
     public sunTextureLevel: TextureLevel = TextureLevel.FULL_TEXTURE;
-
+    public debug: boolean = false;
     // Physics settings
     public physicsEnabled: boolean = true;
 
@@ -49,7 +49,8 @@ export class GameConfig {
             planetTextureLevel: this.planetTextureLevel,
             asteroidTextureLevel: this.asteroidTextureLevel,
             sunTextureLevel: this.sunTextureLevel,
-            physicsEnabled: this.physicsEnabled
+            physicsEnabled: this.physicsEnabled,
+            debug: this.debug
         };
         localStorage.setItem('game-config', JSON.stringify(config));
     }
@@ -66,6 +67,7 @@ export class GameConfig {
                 this.asteroidTextureLevel = config.asteroidTextureLevel ?? TextureLevel.FULL_TEXTURE;
                 this.sunTextureLevel = config.sunTextureLevel ?? TextureLevel.FULL_TEXTURE;
                 this.physicsEnabled = config.physicsEnabled ?? true;
+                this.debug = config.debug ?? false;
             } else {
                 this.save();
             }
@@ -82,6 +84,7 @@ export class GameConfig {
         this.asteroidTextureLevel = TextureLevel.FULL_TEXTURE;
         this.sunTextureLevel = TextureLevel.FULL_TEXTURE;
         this.physicsEnabled = true;
+        this.debug = false;
         this.save();
     }
 }
