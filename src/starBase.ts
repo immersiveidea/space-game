@@ -1,14 +1,12 @@
 import {
-    AbstractMesh,
+    AbstractMesh, LoadAssetContainerAsync, Mesh,
     PhysicsAggregate,
     PhysicsMotionType,
-    PhysicsShapeType,
-    SceneLoader,
+    PhysicsShapeType, Scene,
     Vector3
 } from "@babylonjs/core";
 import {DefaultScene} from "./defaultScene";
 import {GameConfig} from "./gameConfig";
-import {debug} from "openai/core";
 import debugLog from "./debug";
 
 /**
@@ -20,21 +18,33 @@ export default async function buildStarBase(position: Vector3): Promise<Abstract
     const scene = DefaultScene.MainScene;
 
     // Load the base model
-    const importMesh = await SceneLoader.ImportMeshAsync(null, "./", "base.glb", scene);
-    const baseMesh = importMesh.meshes[0].getChildMeshes()[0];
-    debugLog('Star base mesh loaded:', baseMesh);
-    baseMesh.id = "starBase";
-    baseMesh.name = "starBase";
-    baseMesh.position = position;
-    debugLog('Ship Bounds radius', baseMesh.getBoundingInfo().boundingSphere.radiusWorld);
-    // Create physics if enabled
+    const importMesh = await LoadAssetContainerAsync('/base.glb', DefaultScene.MainScene,
+        {
+            pluginOptions: {
+                gltf: {
+                    enabled: true,
+                }
+            }
+        });
+    importMesh.addAllToScene();
+    const starBase = Mesh.MergeMeshes(importMesh.rootNodes[0].getChildMeshes(false), true, false, null, false, true);
+    starBase.id = 'starBase';
+    starBase.name = 'starBase';
+    DefaultScene.MainScene.addMesh(starBase);
+    debugLog('imported base mesh', importMesh.meshes[0]);
+
+    starBase.position = position;
     const config = GameConfig.getInstance();
     if (config.physicsEnabled) {
-        const agg = new PhysicsAggregate(baseMesh, PhysicsShapeType.MESH, {
-            mass: 0
+        const agg = new PhysicsAggregate(starBase, PhysicsShapeType.MESH, {
+            mass: 10000
         }, scene);
-        agg.body.setMotionType(PhysicsMotionType.STATIC);
+        agg.body.setMotionType(PhysicsMotionType.ANIMATED);
+        agg.body.setCollisionCallbackEnabled(true);
+        agg.body.getCollisionObservable().add((collidedBody) => {
+            debugLog('collidedBody', collidedBody);
+        })
     }
-
-    return baseMesh;
+    importMesh.rootNodes[0].dispose();
+    return starBase;
 }

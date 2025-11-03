@@ -231,16 +231,16 @@ export class Ship {
         //shipMesh.position.y = 1;
         shipMesh.position.z = -1;
         // shipMesh.renderingGroupId = 3;
-        const light = new PointLight("ship.light", new Vector3(0, .5, .1), DefaultScene.MainScene);
-        light.intensity = 4;
-        light.includedOnlyMeshes = [shipMesh];
+        //const light = new PointLight("ship.light", new Vector3(0, .5, .1), DefaultScene.MainScene);
+        //light.intensity = 4;
+        /*light.includedOnlyMeshes = [shipMesh];
         for (const mesh of shipMesh.getChildMeshes()) {
             // mesh.renderingGroupId = 3;
             if (mesh.material.id.indexOf('glass') === -1) {
                 light.includedOnlyMeshes.push(mesh);
             }
         }
-        light.parent = this._ship;
+        light.parent = this._ship;*/
         //DefaultScene.MainScene.getMaterialById('glass_mat.002').alpha = .4;
     }
 

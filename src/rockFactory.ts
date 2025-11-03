@@ -52,7 +52,7 @@ export class RockFactory {
     }
     private static async loadMesh() {
         debugLog('loading mesh');
-        const importMesh = await SceneLoader.ImportMeshAsync(null, "./", "asteroid3.glb", DefaultScene.MainScene);
+        const importMesh = await SceneLoader.ImportMeshAsync(null, "./", "asteroid4.glb", DefaultScene.MainScene);
         this._rockMesh = importMesh.meshes[1].clone("asteroid", null, false);
         this._rockMesh.setParent(null);
         this._rockMesh.setEnabled(false);
@@ -62,16 +62,17 @@ export class RockFactory {
         if (!this._rockMaterial) {
             // Clone the original material from GLB to preserve all textures
             this._originalMaterial = this._rockMesh.material.clone("asteroid-original") as PBRMaterial;
+            this._rockMaterial = this._rockMesh.material.clone("asteroid-original") as PBRMaterial;
             debugLog('Cloned original material from GLB:', this._originalMaterial);
 
             // Create material using GameConfig texture level
-            const config = GameConfig.getInstance();
+            /*const config = GameConfig.getInstance();
             this._rockMaterial = MaterialFactory.createAsteroidMaterial(
                 'asteroid-material',
                 config.asteroidTextureLevel,
                 DefaultScene.MainScene,
                 this._originalMaterial
-            ) as PBRMaterial;
+            ) as PBRMaterial;*/
             this._rockMaterial.freeze();
 
             this._rockMesh.material = this._rockMaterial;
@@ -113,12 +114,13 @@ export class RockFactory {
             body.setLinearDamping(0)
             body.setMotionType(PhysicsMotionType.DYNAMIC);
             body.setCollisionCallbackEnabled(true);
+
             body.getCollisionObservable().add((eventData) => {
                 if (eventData.type == 'COLLISION_STARTED') {
-                    debugLog('[RockFactory] Collision detected:', {
+                    /*debugLog('[RockFactory] Collision detected:', {
                         collidedWith: eventData.collidedAgainst.transformNode.id,
                         asteroidName: eventData.collider.transformNode.name
-                    });
+                    });*/
 
                     if ( eventData.collidedAgainst.transformNode.id == 'ammo') {
                         debugLog('[RockFactory] ASTEROID HIT! Triggering explosion...');
@@ -147,8 +149,15 @@ export class RockFactory {
                         eventData.collidedAgainst.dispose();
                         debugLog('[RockFactory] Disposal complete');
                     }
+                } else {
+                    /*debugLog('[RockFactory] Collision ended between:', {
+                        collider: eventData.collider.transformNode.id,
+                        collidedWith: eventData.collidedAgainst.transformNode.id
+                    });*/
                 }
+
             });
+
             //body.setAngularVelocity(new Vector3(Math.random(), Math.random(), Math.random()));
             // body.setLinearVelocity(Vector3.Random(-10, 10));
         }

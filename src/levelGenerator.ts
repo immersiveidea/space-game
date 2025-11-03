@@ -214,29 +214,29 @@ export class LevelGenerator {
             case 'recruit':
                 return {
                     rockCount: 5,
-                    forceMultiplier: .5,
+                    forceMultiplier: .8,
                     rockSizeMin: 10,
                     rockSizeMax: 15,
-                    distanceMin: 80,
-                    distanceMax: 100
+                    distanceMin: 220,
+                    distanceMax: 250
                 };
             case 'pilot':
                 return {
                     rockCount: 10,
                     forceMultiplier: 1,
                     rockSizeMin: 8,
-                    rockSizeMax: 12,
-                    distanceMin: 80,
-                    distanceMax: 150
+                    rockSizeMax: 20,
+                    distanceMin: 225,
+                    distanceMax: 300
                 };
             case 'captain':
                 return {
                     rockCount: 20,
                     forceMultiplier: 1.2,
-                    rockSizeMin: 2,
-                    rockSizeMax: 7,
-                    distanceMin: 100,
-                    distanceMax: 250
+                    rockSizeMin: 5,
+                    rockSizeMax: 40,
+                    distanceMin: 230,
+                    distanceMax: 450
                 };
             case 'commander':
                 return {

@@ -1,6 +1,6 @@
 import {
     AbstractMesh,
-    Color3,
+    Color3, DirectionalLight,
     GlowLayer,
     MeshBuilder,
     Observable,
@@ -66,6 +66,10 @@ export class LevelDeserializer {
         const planets = this.createPlanets();
         const asteroids = await this.createAsteroids(scoreObservable);
 
+        const dir = new Vector3(-1,-2,-1)
+        const light = new DirectionalLight("dirLight", dir, DefaultScene.MainScene);
+        const light2 = new DirectionalLight("dirLight2", dir.negate(), DefaultScene.MainScene);
+        light2.intensity = .5;
         return {
             startBase,
             sun,

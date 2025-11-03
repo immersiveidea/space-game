@@ -4,7 +4,7 @@ import {
     CreateAudioEngineAsync,
     DirectionalLight,
     Engine,
-    HavokPlugin,
+    HavokPlugin, HemisphericLight,
     ParticleHelper,
     Scene,
     ScenePerformancePriority,
@@ -255,7 +255,12 @@ export class Main {
         const havok = await HavokPhysics();
         const havokPlugin = new HavokPlugin(true, havok);
         //DefaultScene.MainScene.ambientColor = new Color3(.1, .1, .1);
-        const light = new DirectionalLight("dirLight", new Vector3(-1, -2, -1), DefaultScene.MainScene);
+
+        //const light = new HemisphericLight("mainlight", new Vector3(-1, -1, 0), DefaultScene.MainScene);
+        //light.diffuse = new Color3(.4, .4, .3);
+        //light.groundColor = new Color3(.2, .2, .1);
+        //light.intensity = .5;
+        //light.specular = new Color3(0,0,0);
         DefaultScene.MainScene.enablePhysics(new Vector3(0, 0, 0), havokPlugin);
         DefaultScene.MainScene.getPhysicsEngine().setTimeStep(1/60);
         DefaultScene.MainScene.getPhysicsEngine().setSubTimeStep(5);

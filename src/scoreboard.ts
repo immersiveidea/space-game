@@ -82,8 +82,8 @@ export class Scoreboard {
             scoreText.text = `Score: ${this.calculateScore()}`;
             remainingText.text = `Remaining: ${this._remaining}`;
             const elapsed = Date.now() - this._startTime;
-            if (this._active && i++%40 == 0) {
-                timeRemainingText.text = `Time: ${Math.floor(elapsed/60).toString().padStart(2,"0")}:${(elapsed%60).toString().padStart(2,"0")}`;
+            if (this._active && i++%30 == 0) {
+                timeRemainingText.text = `Time: ${Math.floor(elapsed/60000).toString().padStart(2,"0")}:${(Math.floor(elapsed/1000)%60).toString().padStart(2,"0")}`;
                 fpsText.text = `FPS: ${Math.floor(scene.getEngine().getFps())}`;
             }
         });

@@ -1,20 +1,18 @@
 import {DefaultScene} from "./defaultScene";
+import type {AudioEngineV2} from "@babylonjs/core";
 import {
     AbstractMesh,
-    Color3, DistanceConstraint, Engine, InstancedMesh, LinesMesh, Mesh,
+    Color3,
+    DistanceConstraint,
     MeshBuilder,
     Observable,
-    ParticleHelper,
     PhysicsAggregate,
     PhysicsMotionType,
-    PhysicsShapeType, PointsCloudSystem,
-    StandardMaterial, TransformNode,
+    PhysicsShapeType,
+    StandardMaterial,
     Vector3
 } from "@babylonjs/core";
-import type {AudioEngineV2} from "@babylonjs/core";
 import {Ship} from "./ship";
-
-import {RockFactory} from "./rockFactory";
 import Level from "./level";
 import {Scoreboard} from "./scoreboard";
 import setLoadingMessage from "./setLoadingMessage";
@@ -55,12 +53,7 @@ export class Level1 implements Level {
                 this._ship.addController(controller);
             });
         });
-
-
-        //console.log('Controller observable registered, observer:', !!observer);
-
         this.initialize();
-
     }
 
     getReadyObservable(): Observable<Level> {
@@ -94,6 +87,7 @@ export class Level1 implements Level {
             });
         }, 2000);
     }
+
     public dispose() {
         this._startBase.dispose();
         this._endBase.dispose();
@@ -101,6 +95,7 @@ export class Level1 implements Level {
             this._backgroundStars.dispose();
         }
     }
+
     public async initialize() {
         debugLog('Initializing level from config:', this._levelConfig.difficulty);
         if (this._initialized) {
@@ -133,6 +128,7 @@ export class Level1 implements Level {
                     // Calculate distance from start base
                     const dist = Vector3.Distance(asteroidMesh.position, this._startBase.position);
                     const constraint = new DistanceConstraint(dist, DefaultScene.MainScene);
+                   // constraint.isCollisionsEnabled = true;
                     this._startBase.physicsBody.addConstraint(asteroidMesh.physicsBody, constraint);
                 }
             }
@@ -154,6 +150,7 @@ export class Level1 implements Level {
                 this._backgroundStars.followCamera(DefaultScene.XR.baseExperience.camera.position);
             }
         });
+
 
         this._initialized = true;
 
