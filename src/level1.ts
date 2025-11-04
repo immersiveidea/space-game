@@ -27,7 +27,6 @@ export class Level1 implements Level {
     private _initialized: boolean = false;
     private _startBase: AbstractMesh;
     private _endBase: AbstractMesh;
-    private _scoreboard: Scoreboard;
     private _levelConfig: LevelConfig;
     private _audioEngine: AudioEngineV2;
     private _deserializer: LevelDeserializer;
@@ -38,7 +37,7 @@ export class Level1 implements Level {
         this._audioEngine = audioEngine;
         this._deserializer = new LevelDeserializer(levelConfig);
         this._ship = new Ship(audioEngine);
-        this._scoreboard = new Scoreboard();
+
         const xr = DefaultScene.XR;
 
         debugLog('Level1 constructor - Setting up XR observables');
@@ -105,18 +104,18 @@ export class Level1 implements Level {
         setLoadingMessage("Loading level from configuration...");
 
         // Use deserializer to create all entities from config
-        const entities = await this._deserializer.deserialize(this._scoreboard.onScoreObservable);
+        const entities = await this._deserializer.deserialize(this._ship.scoreboard.onScoreObservable);
 
         this._startBase = entities.startBase;
         // sun and planets are already created by deserializer
 
         // Initialize scoreboard with total asteroid count
-        this._scoreboard.setRemainingCount(entities.asteroids.length);
+        this._ship.scoreboard.setRemainingCount(entities.asteroids.length);
         debugLog(`Initialized scoreboard with ${entities.asteroids.length} asteroids`);
 
         // Position ship from config
         const shipConfig = this._deserializer.getShipConfig();
-        this._ship.position = new Vector3(shipConfig.position[0], shipConfig.position[1], shipConfig.position[2]);
+        //this._ship.position = new Vector3(shipConfig.position[0], shipConfig.position[1], shipConfig.position[2]);
 
         // Add distance constraints to asteroids (if physics enabled)
         setLoadingMessage("Configuring physics constraints...");

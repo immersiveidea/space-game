@@ -78,8 +78,9 @@ export class Sight {
             tessellation: 64
         }, this.scene);
         this.circle.parent = this.reticleGroup;
+        this.circle.rotation.x = -Math.PI / 2;
         this.circle.material = material;
-        // this.circle.renderingGroupId = this.config.renderingGroupId;
+        this.circle.renderingGroupId = this.config.renderingGroupId;
 
         // Create crosshair lines (4 lines extending from center gap)
         this.createCrosshairLines(material);

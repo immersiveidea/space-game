@@ -1,6 +1,7 @@
 import {AdvancedDynamicTexture, Control, StackPanel, TextBlock} from "@babylonjs/gui";
 import {DefaultScene} from "./defaultScene";
 import {
+    AbstractMesh, Mesh,
     MeshBuilder,
     Observable, StandardMaterial,
     Vector3,
@@ -21,7 +22,7 @@ export class Scoreboard {
     private _done = false;
     public readonly onScoreObservable: Observable<ScoreEvent> = new Observable<ScoreEvent>();
     constructor() {
-        this.initialize();
+
     }
     public get done() {
         return this._done;
@@ -32,26 +33,40 @@ export class Scoreboard {
     public setRemainingCount(count: number) {
         this._remaining = count;
     }
-    private initialize() {
+    public initialize(baseMesh: Mesh) {
         const scene = DefaultScene.MainScene;
 
         const parent = scene.getNodeById('ship');
         debugLog('Scoreboard parent:', parent);
         debugLog('Initializing scoreboard');
-        const scoreboard = MeshBuilder.CreatePlane("scoreboard", {width: 1, height: 1}, scene);
+        let scoreboard = null;
+
+        if (baseMesh) {
+            scoreboard = baseMesh;
+
+            scoreboard.material.dispose();
+            //scoreboard.material = new StandardMaterial("scoreboard", scene);
+
+        } else {
+            scoreboard = MeshBuilder.CreatePlane("scoreboard", {width: 1, height: 1}, scene);
+            scoreboard.parent =parent;
+
+            scoreboard.position.y = 1.05;
+            scoreboard.position.z = 2.1;
+            scoreboard.visibility = .5;
+            scoreboard.scaling = new Vector3(.4, .4, .4);
+        }
+
         // scoreboard.renderingGroupId = 3;
-        const material = new StandardMaterial("scoreboard", scene);
 
-        scoreboard.parent =parent;
 
-        scoreboard.position.y = 1.05;
-        scoreboard.position.z = 2.1;
-        scoreboard.visibility = .5;
 
-        scoreboard.scaling = new Vector3(.4, .4, .4);
+
+
+
 
         const advancedTexture = AdvancedDynamicTexture.CreateForMesh(scoreboard, 512, 512);
-        advancedTexture.background = "black";
+        advancedTexture.background = "green";
         advancedTexture.hasAlpha = false;
         const scoreText = this.createText();
 
@@ -69,8 +84,8 @@ export class Scoreboard {
 
         const panel = new StackPanel();
         panel.isVertical = true;
-        panel.height = 1;
-        panel.isVertical = true;
+        //panel.height = .5;
+        //panel.isVertical = true;
         panel.addControl(scoreText);
         panel.addControl(remainingText);
         panel.addControl(fpsText);
@@ -92,6 +107,7 @@ export class Scoreboard {
             this._score += score.score;
             this._remaining += score.remaining;
         });
+
         this._active = true;
     }
     private createText(): TextBlock {

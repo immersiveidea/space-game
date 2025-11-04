@@ -22,9 +22,10 @@ import {DefaultScene} from "./defaultScene";
 import { GameConfig } from "./gameConfig";
 import { Sight } from "./sight";
 import debugLog from './debug';
-const MAX_LINEAR_VELOCITY = 80;
+import {Scoreboard} from "./scoreboard";
+const MAX_LINEAR_VELOCITY = 200;
 const MAX_ANGULAR_VELOCITY = 1.8;
-const LINEAR_FORCE_MULTIPLIER = 800;
+const LINEAR_FORCE_MULTIPLIER = 1200;
 const ANGULAR_FORCE_MULTIPLIER = 20;
 
 const controllerComponents = [
@@ -52,6 +53,7 @@ type ControllerEvent = {
 
 export class Ship {
     private _ship: TransformNode;
+    private _scoreboard: Scoreboard;
     private _controllerObservable: Observable<ControllerEvent> = new Observable<ControllerEvent>();
     private _ammoMaterial: StandardMaterial;
     private _primaryThrustVectorSound: StaticSound;
@@ -87,7 +89,9 @@ export class Ship {
             volume: 0.5
         });
     }
-
+    public get scoreboard(): Scoreboard {
+        return this._scoreboard;
+    }
     private shoot() {
         // Only allow shooting if physics is enabled
         const config = GameConfig.getInstance();
@@ -98,8 +102,9 @@ export class Ship {
         this._shot?.play();
         const ammo = new InstancedMesh("ammo", this._ammoBaseMesh as Mesh);
         ammo.parent = this._ship;
-        ammo.position.y = 2;
-        ammo.rotation.x = Math.PI / 2;
+        ammo.position.y = .5;
+        ammo.position.z = 7.1;
+        //ammo.rotation.x = Math.PI / 2;
         ammo.setParent(null);
         const ammoAggregate = new PhysicsAggregate(ammo, PhysicsShapeType.SPHERE, {
             mass: 1000,
@@ -110,7 +115,7 @@ export class Ship {
 
         ammoAggregate.body.setMotionType(PhysicsMotionType.DYNAMIC);
 
-        ammoAggregate.body.setLinearVelocity(this._ship.forward.scale(100000))
+        ammoAggregate.body.setLinearVelocity(this._ship.forward.scale(200000))
             //.add(this._ship.physicsBody.getLinearVelocity()));
 
         window.setTimeout(() => {
@@ -170,7 +175,7 @@ export class Ship {
 
         // Create sight reticle
         this._sight = new Sight(DefaultScene.MainScene, this._ship, {
-            position: new Vector3(0, 2, 125),
+            position: new Vector3(0, .5, 125),
             circleRadius: 2,
             crosshairLength: 1.5,
             lineThickness: 0.1,
@@ -183,11 +188,16 @@ export class Ship {
 
 
     private async initialize() {
+        this._scoreboard = new Scoreboard();
+
         const importMesh = await SceneLoader.ImportMeshAsync(null, "./", "ship2.glb", DefaultScene.MainScene);
+
         const shipMesh = importMesh.meshes[0];
         shipMesh.id = "shipMesh";
         shipMesh.name = "shipMesh";
+        debugLog(shipMesh.position);
         shipMesh.parent = this._ship;
+        debugLog(shipMesh.position);
 
         // Create physics aggregate based on the loaded mesh (if physics enabled)
         const config = GameConfig.getInstance();
@@ -242,6 +252,9 @@ export class Ship {
         }
         light.parent = this._ship;*/
         //DefaultScene.MainScene.getMaterialById('glass_mat.002').alpha = .4;
+        const screenMesh = DefaultScene.MainScene.getMaterialById('Screen')?.getBindedMeshes()[0];
+        this._scoreboard.initialize(screenMesh as Mesh);
+        //this._scoreboard.initialize(null);
     }
 
 
