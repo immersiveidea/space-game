@@ -7,7 +7,7 @@ import {
     Observable,
     PhysicsAggregate,
     PhysicsMotionType,
-    PhysicsShapeType, PointLight,
+    PhysicsShapeType,
     SceneLoader,
     StandardMaterial,
     TransformNode,
@@ -373,6 +373,16 @@ export class Ship {
                 if (controllerEvent.value < .1) {
                     this._shooting = false;
                 }
+            }
+            if (controllerEvent.component.type == 'button') {
+                if (controllerEvent.component.id == 'a-button') {
+                    DefaultScene.XR.baseExperience.camera.position.y = DefaultScene.XR.baseExperience.camera.position.y - .1;
+                }
+                if (controllerEvent.component.id == 'b-button') {
+                    DefaultScene.XR.baseExperience.camera.position.y = DefaultScene.XR.baseExperience.camera.position.y + .1;
+                }
+                console.log(controllerEvent);
+
             }
         }
     }

@@ -2,16 +2,14 @@ import {
     AudioEngineV2,
     Color3,
     CreateAudioEngineAsync,
-    DirectionalLight,
     Engine,
-    HavokPlugin, HemisphericLight,
+    HavokPlugin,
     ParticleHelper,
     Scene,
-    ScenePerformancePriority,
     Vector3,
     WebGPUEngine,
     WebXRDefaultExperience,
-    WebXRFeatureName, WebXRFeaturesManager
+    WebXRFeaturesManager
 } from "@babylonjs/core";
 import '@babylonjs/loaders';
 import HavokPhysics from "@babylonjs/havok";
@@ -216,7 +214,7 @@ export class Main {
         DefaultScene.DemoScene = new Scene(this._engine);
         DefaultScene.MainScene = new Scene(this._engine);
 
-        DefaultScene.MainScene.ambientColor = new Color3(0,0,0);
+        DefaultScene.MainScene.ambientColor = new Color3(.2,.2,.2);
         DefaultScene.MainScene.clearColor = new Color3(0, 0, 0).toColor4();
 
 

@@ -19,10 +19,6 @@ export class LevelGenerator {
 
     // Configurable properties (can be overridden by subclasses or set before generate())
     public shipPosition: Vector3Array = [0, 1, 0];
-    public startBasePosition: Vector3Array = [0, 0, 0];
-    public startBaseDiameter = 10;
-    public startBaseHeight = 1;
-    public startBaseColor: Vector3Array = [1, 1, 0]; // Yellow
 
     public sunPosition: Vector3Array = [0, 0, 400];
     public sunDiameter = 50;
@@ -52,7 +48,6 @@ export class LevelGenerator {
      */
     public generate(): LevelConfig {
         const ship = this.generateShip();
-        const startBase = this.generateStartBase();
         const sun = this.generateSun();
         const planets = this.generatePlanets();
         const asteroids = this.generateAsteroids();
@@ -66,7 +61,7 @@ export class LevelGenerator {
                 description: `Procedurally generated ${this._difficulty} level`
             },
             ship,
-            startBase,
+            // startBase is now optional and not generated
             sun,
             planets,
             asteroids,
@@ -80,15 +75,6 @@ export class LevelGenerator {
             rotation: [0, 0, 0],
             linearVelocity: [0, 0, 0],
             angularVelocity: [0, 0, 0]
-        };
-    }
-
-    private generateStartBase(): StartBaseConfig {
-        return {
-            position: [...this.startBasePosition],
-            diameter: this.startBaseDiameter,
-            height: this.startBaseHeight,
-            color: [...this.startBaseColor]
         };
     }
 

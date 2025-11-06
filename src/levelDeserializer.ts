@@ -1,15 +1,7 @@
 import {
     AbstractMesh,
-    Color3, DirectionalLight,
-    GlowLayer,
     MeshBuilder,
     Observable,
-    PhysicsAggregate,
-    PhysicsMotionType,
-    PhysicsShapeType,
-    PointLight,
-    StandardMaterial,
-    Texture,
     Vector3
 } from "@babylonjs/core";
 import { DefaultScene } from "./defaultScene";
@@ -18,19 +10,13 @@ import { ScoreEvent } from "./scoreboard";
 import {
     LevelConfig,
     ShipConfig,
-    StartBaseConfig,
-    SunConfig,
-    PlanetConfig,
-    AsteroidConfig,
     Vector3Array,
     validateLevelConfig
 } from "./levelConfig";
-import { FireProceduralTexture } from "@babylonjs/procedural-textures";
-import {createSphereLightmap} from "./sphereLightmap";
 import { GameConfig } from "./gameConfig";
-import buildStarBase from "./starBase";
 import { MaterialFactory } from "./materialFactory";
 import debugLog from './debug';
+import StarBase from "./starBase";
 
 /**
  * Deserializes a LevelConfig JSON object and creates all entities in the scene
@@ -53,7 +39,7 @@ export class LevelDeserializer {
      * Create all entities from the configuration
      */
     public async deserialize(scoreObservable: Observable<ScoreEvent>): Promise<{
-        startBase: AbstractMesh;
+        startBase: AbstractMesh | null;
         sun: AbstractMesh;
         planets: AbstractMesh[];
         asteroids: AbstractMesh[];
@@ -66,10 +52,13 @@ export class LevelDeserializer {
         const planets = this.createPlanets();
         const asteroids = await this.createAsteroids(scoreObservable);
 
+        /*
         const dir = new Vector3(-1,-2,-1)
+
         const light = new DirectionalLight("dirLight", dir, DefaultScene.MainScene);
         const light2 = new DirectionalLight("dirLight2", dir.negate(), DefaultScene.MainScene);
         light2.intensity = .5;
+        */
         return {
             startBase,
             sun,
@@ -82,13 +71,8 @@ export class LevelDeserializer {
      * Create the start base from config
      */
     private async createStartBase(): Promise<AbstractMesh> {
-        const config = this.config.startBase;
-        const position = this.arrayToVector3(config.position);
-
-        // Call the buildStarBase function to load and configure the base
-        const baseMesh = await buildStarBase(position);
-
-        return baseMesh;
+        const position = this?.config?.startBase?.position?this.arrayToVector3(this?.config?.startBase?.position):null;
+        return   await StarBase.buildStarBase(position);
     }
 
     /**
@@ -96,19 +80,11 @@ export class LevelDeserializer {
      */
     private createSun(): AbstractMesh {
         const config = this.config.sun;
-
-        // Create point light
-        //const light = new PointLight("light", this.arrayToVector3(config.position), this.scene);
-        //light.intensity = config.intensity || 1000000;
-
-        // Create sun sphere
         const sun = MeshBuilder.CreateSphere("sun", {
             diameter: config.diameter,
             segments: 32
         }, this.scene);
-
         sun.position = this.arrayToVector3(config.position);
-
         // Create material using GameConfig texture level
         const gameConfig = GameConfig.getInstance();
         const material = MaterialFactory.createSunMaterial(
@@ -181,20 +157,10 @@ export class LevelDeserializer {
                 i,
                 this.arrayToVector3(asteroidConfig.position),
                 this.arrayToVector3(asteroidConfig.scaling),
+                this.arrayToVector3(asteroidConfig.linearVelocity),
+                this.arrayToVector3(asteroidConfig.angularVelocity),
                 scoreObservable
             );
-
-            // Set velocities from config
-            if (rock.physicsBody) {
-                rock.physicsBody.setLinearVelocity(this.arrayToVector3(asteroidConfig.linearVelocity));
-
-                if (asteroidConfig.angularVelocity) {
-                    rock.physicsBody.setAngularVelocity(this.arrayToVector3(asteroidConfig.angularVelocity));
-                }
-
-                // Note: We don't set mass here as RockFactory already sets it to 10000
-                // If needed, could add: rock.physicsBody.setMassProperties({ mass: asteroidConfig.mass || 10000 });
-            }
 
             // Get the actual mesh from the Rock object
             // The Rock class wraps the mesh, need to access it via position getter

@@ -19,11 +19,12 @@ export interface ShipConfig {
 
 /**
  * Start base configuration (yellow cylinder where asteroids are constrained to)
+ * All fields optional to allow levels without start bases
  */
 export interface StartBaseConfig {
-    position: Vector3Array;
-    diameter: number;
-    height: number;
+    position?: Vector3Array;
+    diameter?: number;
+    height?: number;
     color?: Vector3Array; // RGB values 0-1
 }
 
@@ -85,7 +86,7 @@ export interface LevelConfig {
     };
 
     ship: ShipConfig;
-    startBase: StartBaseConfig;
+    startBase?: StartBaseConfig;
     sun: SunConfig;
     planets: PlanetConfig[];
     asteroids: AsteroidConfig[];
@@ -127,17 +128,15 @@ export function validateLevelConfig(config: any): ValidationResult {
         }
     }
 
-    // Check startBase
-    if (!config.startBase) {
-        errors.push('Missing startBase configuration');
-    } else {
-        if (!Array.isArray(config.startBase.position) || config.startBase.position.length !== 3) {
+    // Check startBase (optional)
+    if (config.startBase) {
+        if (config.startBase.position && (!Array.isArray(config.startBase.position) || config.startBase.position.length !== 3)) {
             errors.push('Invalid startBase.position - must be [x, y, z] array');
         }
-        if (typeof config.startBase.diameter !== 'number') {
+        if (config.startBase.diameter !== undefined && typeof config.startBase.diameter !== 'number') {
             errors.push('Invalid startBase.diameter - must be a number');
         }
-        if (typeof config.startBase.height !== 'number') {
+        if (config.startBase.height !== undefined && typeof config.startBase.height !== 'number') {
             errors.push('Invalid startBase.height - must be a number');
         }
     }

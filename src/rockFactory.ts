@@ -1,21 +1,21 @@
 import {
     AbstractMesh,
+    DistanceConstraint,
     InstancedMesh,
     Mesh,
     Observable,
-    PBRMaterial,
-    PhysicsAggregate, PhysicsBody,
+    PhysicsAggregate,
+    PhysicsBody,
     PhysicsMotionType,
-    PhysicsShapeType, PhysicsViewer,
-    SceneLoader,
+    PhysicsShapeType, TransformNode,
     Vector3
 } from "@babylonjs/core";
 import {DefaultScene} from "./defaultScene";
 import {ScoreEvent} from "./scoreboard";
-import { GameConfig } from "./gameConfig";
-import { MaterialFactory } from "./materialFactory";
-import { ExplosionManager } from "./explosionManager";
+import {GameConfig} from "./gameConfig";
+import {ExplosionManager} from "./explosionManager";
 import debugLog from './debug';
+import loadAsset from "./utils/loadAsset";
 
 export class Rock {
     private _rockMesh: AbstractMesh;
@@ -31,60 +31,39 @@ export class Rock {
 }
 
 export class RockFactory {
-    private static _rockMesh: AbstractMesh;
-    private static _rockMaterial: PBRMaterial;
-    private static _originalMaterial: PBRMaterial = null;
+    private static _asteroidMesh: AbstractMesh;
     private static _explosionManager: ExplosionManager;
-    private static _viewer: PhysicsViewer = null;
+    private static _orbitCenter: PhysicsAggregate;
 
     public static async init() {
         // Initialize explosion manager
+        const node = new TransformNode('orbitCenter', DefaultScene.MainScene);
+        node.position = Vector3.Zero();
+        this._orbitCenter = new PhysicsAggregate(node, PhysicsShapeType.SPHERE, {radius: .1, mass: 1000}, DefaultScene.MainScene );
+
         this._explosionManager = new ExplosionManager(DefaultScene.MainScene, {
-            duration: 500,
-            explosionForce: 15.0,
+            duration: 800,
+            explosionForce: 20.0,
             frameRate: 60
         });
         await this._explosionManager.initialize();
 
-        if (!this._rockMesh) {
+        if (!this._asteroidMesh) {
             await this.loadMesh();
         }
     }
     private static async loadMesh() {
         debugLog('loading mesh');
-        const importMesh = await SceneLoader.ImportMeshAsync(null, "./", "asteroid4.glb", DefaultScene.MainScene);
-        this._rockMesh = importMesh.meshes[1].clone("asteroid", null, false);
-        this._rockMesh.setParent(null);
-        this._rockMesh.setEnabled(false);
-
-        //importMesh.meshes[1].dispose();
-        debugLog(importMesh.meshes);
-        if (!this._rockMaterial) {
-            // Clone the original material from GLB to preserve all textures
-            this._originalMaterial = this._rockMesh.material.clone("asteroid-original") as PBRMaterial;
-            this._rockMaterial = this._rockMesh.material.clone("asteroid-original") as PBRMaterial;
-            debugLog('Cloned original material from GLB:', this._originalMaterial);
-
-            // Create material using GameConfig texture level
-            /*const config = GameConfig.getInstance();
-            this._rockMaterial = MaterialFactory.createAsteroidMaterial(
-                'asteroid-material',
-                config.asteroidTextureLevel,
-                DefaultScene.MainScene,
-                this._originalMaterial
-            ) as PBRMaterial;*/
-            this._rockMaterial.freeze();
-
-            this._rockMesh.material = this._rockMaterial;
-            importMesh.meshes[1].dispose(false, true);
-            importMesh.meshes[0].dispose();
-        }
+        this._asteroidMesh = (await  loadAsset("asteroid.glb")).meshes.get('Asteroid');
+        this._asteroidMesh.setParent(null);
+        this._asteroidMesh.setEnabled(false);
+        debugLog(this._asteroidMesh);
     }
 
     public static async createRock(i: number, position: Vector3, size: Vector3,
-                                   score: Observable<ScoreEvent>): Promise<Rock> {
+                                   linearVelocitry: Vector3, angularVelocity: Vector3, score: Observable<ScoreEvent>): Promise<Rock> {
 
-        const rock = new InstancedMesh("asteroid-" +i, this._rockMesh as Mesh);
+        const rock = new InstancedMesh("asteroid-" +i, this._asteroidMesh as Mesh);
         debugLog(rock.id);
         rock.scaling = size;
         rock.position = position;
@@ -105,23 +84,16 @@ export class RockFactory {
                 // Don't pass radius - let Babylon compute from scaled mesh bounds
                 }, DefaultScene.MainScene);
             const body = agg.body;
+            const constraint = new DistanceConstraint(Vector3.Distance(position, this._orbitCenter.body.transformNode.position), DefaultScene.MainScene);
+            body.addConstraint(this._orbitCenter.body, constraint);
 
-            if (!this._viewer) {
-               // this._viewer = new PhysicsViewer(DefaultScene.MainScene);
-            }
-
-            // this._viewer.showBody(body);
             body.setLinearDamping(0)
             body.setMotionType(PhysicsMotionType.DYNAMIC);
             body.setCollisionCallbackEnabled(true);
-
+            body.setLinearVelocity(linearVelocitry);
+            body.setAngularVelocity(angularVelocity);
             body.getCollisionObservable().add((eventData) => {
                 if (eventData.type == 'COLLISION_STARTED') {
-                    /*debugLog('[RockFactory] Collision detected:', {
-                        collidedWith: eventData.collidedAgainst.transformNode.id,
-                        asteroidName: eventData.collider.transformNode.name
-                    });*/
-
                     if ( eventData.collidedAgainst.transformNode.id == 'ammo') {
                         debugLog('[RockFactory] ASTEROID HIT! Triggering explosion...');
                         score.notifyObservers({score: 1, remaining: -1, message: "Asteroid Destroyed"});
@@ -149,17 +121,8 @@ export class RockFactory {
                         eventData.collidedAgainst.dispose();
                         debugLog('[RockFactory] Disposal complete');
                     }
-                } else {
-                    /*debugLog('[RockFactory] Collision ended between:', {
-                        collider: eventData.collider.transformNode.id,
-                        collidedWith: eventData.collidedAgainst.transformNode.id
-                    });*/
                 }
-
             });
-
-            //body.setAngularVelocity(new Vector3(Math.random(), Math.random(), Math.random()));
-            // body.setLinearVelocity(Vector3.Random(-10, 10));
         }
 
         return new Rock(rock);
