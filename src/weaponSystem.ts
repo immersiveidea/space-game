@@ -13,6 +13,7 @@ import {
     Vector3,
 } from "@babylonjs/core";
 import { GameConfig } from "./gameConfig";
+import { ShipStatus } from "./shipStatus";
 
 /**
  * Handles weapon firing and projectile lifecycle
@@ -21,9 +22,17 @@ export class WeaponSystem {
     private _ammoBaseMesh: AbstractMesh;
     private _ammoMaterial: StandardMaterial;
     private _scene: Scene;
+    private _shipStatus: ShipStatus | null = null;
 
     constructor(scene: Scene) {
         this._scene = scene;
+    }
+
+    /**
+     * Set the ship status instance for ammo tracking
+     */
+    public setShipStatus(shipStatus: ShipStatus): void {
+        this._shipStatus = shipStatus;
     }
 
     /**
@@ -57,6 +66,11 @@ export class WeaponSystem {
             return;
         }
 
+        // Check if we have ammo before firing
+        if (this._shipStatus && this._shipStatus.ammo <= 0) {
+            return;
+        }
+
         // Create projectile instance
         const ammo = new InstancedMesh("ammo", this._ammoBaseMesh as Mesh);
         ammo.parent = shipTransform;
@@ -81,6 +95,11 @@ export class WeaponSystem {
 
         // Set projectile velocity (already includes ship velocity)
         ammoAggregate.body.setLinearVelocity(velocityVector);
+
+        // Consume ammo
+        if (this._shipStatus) {
+            this._shipStatus.consumeAmmo(0.01);
+        }
 
         // Auto-dispose after 2 seconds
         window.setTimeout(() => {
