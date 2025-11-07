@@ -1,5 +1,5 @@
 import {
-    AbstractMesh,
+    AbstractMesh, Color3,
     MeshBuilder,
     Observable,
     PBRMaterial,
@@ -91,7 +91,10 @@ export class LevelDeserializer {
         // Create PBR sun material with fire texture
         const material = new PBRMaterial("sunMaterial", this.scene);
         material.emissiveTexture = new FireProceduralTexture("fire", 1024, this.scene);
-        material.emissiveColor.set(0.5, 0.5, 0.1);
+        material.albedoColor = Color3.Black();
+        material.emissiveColor = Color3.White();
+        material.disableLighting = true;
+        //material.emissiveColor.set(0.5, 0.5, 0.1);
         material.unlit = true;
         sun.material = material;
 
@@ -140,7 +143,7 @@ export class LevelDeserializer {
             material.useLightmapAsShadowmap = true;
             material.roughness = 0.8;
             material.metallic = 0;
-
+            material.unlit = true;
             planet.material = material;
 
             planets.push(planet);

@@ -63,6 +63,8 @@ export function createPlanets(
         const texture  = new Texture(getRandomPlanetTexture(), DefaultScene.MainScene);
         material.diffuseTexture = texture;
         material.ambientTexture = texture;
+        material.emissiveTexture = texture;
+
 
         planets.push(planet);
     }
