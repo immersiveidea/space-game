@@ -1,10 +1,5 @@
 import { PhysicsBody, TransformNode, Vector2, Vector3 } from "@babylonjs/core";
-
-// Physics constants
-const MAX_LINEAR_VELOCITY = 200;
-const MAX_ANGULAR_VELOCITY = 1.4;
-const LINEAR_FORCE_MULTIPLIER = 800;
-const ANGULAR_FORCE_MULTIPLIER = 15;
+import { GameConfig } from "./gameConfig";
 
 export interface InputState {
     leftStick: Vector2;
@@ -18,7 +13,7 @@ export interface ForceApplicationResult {
 
 /**
  * Handles physics force calculations and application for the ship
- * Pure calculation logic with no external dependencies
+ * Reads physics parameters from GameConfig for runtime tuning
  */
 export class ShipPhysics {
     /**
@@ -39,6 +34,9 @@ export class ShipPhysics {
 
         const { leftStick, rightStick } = inputState;
 
+        // Get physics config
+        const config = GameConfig.getInstance().shipPhysics;
+
         // Get current velocities for velocity cap checks
         const currentLinearVelocity = physicsBody.getLinearVelocity();
         const currentAngularVelocity = physicsBody.getAngularVelocity();
@@ -52,7 +50,7 @@ export class ShipPhysics {
             linearMagnitude = Math.abs(leftStick.y);
 
             // Only apply force if we haven't reached max velocity
-            if (currentSpeed < MAX_LINEAR_VELOCITY) {
+            if (currentSpeed < config.maxLinearVelocity) {
                 // Get local direction (Z-axis for forward/backward thrust)
                 const localDirection = new Vector3(0, 0, -leftStick.y);
                 // Transform to world space
@@ -60,7 +58,7 @@ export class ShipPhysics {
                     localDirection,
                     transformNode.getWorldMatrix()
                 );
-                const force = worldDirection.scale(LINEAR_FORCE_MULTIPLIER);
+                const force = worldDirection.scale(config.linearForceMultiplier);
 
                 // Calculate thrust point: center of mass + offset (0, 1, 0) in world space
                 const thrustPoint = Vector3.TransformCoordinates(
@@ -83,14 +81,14 @@ export class ShipPhysics {
             const currentAngularSpeed = currentAngularVelocity.length();
 
             // Only apply torque if we haven't reached max angular velocity
-            if (currentAngularSpeed < MAX_ANGULAR_VELOCITY) {
+            if (currentAngularSpeed < config.maxAngularVelocity) {
                 const yaw = -leftStick.x;
                 const pitch = rightStick.y;
                 const roll = rightStick.x;
 
                 // Create torque in local space, then transform to world space
                 const localTorque = new Vector3(pitch, yaw, roll).scale(
-                    ANGULAR_FORCE_MULTIPLIER
+                    config.angularForceMultiplier
                 );
                 const worldTorque = Vector3.TransformNormal(
                     localTorque,

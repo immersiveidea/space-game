@@ -9,6 +9,14 @@ export class GameConfig {
     // Physics settings
     public physicsEnabled: boolean = true;
 
+    // Ship physics tuning parameters
+    public shipPhysics = {
+        maxLinearVelocity: 200,
+        maxAngularVelocity: 1.4,
+        linearForceMultiplier: 800,
+        angularForceMultiplier: 15
+    };
+
     /**
      * Private constructor for singleton pattern
      */
@@ -33,7 +41,8 @@ export class GameConfig {
     public save(): void {
         const config = {
             physicsEnabled: this.physicsEnabled,
-            debug: this.debug
+            debug: this.debug,
+            shipPhysics: this.shipPhysics
         };
         localStorage.setItem('game-config', JSON.stringify(config));
     }
@@ -48,6 +57,16 @@ export class GameConfig {
                 const config = JSON.parse(stored);
                 this.physicsEnabled = config.physicsEnabled ?? true;
                 this.debug = config.debug ?? false;
+
+                // Load ship physics with fallback to defaults
+                if (config.shipPhysics) {
+                    this.shipPhysics = {
+                        maxLinearVelocity: config.shipPhysics.maxLinearVelocity ?? 200,
+                        maxAngularVelocity: config.shipPhysics.maxAngularVelocity ?? 1.4,
+                        linearForceMultiplier: config.shipPhysics.linearForceMultiplier ?? 800,
+                        angularForceMultiplier: config.shipPhysics.angularForceMultiplier ?? 15
+                    };
+                }
             } else {
                 this.save();
             }
@@ -62,6 +81,12 @@ export class GameConfig {
     public reset(): void {
         this.physicsEnabled = true;
         this.debug = false;
+        this.shipPhysics = {
+            maxLinearVelocity: 200,
+            maxAngularVelocity: 1.4,
+            linearForceMultiplier: 800,
+            angularForceMultiplier: 15
+        };
         this.save();
     }
 }

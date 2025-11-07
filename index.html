@@ -349,6 +349,46 @@
             </div>
           </div>
 
+          <!-- Ship Physics Settings -->
+          <div class="section">
+            <h2>🚀 Ship Physics</h2>
+            <p style="color: #aaa; font-size: 0.9em; margin-bottom: 20px;">
+              Advanced tuning parameters for ship movement and handling. Adjust these to customize how the ship responds to controls.
+            </p>
+
+            <div class="form-group">
+              <label for="maxLinearVelocity">Max Linear Velocity</label>
+              <input type="number" id="maxLinearVelocity" value="200" step="10" min="50" max="1000">
+              <div class="help-text">
+                Maximum forward/backward speed of the ship. Higher values allow faster movement.
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="maxAngularVelocity">Max Angular Velocity</label>
+              <input type="number" id="maxAngularVelocity" value="1.4" step="0.1" min="0.5" max="5.0">
+              <div class="help-text">
+                Maximum rotation speed of the ship. Higher values allow faster turning.
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="linearForceMultiplier">Linear Force Multiplier</label>
+              <input type="number" id="linearForceMultiplier" value="800" step="50" min="100" max="3000">
+              <div class="help-text">
+                Acceleration power for forward/backward thrust. Higher values = faster acceleration.
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="angularForceMultiplier">Angular Force Multiplier</label>
+              <input type="number" id="angularForceMultiplier" value="15" step="1" min="5" max="50">
+              <div class="help-text">
+                Torque power for rotation. Higher values = faster rotational acceleration.
+              </div>
+            </div>
+          </div>
+
           <!-- Info Section -->
           <div class="section">
             <h2>ℹ️ Quality Level Guide</h2>
