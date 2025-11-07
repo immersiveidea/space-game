@@ -62,6 +62,15 @@ export class KeyboardInput {
 
         document.onkeydown = (ev) => {
             switch (ev.key) {
+                case 'i':
+                    // Open Babylon Inspector
+                    import("@babylonjs/inspector").then((inspector) => {
+                        inspector.Inspector.Show(this._scene, {
+                            overlay: true,
+                            showExplorer: true,
+                        });
+                    });
+                    break;
                 case '1':
                     this._onCameraChangeObservable.notifyObservers(1);
                     break;

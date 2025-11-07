@@ -256,7 +256,6 @@ export class Main {
         this._audioEngine = await CreateAudioEngineAsync();
 
 
-        this.setupInspector();
         window.setTimeout(()=>{
             if (!this._started) {
                 this._started = true;
@@ -285,20 +284,6 @@ export class Main {
         DefaultScene.MainScene.getPhysicsEngine().setSubTimeStep(5);
 
         DefaultScene.MainScene.collisionsEnabled = true;
-    }
-
-    private setupInspector() {
-        setLoadingMessage("Initializing Inspector...");
-        window.addEventListener("keydown", (ev) => {
-            if (ev.key == 'i') {
-                import ("@babylonjs/inspector").then((inspector) => {
-                    inspector.Inspector.Show(DefaultScene.MainScene, {
-                        overlay: true,
-                        showExplorer: true
-                    });
-                });
-            }
-        });
     }
 }
 
