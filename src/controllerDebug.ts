@@ -47,6 +47,9 @@ export class ControllerDebug {
         const xr = await this.scene.createDefaultXRExperienceAsync( {
             disablePointerSelection: true,
             disableTeleportation: true,
+            inputOptions: {
+                disableOnlineControllerRepository: true
+            },
             disableDefaultUI: false,  // Enable UI for this test
             disableHandTracking: true
         });
