@@ -11,13 +11,18 @@ import {GameConfig} from "./gameConfig";
 import debugLog from "./debug";
 import loadAsset from "./utils/loadAsset";
 
+export interface StarBaseResult {
+    baseMesh: AbstractMesh;
+    landingAggregate: PhysicsAggregate | null;
+}
+
 /**
  * Create and load the star base mesh
  * @param position - Position for the star base
- * @returns Promise resolving to the loaded star base mesh
+ * @returns Promise resolving to the loaded star base mesh and landing aggregate
  */
 export default class StarBase {
-    public static async buildStarBase(): Promise<AbstractMesh> {
+    public static async buildStarBase(): Promise<StarBaseResult> {
         const config = GameConfig.getInstance();
         const scene = DefaultScene.MainScene;
         const importMeshes = await loadAsset('base.glb');
@@ -25,7 +30,7 @@ export default class StarBase {
         const baseMesh = importMeshes.meshes.get('Base');
         const landingMesh = importMeshes.meshes.get('BaseLandingZone');
 
-
+        let landingAgg: PhysicsAggregate | null = null;
 
         if (config.physicsEnabled) {
             const agg2 = new PhysicsAggregate(baseMesh, PhysicsShapeType.MESH, {
@@ -37,7 +42,7 @@ export default class StarBase {
                 debugLog('collidedBody', collidedBody);
             })
 
-            const landingAgg = new PhysicsAggregate(landingMesh, PhysicsShapeType.MESH);
+            landingAgg = new PhysicsAggregate(landingMesh, PhysicsShapeType.MESH);
             landingAgg.body.setMotionType(PhysicsMotionType.ANIMATED);
             /*landingAgg.body.getCollisionObservable().add((collidedCollidedBody) => {
 
@@ -50,7 +55,10 @@ export default class StarBase {
             landingAgg.body.setCollisionCallbackEnabled(true);
         }
         //importMesh.rootNodes[0].dispose();
-        return baseMesh;
+        return {
+            baseMesh,
+            landingAggregate: landingAgg
+        };
     }
 }
 function clearParent (meshes: Map<string, AbstractMesh>, position?: Vector3) {

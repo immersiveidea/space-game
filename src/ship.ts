@@ -42,6 +42,11 @@ export class Ship {
     // Frame counter for physics updates
     private _frameCount: number = 0;
 
+    // Resupply system
+    private _landingAggregate: PhysicsAggregate | null = null;
+    private _resupplyTimer: number = 0;
+    private _isInLandingZone: boolean = false;
+
     constructor(audioEngine?: AudioEngineV2) {
         this._audioEngine = audioEngine;
     }
@@ -233,6 +238,58 @@ export class Ship {
                 forceMagnitudes.angularMagnitude
             );
         }
+
+        // Handle resupply when in landing zone
+        this.updateResupply();
+    }
+
+    /**
+     * Update resupply system - replenishes resources at 0.1 per second when in landing zone
+     */
+    private updateResupply(): void {
+        if (!this._landingAggregate || !this._ship?.physicsBody) {
+            return;
+        }
+
+        // Check if ship is still in the landing zone by checking distance
+        // Since it's a trigger, we need to track position
+        const shipPos = this._ship.physicsBody.transformNode.position;
+        const landingPos = this._landingAggregate.transformNode.position;
+        const distance = Vector3.Distance(shipPos, landingPos);
+
+        // Assume landing zone radius is approximately 20 units (adjust as needed)
+        const wasInZone = this._isInLandingZone;
+        this._isInLandingZone = distance < 20;
+
+        if (this._isInLandingZone && !wasInZone) {
+            debugLog("Ship entered landing zone - resupply active");
+        } else if (!this._isInLandingZone && wasInZone) {
+            debugLog("Ship exited landing zone - resupply inactive");
+        }
+
+        // Resupply at 0.1 per second if in zone
+        if (this._isInLandingZone && this._scoreboard?.shipStatus) {
+            // Physics update runs every 10 frames at 60fps = 6 times per second
+            // 0.1 per second / 6 updates per second = 0.01666... per update
+            const resupplyRate = 0.1 / 6;
+
+            const status = this._scoreboard.shipStatus;
+
+            // Replenish fuel
+            if (status.fuel < 1.0) {
+                status.addFuel(resupplyRate);
+            }
+
+            // Repair hull
+            if (status.hull < 1.0) {
+                status.repairHull(resupplyRate);
+            }
+
+            // Replenish ammo
+            if (status.ammo < 1.0) {
+                status.addAmmo(resupplyRate);
+            }
+        }
     }
 
     /**
@@ -256,6 +313,22 @@ export class Ship {
 
     public get transformNode() {
         return this._ship;
+    }
+
+    /**
+     * Set the landing zone for resupply
+     */
+    public setLandingZone(landingAggregate: PhysicsAggregate): void {
+        this._landingAggregate = landingAggregate;
+
+        // Listen for trigger events to detect when ship enters/exits landing zone
+        landingAggregate.body.getCollisionObservable().add((collisionEvent) => {
+            // Check if the collision is with our ship
+            if (collisionEvent.collider === this._ship.physicsBody) {
+                this._isInLandingZone = true;
+                debugLog("Ship entered landing zone - resupply active");
+            }
+        });
     }
 
     /**

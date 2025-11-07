@@ -3,6 +3,7 @@ import type {AudioEngineV2} from "@babylonjs/core";
 import {
     AbstractMesh,
     Observable,
+    PhysicsAggregate,
     Vector3
 } from "@babylonjs/core";
 import {Ship} from "./ship";
@@ -18,6 +19,7 @@ export class Level1 implements Level {
     private _onReadyObservable: Observable<Level> = new Observable<Level>();
     private _initialized: boolean = false;
     private _startBase: AbstractMesh | null;
+    private _landingAggregate: PhysicsAggregate | null;
     private _endBase: AbstractMesh;
     private _levelConfig: LevelConfig;
     private _audioEngine: AudioEngineV2;
@@ -103,6 +105,13 @@ export class Level1 implements Level {
         const entities = await this._deserializer.deserialize(this._ship.scoreboard.onScoreObservable);
 
         this._startBase = entities.startBase;
+        this._landingAggregate = entities.landingAggregate;
+
+        // Setup resupply system if landing aggregate exists
+        if (this._landingAggregate) {
+            this._ship.setLandingZone(this._landingAggregate);
+        }
+
         // sun and planets are already created by deserializer
 
         // Initialize scoreboard with total asteroid count

@@ -3,6 +3,7 @@ import {
     MeshBuilder,
     Observable,
     PBRMaterial,
+    PhysicsAggregate,
     Texture,
     Vector3
 } from "@babylonjs/core";
@@ -43,6 +44,7 @@ export class LevelDeserializer {
      */
     public async deserialize(scoreObservable: Observable<ScoreEvent>): Promise<{
         startBase: AbstractMesh | null;
+        landingAggregate: PhysicsAggregate | null;
         sun: AbstractMesh;
         planets: AbstractMesh[];
         asteroids: AbstractMesh[];
@@ -50,7 +52,7 @@ export class LevelDeserializer {
         debugLog('Deserializing level:', this.config.difficulty);
 
         // Create entities
-        const startBase = await this.createStartBase();
+        const baseResult = await this.createStartBase();
         const sun = this.createSun();
         const planets = this.createPlanets();
         const asteroids = await this.createAsteroids(scoreObservable);
@@ -63,7 +65,8 @@ export class LevelDeserializer {
         light2.intensity = .5;
         */
         return {
-            startBase,
+            startBase: baseResult.baseMesh,
+            landingAggregate: baseResult.landingAggregate,
             sun,
             planets,
             asteroids
@@ -73,8 +76,8 @@ export class LevelDeserializer {
     /**
      * Create the start base from config
      */
-    private async createStartBase(): Promise<AbstractMesh> {
-        return   await StarBase.buildStarBase();
+    private async createStartBase() {
+        return await StarBase.buildStarBase();
     }
 
     /**
