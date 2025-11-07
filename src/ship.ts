@@ -145,6 +145,7 @@ export class Ship {
 
         // Initialize physics controller
         this._physics = new ShipPhysics();
+        this._physics.setShipStatus(this._scoreboard.shipStatus);
 
         // Setup physics update loop (every 10 frames)
         DefaultScene.MainScene.onAfterRenderObservable.add(() => {
@@ -174,21 +175,8 @@ export class Ship {
             centerGap: 0.5,
         });
 
-        // Setup scoreboard on screen
-        console.log(data.meshes.get("Screen"));
-        const screen = DefaultScene.MainScene
-            .getMaterialById("Screen")
-            .getBindedMeshes()[0] as AbstractMesh;
-        console.log(screen);
-        const old = screen.parent;
-        screen.setParent(null);
-        screen.setPivotPoint(screen.getBoundingInfo().boundingSphere.center);
-        screen.setParent(old);
-        screen.rotation.y = Math.PI;
-        console.log(screen.rotation);
-        console.log(screen.scaling);
-
-        this._scoreboard.initialize(screen as any);
+        // Initialize scoreboard (it will retrieve and setup its own screen mesh)
+        this._scoreboard.initialize();
     }
 
     /**

@@ -1,5 +1,6 @@
 import { PhysicsBody, TransformNode, Vector2, Vector3 } from "@babylonjs/core";
 import { GameConfig } from "./gameConfig";
+import { ShipStatus } from "./shipStatus";
 
 export interface InputState {
     leftStick: Vector2;
@@ -16,6 +17,14 @@ export interface ForceApplicationResult {
  * Reads physics parameters from GameConfig for runtime tuning
  */
 export class ShipPhysics {
+    private _shipStatus: ShipStatus | null = null;
+
+    /**
+     * Set the ship status instance for fuel consumption tracking
+     */
+    public setShipStatus(shipStatus: ShipStatus): void {
+        this._shipStatus = shipStatus;
+    }
     /**
      * Apply forces to the ship based on input state
      * @param inputState - Current input state (stick positions)
@@ -49,24 +58,31 @@ export class ShipPhysics {
         if (Math.abs(leftStick.y) > 0.1) {
             linearMagnitude = Math.abs(leftStick.y);
 
-            // Only apply force if we haven't reached max velocity
-            if (currentSpeed < config.maxLinearVelocity) {
-                // Get local direction (Z-axis for forward/backward thrust)
-                const localDirection = new Vector3(0, 0, -leftStick.y);
-                // Transform to world space
-                const worldDirection = Vector3.TransformNormal(
-                    localDirection,
-                    transformNode.getWorldMatrix()
-                );
-                const force = worldDirection.scale(config.linearForceMultiplier);
+            // Check if we have fuel before applying force
+            if (this._shipStatus && this._shipStatus.fuel > 0) {
+                // Only apply force if we haven't reached max velocity
+                if (currentSpeed < config.maxLinearVelocity) {
+                    // Get local direction (Z-axis for forward/backward thrust)
+                    const localDirection = new Vector3(0, 0, -leftStick.y);
+                    // Transform to world space
+                    const worldDirection = Vector3.TransformNormal(
+                        localDirection,
+                        transformNode.getWorldMatrix()
+                    );
+                    const force = worldDirection.scale(config.linearForceMultiplier);
 
-                // Calculate thrust point: center of mass + offset (0, 1, 0) in world space
-                const thrustPoint = Vector3.TransformCoordinates(
-                    physicsBody.getMassProperties().centerOfMass.add(new Vector3(0, 1, 0)),
-                    transformNode.getWorldMatrix()
-                );
+                    // Calculate thrust point: center of mass + offset (0, 1, 0) in world space
+                    const thrustPoint = Vector3.TransformCoordinates(
+                        physicsBody.getMassProperties().centerOfMass.add(new Vector3(0, 1, 0)),
+                        transformNode.getWorldMatrix()
+                    );
 
-                physicsBody.applyForce(force, thrustPoint);
+                    physicsBody.applyForce(force, thrustPoint);
+
+                    // Consume fuel: normalized magnitude (0-1) * 0.01 = max consumption of 0.01 per frame
+                    const fuelConsumption = linearMagnitude * 0.005;
+                    this._shipStatus.consumeFuel(fuelConsumption);
+                }
             }
         }
 
@@ -78,24 +94,32 @@ export class ShipPhysics {
 
         // Apply angular forces if any stick has significant rotation input
         if (angularMagnitude > 0.1) {
-            const currentAngularSpeed = currentAngularVelocity.length();
+            // Check if we have fuel before applying torque
+            if (this._shipStatus && this._shipStatus.fuel > 0) {
+                const currentAngularSpeed = currentAngularVelocity.length();
 
-            // Only apply torque if we haven't reached max angular velocity
-            if (currentAngularSpeed < config.maxAngularVelocity) {
-                const yaw = -leftStick.x;
-                const pitch = rightStick.y;
-                const roll = rightStick.x;
+                // Only apply torque if we haven't reached max angular velocity
+                if (currentAngularSpeed < config.maxAngularVelocity) {
+                    const yaw = -leftStick.x;
+                    const pitch = rightStick.y;
+                    const roll = rightStick.x;
 
-                // Create torque in local space, then transform to world space
-                const localTorque = new Vector3(pitch, yaw, roll).scale(
-                    config.angularForceMultiplier
-                );
-                const worldTorque = Vector3.TransformNormal(
-                    localTorque,
-                    transformNode.getWorldMatrix()
-                );
+                    // Create torque in local space, then transform to world space
+                    const localTorque = new Vector3(pitch, yaw, roll).scale(
+                        config.angularForceMultiplier
+                    );
+                    const worldTorque = Vector3.TransformNormal(
+                        localTorque,
+                        transformNode.getWorldMatrix()
+                    );
 
-                physicsBody.applyAngularImpulse(worldTorque);
+                    physicsBody.applyAngularImpulse(worldTorque);
+
+                    // Consume fuel: normalized magnitude (0-3 max) / 3 * 0.01 = max consumption of 0.01 per frame
+                    const normalizedAngularMagnitude = Math.min(angularMagnitude / 3.0, 1.0);
+                    const fuelConsumption = normalizedAngularMagnitude * 0.005;
+                    this._shipStatus.consumeFuel(fuelConsumption);
+                }
             }
         }
 
