@@ -94,6 +94,15 @@ export class Ship {
                 agg.body.setAngularDamping(0.4);
                 agg.body.setAngularVelocity(new Vector3(0, 0, 0));
                 agg.body.setCollisionCallbackEnabled(true);
+
+                // Register collision handler for hull damage
+                const observable = agg.body.getCollisionObservable();
+                observable.add((collisionEvent) => {
+                    // Damage hull on any collision
+                    if (this._scoreboard?.shipStatus) {
+                        this._scoreboard.shipStatus.damageHull(0.01);
+                    }
+                });
             } else {
                 console.warn("No geometry mesh found, cannot create physics");
             }
