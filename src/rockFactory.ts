@@ -55,7 +55,7 @@ export class RockFactory {
     private static async loadMesh() {
         debugLog('loading mesh');
         this._asteroidMesh = (await  loadAsset("asteroid.glb")).meshes.get('Asteroid');
-        this._asteroidMesh.setParent(null);
+        //this._asteroidMesh.setParent(null);
         this._asteroidMesh.setEnabled(false);
         debugLog(this._asteroidMesh);
     }

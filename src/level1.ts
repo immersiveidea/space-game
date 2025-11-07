@@ -30,6 +30,7 @@ export class Level1 implements Level {
         this._deserializer = new LevelDeserializer(levelConfig);
         this._ship = new Ship(audioEngine);
 
+
         const xr = DefaultScene.XR;
 
         debugLog('Level1 constructor - Setting up XR observables');
@@ -45,7 +46,7 @@ export class Level1 implements Level {
                 this._ship.addController(controller);
             });
         });
-        this.initialize();
+        // Don't call initialize here - let Main call it after registering the observable
     }
 
     getReadyObservable(): Observable<Level> {
@@ -92,9 +93,10 @@ export class Level1 implements Level {
     public async initialize() {
         debugLog('Initializing level from config:', this._levelConfig.difficulty);
         if (this._initialized) {
+            console.error('Initialize called twice');
             return;
         }
-
+        await this._ship.initialize();
         setLoadingMessage("Loading level from configuration...");
 
         // Use deserializer to create all entities from config

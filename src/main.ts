@@ -46,19 +46,30 @@ export class Main {
             setLoadingMessage("This browser does not support WebXR");
             return;
         }
-        this.initialize();
+
 
         // Listen for level selection event
         window.addEventListener('levelSelected', async (e: CustomEvent) => {
+            this._started = true;
+            await this.initialize();
             const {levelName, config} = e.detail as {levelName: string, config: LevelConfig};
 
             debugLog(`Starting level: ${levelName}`);
 
-            // Show loading UI again
+            // Hide all UI elements
             const mainDiv = document.querySelector('#mainDiv');
             const levelSelect = document.querySelector('#levelSelect') as HTMLElement;
+            const editorLink = document.querySelector('.editor-link') as HTMLElement;
+            const settingsLink = document.querySelector('.settings-link') as HTMLElement;
+
             if (levelSelect) {
                 levelSelect.style.display = 'none';
+            }
+            if (editorLink) {
+                editorLink.style.display = 'none';
+            }
+            if (settingsLink) {
+                settingsLink.style.display = 'none';
             }
             setLoadingMessage("Initializing Level...");
 
@@ -80,10 +91,15 @@ export class Main {
                     this.play();
                 }, 500);
             });
+
+            // Now initialize the level (after observable is registered)
+            await this._currentLevel.initialize();
         });
 
         // Listen for test level button click
         window.addEventListener('DOMContentLoaded', () => {
+            const levelSelect = document.querySelector('#levelSelect');
+            levelSelect.classList.add('ready');
             debugLog('[Main] DOMContentLoaded fired, looking for test button...');
             const testLevelBtn = document.querySelector('#testLevelBtn');
             debugLog('[Main] Test button found:', !!testLevelBtn);
@@ -92,15 +108,24 @@ export class Main {
                 testLevelBtn.addEventListener('click', async () => {
                     debugLog('[Main] ========== TEST LEVEL BUTTON CLICKED ==========');
 
-                    // Show loading UI
+                    // Hide all UI elements
                     const mainDiv = document.querySelector('#mainDiv');
                     const levelSelect = document.querySelector('#levelSelect') as HTMLElement;
+                    const editorLink = document.querySelector('.editor-link') as HTMLElement;
+                    const settingsLink = document.querySelector('.settings-link') as HTMLElement;
+
                     debugLog('[Main] mainDiv exists:', !!mainDiv);
                     debugLog('[Main] levelSelect exists:', !!levelSelect);
 
                     if (levelSelect) {
                         levelSelect.style.display = 'none';
                         debugLog('[Main] levelSelect hidden');
+                    }
+                    if (editorLink) {
+                        editorLink.style.display = 'none';
+                    }
+                    if (settingsLink) {
+                        settingsLink.style.display = 'none';
                     }
                     setLoadingMessage("Initializing Test Scene...");
 
@@ -193,7 +218,6 @@ export class Main {
           //  photoDome1.position = DefaultScene.MainScene.activeCamera.globalPosition;
           //  photoDome2.position = DefaultScene.MainScene.activeCamera.globalPosition;
         });
-        setLoadingMessage("Select a difficulty to begin!");
     }
 
     private async setupScene() {
@@ -236,11 +260,7 @@ export class Main {
         window.setTimeout(()=>{
             if (!this._started) {
                 this._started = true;
-                const levelSelect = document.querySelector('#levelSelect');
-                if (levelSelect) {
-                    levelSelect.classList.add('ready');
-                    setLoadingMessage("Ready!");
-                }
+                setLoadingMessage("Ready!");
             }
         })
 
@@ -250,6 +270,7 @@ export class Main {
     }
 
     private async setupPhysics() {
+        //DefaultScene.MainScene.useRightHandedSystem = true;
         const havok = await HavokPhysics();
         const havokPlugin = new HavokPlugin(true, havok);
         //DefaultScene.MainScene.ambientColor = new Color3(.1, .1, .1);

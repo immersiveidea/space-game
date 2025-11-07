@@ -1,24 +1,10 @@
 /**
- * Texture detail levels for game objects
- */
-export enum TextureLevel {
-    WIREFRAME = 'WIREFRAME',
-    SIMPLE_MATERIAL = 'SIMPLE_MATERIAL',
-    FULL_TEXTURE = 'FULL_TEXTURE',
-    PBR_TEXTURE = 'PBR_TEXTURE'
-}
-
-/**
  * Global game configuration settings
  * Singleton class for managing game-wide settings
  */
 export class GameConfig {
     private static _instance: GameConfig;
 
-    // Texture detail settings
-    public planetTextureLevel: TextureLevel = TextureLevel.FULL_TEXTURE;
-    public asteroidTextureLevel: TextureLevel = TextureLevel.FULL_TEXTURE;
-    public sunTextureLevel: TextureLevel = TextureLevel.FULL_TEXTURE;
     public debug: boolean = false;
     // Physics settings
     public physicsEnabled: boolean = true;
@@ -46,9 +32,6 @@ export class GameConfig {
      */
     public save(): void {
         const config = {
-            planetTextureLevel: this.planetTextureLevel,
-            asteroidTextureLevel: this.asteroidTextureLevel,
-            sunTextureLevel: this.sunTextureLevel,
             physicsEnabled: this.physicsEnabled,
             debug: this.debug
         };
@@ -63,9 +46,6 @@ export class GameConfig {
             const stored = localStorage.getItem('game-config');
             if (stored) {
                 const config = JSON.parse(stored);
-                this.planetTextureLevel = config.planetTextureLevel ?? TextureLevel.FULL_TEXTURE;
-                this.asteroidTextureLevel = config.asteroidTextureLevel ?? TextureLevel.FULL_TEXTURE;
-                this.sunTextureLevel = config.sunTextureLevel ?? TextureLevel.FULL_TEXTURE;
                 this.physicsEnabled = config.physicsEnabled ?? true;
                 this.debug = config.debug ?? false;
             } else {
@@ -80,9 +60,6 @@ export class GameConfig {
      * Reset to default settings
      */
     public reset(): void {
-        this.planetTextureLevel = TextureLevel.FULL_TEXTURE;
-        this.asteroidTextureLevel = TextureLevel.FULL_TEXTURE;
-        this.sunTextureLevel = TextureLevel.FULL_TEXTURE;
         this.physicsEnabled = true;
         this.debug = false;
         this.save();

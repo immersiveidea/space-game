@@ -1,4 +1,4 @@
-import { GameConfig, TextureLevel } from "./gameConfig";
+import { GameConfig } from "./gameConfig";
 
 /**
  * Initialize the settings screen
@@ -7,9 +7,6 @@ export function initializeSettingsScreen(): void {
     const config = GameConfig.getInstance();
 
     // Get form elements
-    const planetTextureSelect = document.getElementById('planetTextureLevel') as HTMLSelectElement;
-    const asteroidTextureSelect = document.getElementById('asteroidTextureLevel') as HTMLSelectElement;
-    const sunTextureSelect = document.getElementById('sunTextureLevel') as HTMLSelectElement;
     const physicsEnabledCheckbox = document.getElementById('physicsEnabled') as HTMLInputElement;
     const debugEnabledCheckbox = document.getElementById('debugEnabled') as HTMLInputElement;
 
@@ -39,9 +36,6 @@ export function initializeSettingsScreen(): void {
      * Load current settings into form
      */
     function loadSettings(): void {
-        if (planetTextureSelect) planetTextureSelect.value = config.planetTextureLevel;
-        if (asteroidTextureSelect) asteroidTextureSelect.value = config.asteroidTextureLevel;
-        if (sunTextureSelect) sunTextureSelect.value = config.sunTextureLevel;
         if (physicsEnabledCheckbox) physicsEnabledCheckbox.checked = config.physicsEnabled;
         if (debugEnabledCheckbox) debugEnabledCheckbox.checked = config.debug;
     }
@@ -50,9 +44,6 @@ export function initializeSettingsScreen(): void {
      * Save form settings to GameConfig
      */
     function saveSettings(): void {
-        config.planetTextureLevel = planetTextureSelect.value as TextureLevel;
-        config.asteroidTextureLevel = asteroidTextureSelect.value as TextureLevel;
-        config.sunTextureLevel = sunTextureSelect.value as TextureLevel;
         config.physicsEnabled = physicsEnabledCheckbox.checked;
         config.debug = debugEnabledCheckbox.checked;
         config.save();

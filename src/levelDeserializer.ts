@@ -2,6 +2,8 @@ import {
     AbstractMesh,
     MeshBuilder,
     Observable,
+    PBRMaterial,
+    Texture,
     Vector3
 } from "@babylonjs/core";
 import { DefaultScene } from "./defaultScene";
@@ -14,7 +16,8 @@ import {
     validateLevelConfig
 } from "./levelConfig";
 import { GameConfig } from "./gameConfig";
-import { MaterialFactory } from "./materialFactory";
+import { FireProceduralTexture } from "@babylonjs/procedural-textures";
+import { createSphereLightmap } from "./sphereLightmap";
 import debugLog from './debug';
 import StarBase from "./starBase";
 
@@ -71,8 +74,7 @@ export class LevelDeserializer {
      * Create the start base from config
      */
     private async createStartBase(): Promise<AbstractMesh> {
-        const position = this?.config?.startBase?.position?this.arrayToVector3(this?.config?.startBase?.position):null;
-        return   await StarBase.buildStarBase(position);
+        return   await StarBase.buildStarBase();
     }
 
     /**
@@ -85,18 +87,13 @@ export class LevelDeserializer {
             segments: 32
         }, this.scene);
         sun.position = this.arrayToVector3(config.position);
-        // Create material using GameConfig texture level
-        const gameConfig = GameConfig.getInstance();
-        const material = MaterialFactory.createSunMaterial(
-            "sunMaterial",
-            gameConfig.sunTextureLevel,
-            this.scene
-        );
-        sun.material = material;
 
-        // Create glow layer
-        //const gl = new GlowLayer("glow", this.scene);
-        //gl.intensity = 1;
+        // Create PBR sun material with fire texture
+        const material = new PBRMaterial("sunMaterial", this.scene);
+        material.emissiveTexture = new FireProceduralTexture("fire", 1024, this.scene);
+        material.emissiveColor.set(0.5, 0.5, 0.1);
+        material.unlit = true;
+        sun.material = material;
 
         return sun;
     }
@@ -122,15 +119,27 @@ export class LevelDeserializer {
             // Calculate direction from planet to sun
             const toSun = sunPosition.subtract(planetPosition).normalize();
 
-            // Create material using GameConfig texture level
-            const config = GameConfig.getInstance();
-            const material = MaterialFactory.createPlanetMaterial(
-                planetConfig.name + "-material",
-                planetConfig.texturePath,
-                config.planetTextureLevel,
+            // Create PBR planet material
+            const material = new PBRMaterial(planetConfig.name + "-material", this.scene);
+            const texture = new Texture(planetConfig.texturePath, this.scene);
+
+            // Create lightmap with bright light pointing toward sun
+            const lightmap = createSphereLightmap(
+                planetConfig.name + "-lightmap",
+                256,
                 this.scene,
-                toSun
+                toSun,
+                1,
+                toSun.negate(),
+                0.3,
+                0.3
             );
+
+            material.albedoTexture = texture;
+            material.lightmapTexture = lightmap;
+            material.useLightmapAsShadowmap = true;
+            material.roughness = 0.8;
+            material.metallic = 0;
 
             planet.material = material;
 

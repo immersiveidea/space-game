@@ -8,7 +8,6 @@ import {
     PhysicsAggregate,
     PhysicsMotionType,
     PhysicsShapeType,
-    SceneLoader,
     StandardMaterial,
     TransformNode,
     Vector2,
@@ -23,10 +22,12 @@ import { GameConfig } from "./gameConfig";
 import { Sight } from "./sight";
 import debugLog from './debug';
 import {Scoreboard} from "./scoreboard";
+import loadAsset from "./utils/loadAsset";
+import {Debug} from "@babylonjs/core/Legacy/legacy";
 const MAX_LINEAR_VELOCITY = 200;
-const MAX_ANGULAR_VELOCITY = 1.8;
-const LINEAR_FORCE_MULTIPLIER = 1200;
-const ANGULAR_FORCE_MULTIPLIER = 20;
+const MAX_ANGULAR_VELOCITY = 1.4;
+const LINEAR_FORCE_MULTIPLIER = 800;
+const ANGULAR_FORCE_MULTIPLIER = 15;
 
 const controllerComponents = [
     'a-button',
@@ -69,8 +70,6 @@ export class Ship {
 
     constructor( audioEngine?: AudioEngineV2) {
         this._audioEngine = audioEngine;
-        this.setup();
-        this.initialize();
     }
 
     private async initializeSounds() {
@@ -102,8 +101,8 @@ export class Ship {
         this._shot?.play();
         const ammo = new InstancedMesh("ammo", this._ammoBaseMesh as Mesh);
         ammo.parent = this._ship;
-        ammo.position.y = .5;
-        ammo.position.z = 7.1;
+        ammo.position.y = .1;
+        ammo.position.z =  8.4;
         //ammo.rotation.x = Math.PI / 2;
         ammo.setParent(null);
         const ammoAggregate = new PhysicsAggregate(ammo, PhysicsShapeType.SPHERE, {
@@ -141,13 +140,48 @@ export class Ship {
         })
 
     }
-    private setup() {
-        this._ship = new TransformNode("ship", DefaultScene.MainScene);
 
+    public async initialize() {
+        this._scoreboard = new Scoreboard();
+        this._ship = new TransformNode("shipBawe", DefaultScene.MainScene);
+        //this._ship.rotation.y = Math.PI;
+        const data = await loadAsset('ship.glb');
+        const axes = new Debug.AxesViewer(DefaultScene.MainScene, 1);
+        //axes.xAxis.parent = data.container.rootNodes[0];
+        //axes.yAxis.parent = data.container.rootNodes[0];
+        axes.zAxis.parent = data.container.transformNodes[0];
+        //data.container.transformNodes[0].parent = this._ship;
+        this._ship = data.container.transformNodes[0];
+        this._ship.position.y = 5;
 
-        // Create sounds asynchronously if audio engine is available
+        const config = GameConfig.getInstance();
+        if (config.physicsEnabled) {
+            console.log('Physics Enabled for Ship');
+            if (this._ship) {
+                const agg = new PhysicsAggregate(
+                    this._ship,
+                    PhysicsShapeType.MESH,
+                    {
+                        mass: 10,
+                        mesh: data.container.rootNodes[0].getChildMeshes()[0] as Mesh
+                    },
+                    DefaultScene.MainScene
+                );
+
+                agg.body.setMotionType(PhysicsMotionType.DYNAMIC);
+                agg.body.setLinearDamping(.2);
+                agg.body.setAngularDamping(.4);
+                agg.body.setAngularVelocity(new Vector3(0, 0, 0));
+                agg.body.setCollisionCallbackEnabled(true);
+
+            } else {
+                console.warn("No geometry mesh found, cannot create physics");
+            }
+        }
+        //shipMesh.position.z = -1;
+
         if (this._audioEngine) {
-            this.initializeSounds();
+            await this.initializeSounds();
         }
         this._ammoMaterial = new StandardMaterial("ammoMaterial", DefaultScene.MainScene);
         this._ammoMaterial.emissiveColor = new Color3(1, 1, 0);
@@ -158,8 +192,8 @@ export class Ship {
 
 
         //const landingLight = new SpotLight("landingLight", new Vector3(0, 0, 0), new Vector3(0, -.5, .5), 1.5, .5, DefaultScene.MainScene);
-       // landingLight.parent = this._ship;
-       // landingLight.position.z = 5;
+        // landingLight.parent = this._ship;
+        // landingLight.position.z = 5;
 
         // Physics will be set up after mesh loads in initialize()
 
@@ -171,11 +205,11 @@ export class Ship {
             DefaultScene.MainScene);
         this._camera.parent = this._ship;
 
-        DefaultScene.MainScene.setActiveCameraByName("Flat Camera");
+        //DefaultScene.MainScene.setActiveCameraByName("Flat Camera");
 
         // Create sight reticle
         this._sight = new Sight(DefaultScene.MainScene, this._ship, {
-            position: new Vector3(0, .5, 125),
+            position: new Vector3(0, .1, 125),
             circleRadius: 2,
             crosshairLength: 1.5,
             lineThickness: 0.1,
@@ -183,78 +217,20 @@ export class Ship {
             renderingGroupId: 3,
             centerGap: 0.5
         });
+        console.log(data.meshes.get('Screen'));
+        const screen = DefaultScene.MainScene.getMaterialById('Screen').getBindedMeshes()[0] as Mesh
+        console.log(screen);
+        const old = screen.parent;
+        screen.setParent(null);
+        screen.setPivotPoint(screen.getBoundingInfo().boundingSphere.center);
+        screen.setParent(old);
+        screen.rotation.y  = Math.PI;
+        console.log(screen.rotation);
+        console.log(screen.scaling);
 
-    }
-
-
-    private async initialize() {
-        this._scoreboard = new Scoreboard();
-
-        const importMesh = await SceneLoader.ImportMeshAsync(null, "./", "ship2.glb", DefaultScene.MainScene);
-
-        const shipMesh = importMesh.meshes[0];
-        shipMesh.id = "shipMesh";
-        shipMesh.name = "shipMesh";
-        debugLog(shipMesh.position);
-        shipMesh.parent = this._ship;
-        debugLog(shipMesh.position);
-
-        // Create physics aggregate based on the loaded mesh (if physics enabled)
-        const config = GameConfig.getInstance();
-        if (config.physicsEnabled) {
-            // Find the actual geometry mesh (usually meshes[1] or a child)
-            //const geometryMesh = importMesh.meshes.find(m => m instanceof Mesh && m.getTotalVertices() > 0) as Mesh;
-            const geo = shipMesh.getChildMeshes()[0]
-            if (geo) {
+        this._scoreboard.initialize(screen);
 
 
-                // Create physics aggregate on the ship TransformNode using the mesh shape
-                const agg = new PhysicsAggregate(this._ship, PhysicsShapeType.CONVEX_HULL, {
-                    mass: 100,
-                    mesh: (geo as Mesh)  // Use the actual ship geometry
-                }, DefaultScene.MainScene);
-
-
-                agg.body.setMotionType(PhysicsMotionType.DYNAMIC);
-                agg.body.setLinearDamping(.2);
-                agg.body.setAngularDamping(.3);
-                agg.body.setAngularVelocity(new Vector3(0, 0, 0));
-                agg.body.setCollisionCallbackEnabled(true);
-            } else {
-                console.warn("No geometry mesh found in ship1.glb, falling back to box shape");
-                // Fallback to box shape if mesh not found
-                const agg = new PhysicsAggregate(this._ship, PhysicsShapeType.BOX, {
-                    mass: 100,
-                    extents: new Vector3(4, 4, 7.4),
-                    center: new Vector3(0, 1, 1.8)
-                }, DefaultScene.MainScene);
-
-                agg.body.setMotionType(PhysicsMotionType.DYNAMIC);
-                agg.body.setLinearDamping(.1);
-                agg.body.setAngularDamping(.2);
-                agg.body.setAngularVelocity(new Vector3(0, 0, 0));
-                agg.body.setCollisionCallbackEnabled(true);
-            }
-        }
-        //shipMesh.rotation.y = Angle.FromDegrees(90).radians();
-        //shipMesh.rotation.y = Math.PI;
-        //shipMesh.position.y = 1;
-        shipMesh.position.z = -1;
-        // shipMesh.renderingGroupId = 3;
-        //const light = new PointLight("ship.light", new Vector3(0, .5, .1), DefaultScene.MainScene);
-        //light.intensity = 4;
-        /*light.includedOnlyMeshes = [shipMesh];
-        for (const mesh of shipMesh.getChildMeshes()) {
-            // mesh.renderingGroupId = 3;
-            if (mesh.material.id.indexOf('glass') === -1) {
-                light.includedOnlyMeshes.push(mesh);
-            }
-        }
-        light.parent = this._ship;*/
-        //DefaultScene.MainScene.getMaterialById('glass_mat.002').alpha = .4;
-        const screenMesh = DefaultScene.MainScene.getMaterialById('Screen')?.getBindedMeshes()[0];
-        this._scoreboard.initialize(screenMesh as Mesh);
-        //this._scoreboard.initialize(null);
     }
 
 
@@ -287,7 +263,8 @@ export class Ship {
                 // Transform to world space - TransformNode vectors are in local space!
                 const worldDirection = Vector3.TransformNormal(localDirection, this._ship.getWorldMatrix());
                 const force = worldDirection.scale(LINEAR_FORCE_MULTIPLIER);
-                body.applyForce(force, this._ship.physicsBody.transformNode.absolutePosition);
+                const thrustPoint = Vector3.TransformCoordinates(this._ship.physicsBody.getMassProperties().centerOfMass.add(new Vector3(0,1,0)), this._ship.getWorldMatrix());
+                body.applyForce(force, thrustPoint);
 
             }
 
@@ -318,9 +295,9 @@ export class Ship {
 
             // Only apply torque if we haven't reached max angular velocity
             if (currentAngularSpeed < MAX_ANGULAR_VELOCITY) {
-                const yaw = this._leftStickVector.x;
-                const pitch = -this._rightStickVector.y;
-                const roll = -this._rightStickVector.x;
+                const yaw = -this._leftStickVector.x;
+                const pitch = this._rightStickVector.y;
+                const roll = this._rightStickVector.x;
 
                 // Create torque in local space, then transform to world space
                 const localTorque = new Vector3(pitch, yaw, roll).scale(ANGULAR_FORCE_MULTIPLIER);

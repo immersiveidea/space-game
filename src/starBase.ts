@@ -1,6 +1,6 @@
 import {
     AbstractMesh,
-    HavokPlugin,
+    HavokPlugin, Mesh,
     PhysicsAggregate,
     PhysicsMotionType,
     PhysicsShapeType,
@@ -17,13 +17,14 @@ import loadAsset from "./utils/loadAsset";
  * @returns Promise resolving to the loaded star base mesh
  */
 export default class StarBase {
-    public static async buildStarBase(position: Vector3): Promise<AbstractMesh> {
+    public static async buildStarBase(): Promise<AbstractMesh> {
         const config = GameConfig.getInstance();
         const scene = DefaultScene.MainScene;
         const importMeshes = await loadAsset('base.glb');
+
         const baseMesh = importMeshes.meshes.get('Base');
         const landingMesh = importMeshes.meshes.get('BaseLandingZone');
-        clearParent(importMeshes.meshes, position);
+
 
 
         if (config.physicsEnabled) {
@@ -38,14 +39,14 @@ export default class StarBase {
 
             const landingAgg = new PhysicsAggregate(landingMesh, PhysicsShapeType.MESH);
             landingAgg.body.setMotionType(PhysicsMotionType.ANIMATED);
-            landingAgg.body.getCollisionObservable().add((collidedCollidedBody) => {
-                console.log(collidedCollidedBody);
-            });
+            /*landingAgg.body.getCollisionObservable().add((collidedCollidedBody) => {
+
+            });*/
             landingAgg.shape.isTrigger = true;
-            (DefaultScene.MainScene.getPhysicsEngine().getPhysicsPlugin() as HavokPlugin).onTriggerCollisionObservable.add((eventdata, eventState) => {
+            /*(DefaultScene.MainScene.getPhysicsEngine().getPhysicsPlugin() as HavokPlugin).onTriggerCollisionObservable.add((eventdata, eventState) => {
                 console.log(eventState);
                 console.log(eventdata);
-            })
+            })*/
             landingAgg.body.setCollisionCallbackEnabled(true);
         }
         //importMesh.rootNodes[0].dispose();
