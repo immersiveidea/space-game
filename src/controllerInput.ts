@@ -48,6 +48,7 @@ export class ControllerInput {
     private _onShootObservable: Observable<void> = new Observable<void>();
     private _onCameraAdjustObservable: Observable<CameraAdjustment> =
         new Observable<CameraAdjustment>();
+    private _onStatusScreenToggleObservable: Observable<void> = new Observable<void>();
 
     constructor() {
         this._controllerObservable.add(this.handleControllerEvent.bind(this));
@@ -65,6 +66,13 @@ export class ControllerInput {
      */
     public get onCameraAdjustObservable(): Observable<CameraAdjustment> {
         return this._onCameraAdjustObservable;
+    }
+
+    /**
+     * Get observable that fires when X button is pressed on left controller
+     */
+    public get onStatusScreenToggleObservable(): Observable<void> {
+        return this._onStatusScreenToggleObservable;
     }
 
     /**
@@ -224,6 +232,12 @@ export class ControllerInput {
                     this._onCameraAdjustObservable.notifyObservers({
                         direction: "up",
                     });
+                }
+                if (controllerEvent.component.id === "x-button" && controllerEvent.hand === "left") {
+                    // Only trigger on button press, not release
+                    if (controllerEvent.pressed) {
+                        this._onStatusScreenToggleObservable.notifyObservers();
+                    }
                 }
                 console.log(controllerEvent);
             }

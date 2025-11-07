@@ -24,6 +24,8 @@ import { ControllerInput } from "./controllerInput";
 import { ShipPhysics } from "./shipPhysics";
 import { ShipAudio } from "./shipAudio";
 import { WeaponSystem } from "./weaponSystem";
+import { StatusScreen } from "./statusScreen";
+import { GameStats } from "./gameStats";
 
 export class Ship {
     private _ship: TransformNode;
@@ -38,6 +40,8 @@ export class Ship {
     private _physics: ShipPhysics;
     private _audio: ShipAudio;
     private _weapons: WeaponSystem;
+    private _statusScreen: StatusScreen;
+    private _gameStats: GameStats;
 
     // Frame counter for physics updates
     private _frameCount: number = 0;
@@ -74,6 +78,7 @@ export class Ship {
 
     public async initialize() {
         this._scoreboard = new Scoreboard();
+        this._gameStats = new GameStats();
         this._ship = new TransformNode("shipBase", DefaultScene.MainScene);
         const data = await loadAsset("ship.glb");
         this._ship = data.container.transformNodes[0];
@@ -139,6 +144,13 @@ export class Ship {
             this.handleShoot();
         });
 
+        // Wire up status screen toggle event
+        this._controllerInput.onStatusScreenToggleObservable.add(() => {
+            if (this._statusScreen) {
+                this._statusScreen.toggle();
+            }
+        });
+
         // Wire up camera adjustment events
         this._keyboardInput.onCameraChangeObservable.add((cameraKey) => {
             if (cameraKey === 1) {
@@ -192,6 +204,10 @@ export class Ship {
 
         // Initialize scoreboard (it will retrieve and setup its own screen mesh)
         this._scoreboard.initialize();
+
+        // Initialize status screen
+        this._statusScreen = new StatusScreen(DefaultScene.MainScene, this._gameStats);
+        this._statusScreen.initialize(this._camera);
     }
 
     /**
@@ -366,6 +382,10 @@ export class Ship {
 
         if (this._weapons) {
             this._weapons.dispose();
+        }
+
+        if (this._statusScreen) {
+            this._statusScreen.dispose();
         }
     }
 }
