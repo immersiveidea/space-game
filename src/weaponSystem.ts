@@ -101,6 +101,7 @@ export class WeaponSystem {
         );
         ammoAggregate.body.setAngularDamping(1);
         ammoAggregate.body.setMotionType(PhysicsMotionType.DYNAMIC);
+        ammoAggregate.body.setCollisionCallbackEnabled(true);
 
         // Set projectile velocity (already includes ship velocity)
         ammoAggregate.body.setLinearVelocity(velocityVector);
@@ -115,8 +116,31 @@ export class WeaponSystem {
             this._gameStats.recordShotFired();
         }
 
+        // Track hits via collision detection
+        let hitRecorded = false; // Prevent multiple hits from same projectile
+        const gameStats = this._gameStats; // Capture in closure
+
+        const collisionObserver = ammoAggregate.body.getCollisionObservable().add((collisionEvent) => {
+            // Check if projectile hit something (not ship, not another projectile)
+            // Asteroids/rocks are the targets
+            if (!hitRecorded && gameStats && collisionEvent.collidedAgainst) {
+                // Record as hit - assumes collision with asteroid
+                gameStats.recordShotHit();
+                hitRecorded = true;
+
+                // Remove collision observer after first hit
+                if (collisionObserver) {
+                    ammoAggregate.body.getCollisionObservable().remove(collisionObserver);
+                }
+            }
+        });
+
         // Auto-dispose after 2 seconds
         window.setTimeout(() => {
+            // Clean up collision observer
+            if (collisionObserver) {
+                ammoAggregate.body.getCollisionObservable().remove(collisionObserver);
+            }
             ammoAggregate.dispose();
             ammo.dispose();
         }, 2000);
