@@ -209,6 +209,12 @@ export class Ship {
         // Initialize scoreboard (it will retrieve and setup its own screen mesh)
         this._scoreboard.initialize();
 
+        // Subscribe to score events to track asteroids destroyed
+        this._scoreboard.onScoreObservable.add((scoreEvent) => {
+            // Each score event represents an asteroid destroyed
+            this._gameStats.recordAsteroidDestroyed();
+        });
+
         // Initialize status screen
         this._statusScreen = new StatusScreen(DefaultScene.MainScene, this._gameStats);
         this._statusScreen.initialize(this._camera);
