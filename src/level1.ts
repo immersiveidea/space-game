@@ -43,6 +43,11 @@ export class Level1 implements Level {
             xr.baseExperience.camera.parent = this._ship.transformNode;
             const currPose =  xr.baseExperience.camera.globalPosition.y;
             xr.baseExperience.camera.position = new Vector3(0, 0, 0);
+
+            // Start game timer when XR pose is set
+            this._ship.gameStats.startTimer();
+            debugLog('Game timer started');
+
             const observer = xr.input.onControllerAddedObservable.add((controller) => {
                 debugLog('🎮 onControllerAddedObservable FIRED for:', controller.inputSource.handedness);
                 this._ship.addController(controller);

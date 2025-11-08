@@ -59,6 +59,10 @@ export class Ship {
         return this._scoreboard;
     }
 
+    public get gameStats(): GameStats {
+        return this._gameStats;
+    }
+
     public set position(newPosition: Vector3) {
         const body = this._ship.physicsBody;
 
