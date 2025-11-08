@@ -53,6 +53,12 @@ export class StatusScreen {
             this._scene
         );
 
+        // Parent to camera for automatic following
+        this._screenMesh.parent = this._camera;
+        this._screenMesh.position = new Vector3(0, 0, 2); // 2 meters forward in local space
+        //this._screenMesh.rotation.y = Math.PI; // Face backward (toward user)
+        this._screenMesh.renderingGroupId = 3; // Always render on top
+
         // Create material
         const material = new StandardMaterial("statusScreenMaterial", this._scene);
         this._screenMesh.material = material;
@@ -163,24 +169,14 @@ export class StatusScreen {
      * Show the status screen
      */
     public show(): void {
-        if (!this._screenMesh || !this._camera) {
+        if (!this._screenMesh) {
             return;
         }
 
         // Update statistics before showing
         this.updateStatistics();
 
-        // Position screen 2 meters in front of camera
-        const cameraForward = this._camera.forward;
-        const offset = cameraForward.scale(2.0);
-        this._screenMesh.position = this._camera.position.add(offset);
-
-        // Make screen face the camera
-        this._screenMesh.lookAt(this._camera.position);
-
-        // Rotate 180 degrees to face the right way
-        this._screenMesh.rotate(Vector3.Up(), Math.PI);
-
+        // Simply enable the mesh - position/rotation handled by parenting
         this._screenMesh.setEnabled(true);
         this._isVisible = true;
     }
