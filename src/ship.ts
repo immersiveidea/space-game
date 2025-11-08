@@ -178,6 +178,7 @@ export class Ship {
         // Initialize physics controller
         this._physics = new ShipPhysics();
         this._physics.setShipStatus(this._scoreboard.shipStatus);
+        this._physics.setGameStats(this._gameStats);
 
         // Setup physics update loop (every 10 frames)
         DefaultScene.MainScene.onAfterRenderObservable.add(() => {

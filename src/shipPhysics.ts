@@ -1,6 +1,7 @@
 import { PhysicsBody, TransformNode, Vector2, Vector3 } from "@babylonjs/core";
 import { GameConfig } from "./gameConfig";
 import { ShipStatus } from "./shipStatus";
+import { GameStats } from "./gameStats";
 
 export interface InputState {
     leftStick: Vector2;
@@ -18,12 +19,20 @@ export interface ForceApplicationResult {
  */
 export class ShipPhysics {
     private _shipStatus: ShipStatus | null = null;
+    private _gameStats: GameStats | null = null;
 
     /**
      * Set the ship status instance for fuel consumption tracking
      */
     public setShipStatus(shipStatus: ShipStatus): void {
         this._shipStatus = shipStatus;
+    }
+
+    /**
+     * Set the game stats instance for tracking fuel consumed
+     */
+    public setGameStats(gameStats: GameStats): void {
+        this._gameStats = gameStats;
     }
     /**
      * Apply forces to the ship based on input state
@@ -79,9 +88,14 @@ export class ShipPhysics {
 
                     physicsBody.applyForce(force, thrustPoint);
 
-                    // Consume fuel: normalized magnitude (0-1) * 0.01 = max consumption of 0.01 per frame
+                    // Consume fuel: normalized magnitude (0-1) * 0.005 per frame
                     const fuelConsumption = linearMagnitude * 0.005;
                     this._shipStatus.consumeFuel(fuelConsumption);
+
+                    // Track fuel consumed for statistics
+                    if (this._gameStats) {
+                        this._gameStats.recordFuelConsumed(fuelConsumption);
+                    }
                 }
             }
         }
@@ -115,10 +129,15 @@ export class ShipPhysics {
 
                     physicsBody.applyAngularImpulse(worldTorque);
 
-                    // Consume fuel: normalized magnitude (0-3 max) / 3 * 0.01 = max consumption of 0.01 per frame
+                    // Consume fuel: normalized magnitude (0-3 max) / 3 * 0.005 per frame
                     const normalizedAngularMagnitude = Math.min(angularMagnitude / 3.0, 1.0);
                     const fuelConsumption = normalizedAngularMagnitude * 0.005;
                     this._shipStatus.consumeFuel(fuelConsumption);
+
+                    // Track fuel consumed for statistics
+                    if (this._gameStats) {
+                        this._gameStats.recordFuelConsumed(fuelConsumption);
+                    }
                 }
             }
         }
