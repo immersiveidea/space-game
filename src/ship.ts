@@ -132,6 +132,7 @@ export class Ship {
         this._weapons = new WeaponSystem(DefaultScene.MainScene);
         this._weapons.initialize();
         this._weapons.setShipStatus(this._scoreboard.shipStatus);
+        this._weapons.setGameStats(this._gameStats);
 
         // Initialize input systems
         this._keyboardInput = new KeyboardInput(DefaultScene.MainScene);

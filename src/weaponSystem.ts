@@ -14,6 +14,7 @@ import {
 } from "@babylonjs/core";
 import { GameConfig } from "./gameConfig";
 import { ShipStatus } from "./shipStatus";
+import { GameStats } from "./gameStats";
 
 /**
  * Handles weapon firing and projectile lifecycle
@@ -23,6 +24,7 @@ export class WeaponSystem {
     private _ammoMaterial: StandardMaterial;
     private _scene: Scene;
     private _shipStatus: ShipStatus | null = null;
+    private _gameStats: GameStats | null = null;
 
     constructor(scene: Scene) {
         this._scene = scene;
@@ -33,6 +35,13 @@ export class WeaponSystem {
      */
     public setShipStatus(shipStatus: ShipStatus): void {
         this._shipStatus = shipStatus;
+    }
+
+    /**
+     * Set the game stats instance for tracking shots fired
+     */
+    public setGameStats(gameStats: GameStats): void {
+        this._gameStats = gameStats;
     }
 
     /**
@@ -99,6 +108,11 @@ export class WeaponSystem {
         // Consume ammo
         if (this._shipStatus) {
             this._shipStatus.consumeAmmo(0.01);
+        }
+
+        // Track shot fired
+        if (this._gameStats) {
+            this._gameStats.recordShotFired();
         }
 
         // Auto-dispose after 2 seconds
