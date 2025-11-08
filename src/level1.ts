@@ -50,6 +50,12 @@ export class Level1 implements Level {
             this._ship.gameStats.startTimer();
             debugLog('Game timer started');
 
+            // Start physics recording when gameplay begins
+            if (this._physicsRecorder) {
+                this._physicsRecorder.startRingBuffer();
+                debugLog('Physics recorder started');
+            }
+
             const observer = xr.input.onControllerAddedObservable.add((controller) => {
                 debugLog('🎮 onControllerAddedObservable FIRED for:', controller.inputSource.handedness);
                 this._ship.addController(controller);
@@ -147,11 +153,10 @@ export class Level1 implements Level {
             }
         });
 
-        // Initialize physics recorder
+        // Initialize physics recorder (but don't start it yet - will start on XR pose)
         setLoadingMessage("Initializing physics recorder...");
         this._physicsRecorder = new PhysicsRecorder(DefaultScene.MainScene);
-        this._physicsRecorder.startRingBuffer();
-        debugLog('Physics recorder initialized and running');
+        debugLog('Physics recorder initialized (will start on XR pose)');
 
         // Wire up recording keyboard shortcuts
         this._ship.keyboardInput.onRecordingActionObservable.add((action) => {
