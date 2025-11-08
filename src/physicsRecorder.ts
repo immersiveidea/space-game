@@ -155,61 +155,71 @@ export class PhysicsRecorder {
         const objects: PhysicsObjectState[] = [];
 
         // Get all physics-enabled meshes
-        const physicsMeshes = this._scene.meshes.filter(mesh => mesh.physicsBody !== null);
+        const physicsMeshes = this._scene.meshes.filter(mesh => mesh.physicsBody !== null && mesh.physicsBody !== undefined);
 
         for (const mesh of physicsMeshes) {
-            const body = mesh.physicsBody!;
+            const body = mesh.physicsBody;
 
-            // Get position
-            const pos = body.transformNode.position;
-
-            // Get rotation as quaternion
-            let quat = body.transformNode.rotationQuaternion;
-            if (!quat) {
-                // Convert Euler to Quaternion if needed
-                const rot = body.transformNode.rotation;
-                quat = Quaternion.FromEulerAngles(rot.x, rot.y, rot.z);
+            // Double-check body still exists and has transformNode (can be disposed between filter and here)
+            if (!body || !body.transformNode) {
+                continue;
             }
 
-            // Get velocities
-            const linVel = body.getLinearVelocity();
-            const angVel = body.getAngularVelocity();
+            try {
+                // Get position
+                const pos = body.transformNode.position;
 
-            // Get mass
-            const mass = body.getMassProperties().mass;
+                // Get rotation as quaternion
+                let quat = body.transformNode.rotationQuaternion;
+                if (!quat) {
+                    // Convert Euler to Quaternion if needed
+                    const rot = body.transformNode.rotation;
+                    quat = Quaternion.FromEulerAngles(rot.x, rot.y, rot.z);
+                }
 
-            // Get restitution (from shape material if available)
-            let restitution = 0;
-            if (body.shape && (body.shape as any).material) {
-                restitution = (body.shape as any).material.restitution || 0;
+                // Get velocities
+                const linVel = body.getLinearVelocity();
+                const angVel = body.getAngularVelocity();
+
+                // Get mass
+                const mass = body.getMassProperties().mass;
+
+                // Get restitution (from shape material if available)
+                let restitution = 0;
+                if (body.shape && (body.shape as any).material) {
+                    restitution = (body.shape as any).material.restitution || 0;
+                }
+
+                objects.push({
+                    id: mesh.id,
+                    position: [
+                        parseFloat(pos.x.toFixed(3)),
+                        parseFloat(pos.y.toFixed(3)),
+                        parseFloat(pos.z.toFixed(3))
+                    ],
+                    rotation: [
+                        parseFloat(quat.x.toFixed(4)),
+                        parseFloat(quat.y.toFixed(4)),
+                        parseFloat(quat.z.toFixed(4)),
+                        parseFloat(quat.w.toFixed(4))
+                    ],
+                    linearVelocity: [
+                        parseFloat(linVel.x.toFixed(3)),
+                        parseFloat(linVel.y.toFixed(3)),
+                        parseFloat(linVel.z.toFixed(3))
+                    ],
+                    angularVelocity: [
+                        parseFloat(angVel.x.toFixed(3)),
+                        parseFloat(angVel.y.toFixed(3)),
+                        parseFloat(angVel.z.toFixed(3))
+                    ],
+                    mass: parseFloat(mass.toFixed(2)),
+                    restitution: parseFloat(restitution.toFixed(2))
+                });
+            } catch (error) {
+                // Physics body was disposed during capture, skip this object
+                continue;
             }
-
-            objects.push({
-                id: mesh.id,
-                position: [
-                    parseFloat(pos.x.toFixed(3)),
-                    parseFloat(pos.y.toFixed(3)),
-                    parseFloat(pos.z.toFixed(3))
-                ],
-                rotation: [
-                    parseFloat(quat.x.toFixed(4)),
-                    parseFloat(quat.y.toFixed(4)),
-                    parseFloat(quat.z.toFixed(4)),
-                    parseFloat(quat.w.toFixed(4))
-                ],
-                linearVelocity: [
-                    parseFloat(linVel.x.toFixed(3)),
-                    parseFloat(linVel.y.toFixed(3)),
-                    parseFloat(linVel.z.toFixed(3))
-                ],
-                angularVelocity: [
-                    parseFloat(angVel.x.toFixed(3)),
-                    parseFloat(angVel.y.toFixed(3)),
-                    parseFloat(angVel.z.toFixed(3))
-                ],
-                mass: parseFloat(mass.toFixed(2)),
-                restitution: parseFloat(restitution.toFixed(2))
-            });
         }
 
         const snapshot: PhysicsSnapshot = {
