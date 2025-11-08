@@ -129,20 +129,34 @@ export class WeaponSystem {
                 hitRecorded = true;
 
                 // Remove collision observer after first hit
-                if (collisionObserver) {
-                    ammoAggregate.body.getCollisionObservable().remove(collisionObserver);
+                if (collisionObserver && ammoAggregate.body) {
+                    try {
+                        ammoAggregate.body.getCollisionObservable().remove(collisionObserver);
+                    } catch (e) {
+                        // Body may have been disposed during collision handling, ignore
+                    }
                 }
             }
         });
 
         // Auto-dispose after 2 seconds
         window.setTimeout(() => {
-            // Clean up collision observer
-            if (collisionObserver) {
-                ammoAggregate.body.getCollisionObservable().remove(collisionObserver);
+            // Clean up collision observer if body still exists
+            if (collisionObserver && ammoAggregate.body) {
+                try {
+                    ammoAggregate.body.getCollisionObservable().remove(collisionObserver);
+                } catch (e) {
+                    // Body may have already been disposed, ignore error
+                }
             }
-            ammoAggregate.dispose();
-            ammo.dispose();
+
+            // Dispose if not already disposed
+            try {
+                ammoAggregate.dispose();
+                ammo.dispose();
+            } catch (e) {
+                // Already disposed, ignore
+            }
         }, 2000);
     }
 
