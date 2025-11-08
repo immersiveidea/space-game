@@ -74,6 +74,13 @@ export class PhysicsRecorder {
     // IndexedDB storage
     private _storage: PhysicsStorage | null = null;
 
+    // Auto-save to IndexedDB
+    private _autoSaveEnabled: boolean = true;
+    private _autoSaveBuffer: PhysicsSnapshot[] = [];
+    private _autoSaveInterval: number = 10000; // Save every 10 seconds
+    private _lastAutoSaveTime: number = 0;
+    private _currentSessionId: string = "";
+
     constructor(scene: Scene) {
         this._scene = scene;
 
@@ -86,6 +93,7 @@ export class PhysicsRecorder {
 
     /**
      * Start the ring buffer recorder (always capturing last 30 seconds)
+     * Also starts auto-save to IndexedDB
      */
     public startRingBuffer(): void {
         if (this._isEnabled) {
@@ -95,16 +103,22 @@ export class PhysicsRecorder {
 
         this._isEnabled = true;
         this._startTime = performance.now();
+        this._lastAutoSaveTime = performance.now();
         this._frameNumber = 0;
+
+        // Create unique session ID for this recording
+        this._currentSessionId = `session-${Date.now()}`;
 
         // Hook into physics update observable
         this._scene.onAfterPhysicsObservable.add(() => {
             if (this._isEnabled) {
                 this.captureFrame();
+                this.checkAutoSave();
             }
         });
 
-        debugLog("PhysicsRecorder: Ring buffer started (30 second capacity)");
+        debugLog("PhysicsRecorder: Recording started (ring buffer + auto-save to IndexedDB)");
+        debugLog(`PhysicsRecorder: Session ID: ${this._currentSessionId}`);
     }
 
     /**
@@ -237,6 +251,11 @@ export class PhysicsRecorder {
             this._longRecording.push(snapshot);
         }
 
+        // Add to auto-save buffer if enabled
+        if (this._autoSaveEnabled) {
+            this._autoSaveBuffer.push(snapshot);
+        }
+
         this._frameNumber++;
 
         // Track performance
@@ -248,6 +267,61 @@ export class PhysicsRecorder {
         if (this._captureCount % 100 === 0) {
             const avgTime = (this._captureTimeAccumulator / this._captureCount).toFixed(3);
             debugLog(`PhysicsRecorder: Average capture time: ${avgTime}ms (${objects.length} objects)`);
+        }
+    }
+
+    /**
+     * Check if it's time to auto-save to IndexedDB
+     */
+    private checkAutoSave(): void {
+        if (!this._autoSaveEnabled || !this._storage) {
+            return;
+        }
+
+        const now = performance.now();
+        const timeSinceLastSave = now - this._lastAutoSaveTime;
+
+        // Save every 10 seconds
+        if (timeSinceLastSave >= this._autoSaveInterval && this._autoSaveBuffer.length > 0) {
+            this.performAutoSave();
+            this._lastAutoSaveTime = now;
+        }
+    }
+
+    /**
+     * Save buffered snapshots to IndexedDB
+     */
+    private async performAutoSave(): Promise<void> {
+        if (!this._storage || this._autoSaveBuffer.length === 0) {
+            return;
+        }
+
+        // Copy buffer and clear it immediately to avoid blocking next frame
+        const snapshotsToSave = [...this._autoSaveBuffer];
+        this._autoSaveBuffer = [];
+
+        // Create a recording from the buffered snapshots
+        const metadata: RecordingMetadata = {
+            startTime: snapshotsToSave[0].timestamp,
+            endTime: snapshotsToSave[snapshotsToSave.length - 1].timestamp,
+            frameCount: snapshotsToSave.length,
+            recordingDuration: snapshotsToSave[snapshotsToSave.length - 1].timestamp - snapshotsToSave[0].timestamp,
+            physicsUpdateRate: this._physicsUpdateRate
+        };
+
+        const recording: PhysicsRecording = {
+            metadata,
+            snapshots: snapshotsToSave
+        };
+
+        try {
+            // Save to IndexedDB with session ID as name
+            await this._storage.saveRecording(this._currentSessionId, recording);
+
+            const duration = (metadata.recordingDuration / 1000).toFixed(1);
+            debugLog(`PhysicsRecorder: Auto-saved ${snapshotsToSave.length} frames (${duration}s) to IndexedDB`);
+        } catch (error) {
+            debugLog("PhysicsRecorder: Error during auto-save", error);
         }
     }
 
@@ -512,11 +586,18 @@ export class PhysicsRecorder {
     /**
      * Dispose of recorder resources
      */
-    public dispose(): void {
+    public async dispose(): Promise<void> {
+        // Save any remaining buffered data before disposing
+        if (this._autoSaveBuffer.length > 0) {
+            debugLog(`PhysicsRecorder: Saving ${this._autoSaveBuffer.length} remaining frames before disposal`);
+            await this.performAutoSave();
+        }
+
         this.stopRingBuffer();
         this.stopLongRecording();
         this._ringBuffer = [];
         this._longRecording = [];
+        this._autoSaveBuffer = [];
 
         if (this._storage) {
             this._storage.close();
