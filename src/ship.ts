@@ -63,6 +63,10 @@ export class Ship {
         return this._gameStats;
     }
 
+    public get keyboardInput(): KeyboardInput {
+        return this._keyboardInput;
+    }
+
     public set position(newPosition: Vector3) {
         const body = this._ship.physicsBody;
 
@@ -111,7 +115,7 @@ export class Ship {
 
                 // Register collision handler for hull damage
                 const observable = agg.body.getCollisionObservable();
-                observable.add((collisionEvent) => {
+                observable.add(() => {
                     // Damage hull on any collision
                     if (this._scoreboard?.shipStatus) {
                         this._scoreboard.shipStatus.damageHull(0.01);
@@ -212,7 +216,7 @@ export class Ship {
         this._scoreboard.initialize();
 
         // Subscribe to score events to track asteroids destroyed
-        this._scoreboard.onScoreObservable.add((scoreEvent) => {
+        this._scoreboard.onScoreObservable.add(() => {
             // Each score event represents an asteroid destroyed
             this._gameStats.recordAsteroidDestroyed();
         });

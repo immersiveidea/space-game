@@ -4,6 +4,14 @@ import { FreeCamera, Observable, Scene, Vector2 } from "@babylonjs/core";
  * Handles keyboard and mouse input for ship control
  * Combines both input methods into a unified interface
  */
+/**
+ * Recording control action types
+ */
+export type RecordingAction =
+    | "exportRingBuffer"      // R key
+    | "toggleLongRecording"    // Ctrl+R
+    | "exportLongRecording";   // Shift+R
+
 export class KeyboardInput {
     private _leftStick: Vector2 = Vector2.Zero();
     private _rightStick: Vector2 = Vector2.Zero();
@@ -11,6 +19,7 @@ export class KeyboardInput {
     private _mousePos: Vector2 = new Vector2(0, 0);
     private _onShootObservable: Observable<void> = new Observable<void>();
     private _onCameraChangeObservable: Observable<number> = new Observable<number>();
+    private _onRecordingActionObservable: Observable<RecordingAction> = new Observable<RecordingAction>();
     private _scene: Scene;
 
     constructor(scene: Scene) {
@@ -29,6 +38,13 @@ export class KeyboardInput {
      */
     public get onCameraChangeObservable(): Observable<number> {
         return this._onCameraChangeObservable;
+    }
+
+    /**
+     * Get observable that fires when recording action is triggered
+     */
+    public get onRecordingActionObservable(): Observable<RecordingAction> {
+        return this._onRecordingActionObservable;
     }
 
     /**
@@ -61,6 +77,24 @@ export class KeyboardInput {
         };
 
         document.onkeydown = (ev) => {
+            // Recording controls (with modifiers)
+            if (ev.key === 'r' || ev.key === 'R') {
+                if (ev.ctrlKey || ev.metaKey) {
+                    // Ctrl+R or Cmd+R: Toggle long recording
+                    ev.preventDefault(); // Prevent browser reload
+                    this._onRecordingActionObservable.notifyObservers("toggleLongRecording");
+                    return;
+                } else if (ev.shiftKey) {
+                    // Shift+R: Export long recording
+                    this._onRecordingActionObservable.notifyObservers("exportLongRecording");
+                    return;
+                } else {
+                    // R: Export ring buffer (last 30 seconds)
+                    this._onRecordingActionObservable.notifyObservers("exportRingBuffer");
+                    return;
+                }
+            }
+
             switch (ev.key) {
                 case 'i':
                     // Open Babylon Inspector
@@ -148,5 +182,6 @@ export class KeyboardInput {
         this._scene.onPointerMove = null;
         this._onShootObservable.clear();
         this._onCameraChangeObservable.clear();
+        this._onRecordingActionObservable.clear();
     }
 }

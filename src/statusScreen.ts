@@ -6,11 +6,11 @@ import {
     TextBlock
 } from "@babylonjs/gui";
 import {
+    Camera,
     Mesh,
     MeshBuilder,
     Scene,
     StandardMaterial,
-    TransformNode,
     Vector3
 } from "@babylonjs/core";
 import { GameStats } from "./gameStats";
@@ -25,7 +25,7 @@ export class StatusScreen {
     private _screenMesh: Mesh | null = null;
     private _texture: AdvancedDynamicTexture | null = null;
     private _isVisible: boolean = false;
-    private _camera: TransformNode | null = null;
+    private _camera: Camera | null = null;
 
     // Text blocks for statistics
     private _gameTimeText: TextBlock;
@@ -43,7 +43,7 @@ export class StatusScreen {
     /**
      * Initialize the status screen mesh and UI
      */
-    public initialize(camera: TransformNode): void {
+    public initialize(camera: Camera): void {
         this._camera = camera;
 
         // Create a plane mesh for the status screen

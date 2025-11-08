@@ -13,6 +13,7 @@ import {LevelConfig} from "./levelConfig";
 import {LevelDeserializer} from "./levelDeserializer";
 import {BackgroundStars} from "./backgroundStars";
 import debugLog from './debug';
+import {PhysicsRecorder} from "./physicsRecorder";
 
 export class Level1 implements Level {
     private _ship: Ship;
@@ -25,6 +26,7 @@ export class Level1 implements Level {
     private _audioEngine: AudioEngineV2;
     private _deserializer: LevelDeserializer;
     private _backgroundStars: BackgroundStars;
+    private _physicsRecorder: PhysicsRecorder;
 
     constructor(levelConfig: LevelConfig, audioEngine: AudioEngineV2) {
         this._levelConfig = levelConfig;
@@ -95,6 +97,9 @@ export class Level1 implements Level {
         if (this._backgroundStars) {
             this._backgroundStars.dispose();
         }
+        if (this._physicsRecorder) {
+            this._physicsRecorder.dispose();
+        }
     }
 
     public async initialize() {
@@ -142,10 +147,64 @@ export class Level1 implements Level {
             }
         });
 
+        // Initialize physics recorder
+        setLoadingMessage("Initializing physics recorder...");
+        this._physicsRecorder = new PhysicsRecorder(DefaultScene.MainScene);
+        this._physicsRecorder.startRingBuffer();
+        debugLog('Physics recorder initialized and running');
+
+        // Wire up recording keyboard shortcuts
+        this._ship.keyboardInput.onRecordingActionObservable.add((action) => {
+            this.handleRecordingAction(action);
+        });
 
         this._initialized = true;
 
         // Notify that initialization is complete
         this._onReadyObservable.notifyObservers(this);
+    }
+
+    /**
+     * Handle recording keyboard shortcuts
+     */
+    private handleRecordingAction(action: string): void {
+        switch (action) {
+            case "exportRingBuffer":
+                // R key: Export last 30 seconds from ring buffer
+                const ringRecording = this._physicsRecorder.exportRingBuffer(30);
+                this._physicsRecorder.downloadRecording(ringRecording, "ring-buffer-30s");
+                debugLog("Exported ring buffer (last 30 seconds)");
+                break;
+
+            case "toggleLongRecording":
+                // Ctrl+R: Toggle long recording
+                const stats = this._physicsRecorder.getStats();
+                if (stats.isLongRecording) {
+                    this._physicsRecorder.stopLongRecording();
+                    debugLog("Long recording stopped");
+                } else {
+                    this._physicsRecorder.startLongRecording();
+                    debugLog("Long recording started");
+                }
+                break;
+
+            case "exportLongRecording":
+                // Shift+R: Export long recording
+                const longRecording = this._physicsRecorder.exportLongRecording();
+                if (longRecording.snapshots.length > 0) {
+                    this._physicsRecorder.downloadRecording(longRecording, "long-recording");
+                    debugLog("Exported long recording");
+                } else {
+                    debugLog("No long recording data to export");
+                }
+                break;
+        }
+    }
+
+    /**
+     * Get the physics recorder instance
+     */
+    public get physicsRecorder(): PhysicsRecorder {
+        return this._physicsRecorder;
     }
 }
