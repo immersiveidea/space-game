@@ -215,6 +215,14 @@ export class Ship {
             this._gameStats.recordAsteroidDestroyed();
         });
 
+        // Subscribe to ship status changes to track hull damage
+        this._scoreboard.shipStatus.onStatusChanged.add((event) => {
+            if (event.statusType === "hull" && event.delta < 0) {
+                // Hull damage (delta is negative)
+                this._gameStats.recordHullDamage(Math.abs(event.delta));
+            }
+        });
+
         // Initialize status screen
         this._statusScreen = new StatusScreen(DefaultScene.MainScene, this._gameStats);
         this._statusScreen.initialize(this._camera);
