@@ -8,6 +8,7 @@ export class ShipAudio {
     private _primaryThrustSound: StaticSound;
     private _secondaryThrustSound: StaticSound;
     private _weaponSound: StaticSound;
+    private _collisionSound: StaticSound;
     private _primaryThrustPlaying: boolean = false;
     private _secondaryThrustPlaying: boolean = false;
 
@@ -45,6 +46,15 @@ export class ShipAudio {
             {
                 loop: false,
                 volume: 0.5,
+            }
+        );
+
+        this._collisionSound = await this._audioEngine.createSoundAsync(
+            "collision",
+            "/assets/themes/default/audio/collision.mp3",
+            {
+                loop: false,
+                volume: 0.35,
             }
         );
     }
@@ -99,11 +109,19 @@ export class ShipAudio {
     }
 
     /**
+     * Play collision sound
+     */
+    public playCollisionSound(): void {
+        this._collisionSound?.play();
+    }
+
+    /**
      * Cleanup audio resources
      */
     public dispose(): void {
         this._primaryThrustSound?.dispose();
         this._secondaryThrustSound?.dispose();
         this._weaponSound?.dispose();
+        this._collisionSound?.dispose();
     }
 }

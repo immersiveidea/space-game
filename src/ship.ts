@@ -80,6 +80,13 @@ export class Ship {
         return this._isInLandingZone;
     }
 
+    public get velocity(): Vector3 {
+        if (this._ship?.physicsBody) {
+            return this._ship.physicsBody.getLinearVelocity();
+        }
+        return Vector3.Zero();
+    }
+
     public set position(newPosition: Vector3) {
         const body = this._ship.physicsBody;
 
@@ -99,6 +106,7 @@ export class Ship {
 
     public async initialize() {
         this._scoreboard = new Scoreboard();
+        this._scoreboard.setShip(this); // Pass ship reference for velocity reading
         this._gameStats = new GameStats();
         this._ship = new TransformNode("shipBase", DefaultScene.MainScene);
         const data = await loadAsset("ship.glb");
@@ -126,12 +134,48 @@ export class Ship {
                 agg.body.setAngularVelocity(new Vector3(0, 0, 0));
                 agg.body.setCollisionCallbackEnabled(true);
 
-                // Register collision handler for hull damage
+                // Register collision handler for energy-based hull damage
                 const observable = agg.body.getCollisionObservable();
-                observable.add(() => {
-                    // Damage hull on any collision
-                    if (this._scoreboard?.shipStatus) {
-                        this._scoreboard.shipStatus.damageHull(0.01);
+                observable.add((collisionEvent) => {
+                    // Only calculate damage on collision start to avoid double-counting
+                    if (collisionEvent.type === 'COLLISION_STARTED') {
+                        // Get collision bodies
+                        const shipBody = collisionEvent.collider;
+                        const otherBody = collisionEvent.collidedAgainst;
+
+                        // Get velocities
+                        const shipVelocity = shipBody.getLinearVelocity();
+                        const otherVelocity = otherBody.getLinearVelocity();
+
+                        // Calculate relative velocity
+                        const relativeVelocity = shipVelocity.subtract(otherVelocity);
+                        const relativeSpeed = relativeVelocity.length();
+
+                        // Get masses
+                        const shipMass = 10; // Known ship mass from aggregate creation
+                        const otherMass = otherBody.getMassProperties().mass;
+
+                        // Calculate reduced mass for collision
+                        const reducedMass = (shipMass * otherMass) / (shipMass + otherMass);
+
+                        // Calculate kinetic energy of collision
+                        const kineticEnergy = 0.5 * reducedMass * relativeSpeed * relativeSpeed;
+
+                        // Convert energy to damage (tuning factor)
+                        // 1000 units of energy = 0.01 (1%) damage
+                        const ENERGY_TO_DAMAGE_FACTOR = 0.01 / 1000;
+                        const damage = Math.min(kineticEnergy * ENERGY_TO_DAMAGE_FACTOR, 0.5); // Cap at 50% per hit
+
+                        // Apply damage if above minimum threshold
+                        if (this._scoreboard?.shipStatus && damage > 0.001) {
+                            this._scoreboard.shipStatus.damageHull(damage);
+                            debugLog(`Collision damage: ${damage.toFixed(4)} (energy: ${kineticEnergy.toFixed(1)}, speed: ${relativeSpeed.toFixed(1)} m/s)`);
+
+                            // Play collision sound
+                            if (this._audio) {
+                                this._audio.playCollisionSound();
+                            }
+                        }
                     }
                 });
             } else {

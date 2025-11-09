@@ -32,6 +32,9 @@ export class Scoreboard {
     // Ship status manager
     private _shipStatus: ShipStatus;
 
+    // Reference to ship for velocity reading
+    private _ship: any = null;
+
     constructor() {
         this._shipStatus = new ShipStatus();
 
@@ -64,9 +67,24 @@ export class Scoreboard {
         return this._shipStatus;
     }
 
+    /**
+     * Get the number of asteroids remaining
+     */
+    public get remaining(): number {
+        return this._remaining;
+    }
+
     public setRemainingCount(count: number) {
         this._remaining = count;
     }
+
+    /**
+     * Set the ship reference for velocity reading
+     */
+    public setShip(ship: any): void {
+        this._ship = ship;
+    }
+
     public initialize(): void {
         const scene = DefaultScene.MainScene;
 
@@ -140,7 +158,11 @@ export class Scoreboard {
         remainingText.text = 'Remaining: 0';
 
         const timeRemainingText = this.createText();
-        timeRemainingText.text = 'Time: 2:00';
+        timeRemainingText.text = 'Time: 00:00';
+
+        const velocityText = this.createText();
+        velocityText.text = 'Velocity: 0 m/s';
+
 
         const panel = new StackPanel();
         panel.isVertical = true;
@@ -151,11 +173,21 @@ export class Scoreboard {
         panel.addControl(fpsText);
         panel.addControl(hullText);
         panel.addControl(timeRemainingText);
+        panel.addControl(velocityText);
         advancedTexture.addControl(panel);
         let i = 0;
         const afterRender = scene.onAfterRenderObservable.add(() => {
             scoreText.text = `Score: ${this.calculateScore()}`;
             remainingText.text = `Remaining: ${this._remaining}`;
+
+            // Update velocity from ship if available
+            if (this._ship && this._ship.velocity) {
+                const velocityMagnitude = this._ship.velocity.length();
+                velocityText.text = `Velocity: ${velocityMagnitude.toFixed(1)} m/s`;
+            } else {
+                velocityText.text = `Velocity: 0.0 m/s`;
+            }
+
             const elapsed = Date.now() - this._startTime;
             if (this._active && i++%30 == 0) {
                 timeRemainingText.text = `Time: ${Math.floor(elapsed/60000).toString().padStart(2,"0")}:${(Math.floor(elapsed/1000)%60).toString().padStart(2,"0")}`;

@@ -1,5 +1,6 @@
 import {
     AbstractMesh,
+    AudioEngineV2,
     DistanceConstraint,
     InstancedMesh,
     Mesh,
@@ -7,7 +8,9 @@ import {
     PhysicsAggregate,
     PhysicsBody,
     PhysicsMotionType,
-    PhysicsShapeType, TransformNode,
+    PhysicsShapeType,
+    Sound,
+    TransformNode,
     Vector3
 } from "@babylonjs/core";
 import {DefaultScene} from "./defaultScene";
@@ -34,19 +37,53 @@ export class RockFactory {
     private static _asteroidMesh: AbstractMesh;
     private static _explosionManager: ExplosionManager;
     private static _orbitCenter: PhysicsAggregate;
+    private static _explosionSound: Sound;
+    private static _audioEngine: AudioEngineV2 | null = null;
 
-    public static async init() {
+    public static async init(audioEngine?: AudioEngineV2) {
+        if (audioEngine) {
+            this._audioEngine = audioEngine;
+        }
         // Initialize explosion manager
         const node = new TransformNode('orbitCenter', DefaultScene.MainScene);
         node.position = Vector3.Zero();
         this._orbitCenter = new PhysicsAggregate(node, PhysicsShapeType.SPHERE, {radius: .1, mass: 1000}, DefaultScene.MainScene );
-
+        this._orbitCenter.body.setMotionType(PhysicsMotionType.ANIMATED);
         this._explosionManager = new ExplosionManager(DefaultScene.MainScene, {
             duration: 800,
             explosionForce: 20.0,
             frameRate: 60
         });
         await this._explosionManager.initialize();
+
+        // Load explosion sound with spatial audio (only if audio engine available)
+        if (this._audioEngine) {
+            debugLog('[RockFactory] Loading explosion sound with AudioEngineV2...');
+
+            // Wrap Sound loading in a Promise to ensure it's loaded before continuing
+            await new Promise<void>((resolve) => {
+                this._explosionSound = new Sound(
+                    "explosionSound",
+                    "/assets/themes/default/audio/explosion.mp3",
+                    DefaultScene.MainScene,
+                    () => {
+                        debugLog('[RockFactory] Explosion sound loaded successfully');
+                        resolve();
+                    },
+                    {
+                        loop: false,
+                        autoplay: false,
+                        spatialSound: true,
+                        maxDistance: 500,
+                        distanceModel: "exponential",
+                        rolloffFactor: 1,
+                        volume: 5.0
+                    }
+                );
+            });
+        } else {
+            debugLog('[RockFactory] WARNING: No audio engine provided, explosion sounds will be disabled');
+        }
 
         if (!this._asteroidMesh) {
             await this.loadMesh();
@@ -100,11 +137,22 @@ export class RockFactory {
 
                         // Get the asteroid mesh before disposing
                         const asteroidMesh = eventData.collider.transformNode as AbstractMesh;
+                        const asteroidPosition = asteroidMesh.getAbsolutePosition();
                         debugLog('[RockFactory] Asteroid mesh to explode:', {
                             name: asteroidMesh.name,
                             id: asteroidMesh.id,
-                            position: asteroidMesh.position.toString()
+                            position: asteroidPosition.toString()
                         });
+
+                        // Play spatial explosion sound at asteroid position
+                        if (RockFactory._explosionSound) {
+                            debugLog('[RockFactory] Explosion sound exists, isReady:', RockFactory._explosionSound.isReady());
+                            RockFactory._explosionSound.setPosition(asteroidPosition);
+                            const playResult = RockFactory._explosionSound.play();
+                            debugLog('[RockFactory] Playing explosion sound at position:', asteroidPosition.toString(), 'play() returned:', playResult);
+                        } else {
+                            debugLog('[RockFactory] WARNING: Explosion sound not loaded!');
+                        }
 
                         // Play explosion using ExplosionManager (clones mesh internally)
                         debugLog('[RockFactory] Calling ExplosionManager.playExplosion()...');

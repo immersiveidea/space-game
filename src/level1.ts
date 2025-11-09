@@ -1,5 +1,5 @@
 import {DefaultScene} from "./defaultScene";
-import type {AudioEngineV2} from "@babylonjs/core";
+import type {AudioEngineV2, StaticSound} from "@babylonjs/core";
 import {
     AbstractMesh,
     Observable,
@@ -29,6 +29,7 @@ export class Level1 implements Level {
     private _backgroundStars: BackgroundStars;
     private _physicsRecorder: PhysicsRecorder;
     private _isReplayMode: boolean;
+    private _backgroundMusic: StaticSound;
 
     constructor(levelConfig: LevelConfig, audioEngine: AudioEngineV2, isReplayMode: boolean = false) {
         this._levelConfig = levelConfig;
@@ -78,13 +79,10 @@ export class Level1 implements Level {
             throw new Error("Cannot call play() in replay mode");
         }
 
-        // Create background music using AudioEngineV2
-        if (this._audioEngine) {
-            const background = await this._audioEngine.createSoundAsync("background", "/song1.mp3", {
-                loop: true,
-                volume: 0.5
-            });
-            background.play();
+        // Play background music (already loaded during initialization)
+        if (this._backgroundMusic) {
+            this._backgroundMusic.play();
+            debugLog('Started playing background music');
         }
 
         // If XR is available and session is active, check for controllers
@@ -210,6 +208,16 @@ export class Level1 implements Level {
             this._ship.keyboardInput.onRecordingActionObservable.add((action) => {
                 this.handleRecordingAction(action);
             });
+        }
+
+        // Load background music before marking as ready
+        if (this._audioEngine) {
+            setLoadingMessage("Loading background music...");
+            this._backgroundMusic = await this._audioEngine.createSoundAsync("background", "/song1.mp3", {
+                loop: true,
+                volume: 0.5
+            });
+            debugLog('Background music loaded successfully');
         }
 
         this._initialized = true;

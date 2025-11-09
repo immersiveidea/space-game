@@ -397,14 +397,14 @@ export class Main {
         await this.setupPhysics();
         setLoadingMessage("Physics Engine Ready!");
 
-        setLoadingMessage("Loading Assets and animations...");
-        ParticleHelper.BaseAssetsUrl = window.location.href;
-        await RockFactory.init();
-        setLoadingMessage("Ready!");
-
-        // Initialize AudioEngineV2
+        // Initialize AudioEngineV2 first
         setLoadingMessage("Initializing Audio Engine...");
         this._audioEngine = await CreateAudioEngineAsync();
+
+        setLoadingMessage("Loading audio and visual assets...");
+        ParticleHelper.BaseAssetsUrl = window.location.href;
+        await RockFactory.init(this._audioEngine);
+        setLoadingMessage("All assets loaded!");
 
 
         window.setTimeout(()=>{
