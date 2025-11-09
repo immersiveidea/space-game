@@ -213,10 +213,10 @@ export class Level1 implements Level {
         // Load background music before marking as ready
         if (this._audioEngine) {
             setLoadingMessage("Loading background music...");
-            this._backgroundMusic = await this._audioEngine.createSoundAsync("background", "/song1.mp3", {
+            /*this._backgroundMusic = await this._audioEngine.createSoundAsync("background", "/song1.mp3", {
                 loop: true,
                 volume: 0.5
-            });
+            });*/
             debugLog('Background music loaded successfully');
         }
 

@@ -90,6 +90,19 @@ export class Main {
                 await this._audioEngine.unlockAsync();
             }
 
+            // Now load audio assets (after unlock)
+            setLoadingMessage("Loading audio assets...");
+            await RockFactory.initAudio(this._audioEngine);
+
+            // Attach audio listener to camera for spatial audio
+            const camera = DefaultScene.XR?.baseExperience?.camera || DefaultScene.MainScene.activeCamera;
+            if (camera && this._audioEngine.listener) {
+                this._audioEngine.listener.attach(camera);
+                debugLog('[Main] Audio listener attached to camera for spatial audio');
+            } else {
+                debugLog('[Main] WARNING: Could not attach audio listener - camera or listener not available');
+            }
+
             setLoadingMessage("Loading level...");
 
             // Create and initialize level from config
@@ -182,6 +195,19 @@ export class Main {
                         debugLog('[Main] Unlocking audio engine...');
                         await this._audioEngine.unlockAsync();
                         debugLog('[Main] Audio engine unlocked');
+                    }
+
+                    // Now load audio assets (after unlock)
+                    setLoadingMessage("Loading audio assets...");
+                    await RockFactory.initAudio(this._audioEngine);
+
+                    // Attach audio listener to camera for spatial audio
+                    const camera = DefaultScene.XR?.baseExperience?.camera || DefaultScene.MainScene.activeCamera;
+                    if (camera && this._audioEngine.listener) {
+                        this._audioEngine.listener.attach(camera);
+                        debugLog('[Main] Audio listener attached to camera for spatial audio (test level)');
+                    } else {
+                        debugLog('[Main] WARNING: Could not attach audio listener - camera or listener not available (test level)');
                     }
 
                     // Create test level
@@ -397,14 +423,20 @@ export class Main {
         await this.setupPhysics();
         setLoadingMessage("Physics Engine Ready!");
 
-        // Initialize AudioEngineV2 first
+        // Initialize AudioEngineV2 with spatial audio support
         setLoadingMessage("Initializing Audio Engine...");
-        this._audioEngine = await CreateAudioEngineAsync();
+        this._audioEngine = await CreateAudioEngineAsync({
+            volume: 1.0,
+            listenerAutoUpdate: true,
+            listenerEnabled: true,
+            resumeOnInteraction: true
+        });
+        debugLog('Audio engine created with spatial audio enabled');
 
-        setLoadingMessage("Loading audio and visual assets...");
+        setLoadingMessage("Loading visual assets...");
         ParticleHelper.BaseAssetsUrl = window.location.href;
-        await RockFactory.init(this._audioEngine);
-        setLoadingMessage("All assets loaded!");
+        await RockFactory.init();
+        setLoadingMessage("Visual assets loaded!");
 
 
         window.setTimeout(()=>{
