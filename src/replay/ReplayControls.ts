@@ -94,8 +94,9 @@ export class ReplayControls {
         this._playPauseButton.fontWeight = "bold";
 
         this._playPauseButton.left = "20px";
-        this._playPauseButton.top = "-80px";
+        this._playPauseButton.top = "20px";
         this._playPauseButton.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_LEFT;
+        this._playPauseButton.verticalAlignment = Control.VERTICAL_ALIGNMENT_TOP;
 
         this._playPauseButton.onPointerClickObservable.add(() => {
             this._player.togglePlayPause();
@@ -124,8 +125,9 @@ export class ReplayControls {
         stepBackBtn.fontSize = "18px";
 
         stepBackBtn.left = "150px";
-        stepBackBtn.top = "-80px";
+        stepBackBtn.top = "20px";
         stepBackBtn.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_LEFT;
+        stepBackBtn.verticalAlignment = Control.VERTICAL_ALIGNMENT_TOP;
 
         stepBackBtn.onPointerClickObservable.add(() => {
             this._player.stepBackward();
@@ -144,8 +146,9 @@ export class ReplayControls {
         stepFwdBtn.fontSize = "18px";
 
         stepFwdBtn.left = "220px";
-        stepFwdBtn.top = "-80px";
+        stepFwdBtn.top = "20px";
         stepFwdBtn.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_LEFT;
+        stepFwdBtn.verticalAlignment = Control.VERTICAL_ALIGNMENT_TOP;
 
         stepFwdBtn.onPointerClickObservable.add(() => {
             this._player.stepForward();
@@ -167,8 +170,9 @@ export class ReplayControls {
         this._speedText.textHorizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
 
         this._speedText.left = "-320px";
-        this._speedText.top = "-95px";
+        this._speedText.top = "10px";
         this._speedText.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_RIGHT;
+        this._speedText.verticalAlignment = Control.VERTICAL_ALIGNMENT_TOP;
 
         this._controlBar.addControl(this._speedText);
 
@@ -183,8 +187,9 @@ export class ReplayControls {
         speed05Btn.fontSize = "14px";
 
         speed05Btn.left = "-250px";
-        speed05Btn.top = "-85px";
+        speed05Btn.top = "20px";
         speed05Btn.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_RIGHT;
+        speed05Btn.verticalAlignment = Control.VERTICAL_ALIGNMENT_TOP;
 
         speed05Btn.onPointerClickObservable.add(() => {
             this._player.setPlaybackSpeed(0.5);
@@ -204,8 +209,9 @@ export class ReplayControls {
         speed1Btn.fontSize = "14px";
 
         speed1Btn.left = "-180px";
-        speed1Btn.top = "-85px";
+        speed1Btn.top = "20px";
         speed1Btn.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_RIGHT;
+        speed1Btn.verticalAlignment = Control.VERTICAL_ALIGNMENT_TOP;
 
         speed1Btn.onPointerClickObservable.add(() => {
             this._player.setPlaybackSpeed(1.0);
@@ -225,8 +231,9 @@ export class ReplayControls {
         speed2Btn.fontSize = "14px";
 
         speed2Btn.left = "-110px";
-        speed2Btn.top = "-85px";
+        speed2Btn.top = "20px";
         speed2Btn.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_RIGHT;
+        speed2Btn.verticalAlignment = Control.VERTICAL_ALIGNMENT_TOP;
 
         speed2Btn.onPointerClickObservable.add(() => {
             this._player.setPlaybackSpeed(2.0);
@@ -252,8 +259,9 @@ export class ReplayControls {
         this._progressSlider.thumbColor = "#00ff88";
         this._progressSlider.thumbWidth = "20px";
 
-        this._progressSlider.top = "-30px";
+        this._progressSlider.top = "80px";
         this._progressSlider.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
+        this._progressSlider.verticalAlignment = Control.VERTICAL_ALIGNMENT_TOP;
 
         let isDragging = false;
 
@@ -286,9 +294,10 @@ export class ReplayControls {
         this._timeText.fontSize = "18px";
         this._timeText.textHorizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
 
-        this._timeText.top = "-30px";
+        this._timeText.top = "80px";
         this._timeText.left = "-20px";
         this._timeText.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_RIGHT;
+        this._timeText.verticalAlignment = Control.VERTICAL_ALIGNMENT_TOP;
 
         this._controlBar.addControl(this._timeText);
     }

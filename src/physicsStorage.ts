@@ -58,7 +58,8 @@ export class PhysicsStorage {
             throw new Error("Database not initialized");
         }
 
-        const recordingId = `recording-${Date.now()}`;
+        // Use the provided name as recordingId (for session-based grouping)
+        const recordingId = name;
         const segmentSize = 1000; // 1 second at ~7 Hz = ~7 snapshots per segment
 
         return new Promise((resolve, reject) => {
@@ -190,23 +191,76 @@ export class PhysicsStorage {
             request.onsuccess = () => {
                 const allSegments = request.result;
 
-                // Group by recordingId and get first segment (which has metadata)
-                const recordingMap = new Map();
+                // Group by recordingId and aggregate all segments
+                const sessionMap = new Map<string, {
+                    segments: any[];
+                    metadata: any;
+                }>();
 
+                // Group segments by session
                 allSegments.forEach(segment => {
-                    if (!recordingMap.has(segment.recordingId) && segment.metadata) {
-                        recordingMap.set(segment.recordingId, {
-                            id: segment.recordingId,
-                            name: segment.name,
-                            timestamp: segment.timestamp,
-                            duration: segment.metadata.recordingDuration / 1000, // Convert to seconds
-                            frameCount: segment.metadata.frameCount
+                    if (!sessionMap.has(segment.recordingId)) {
+                        sessionMap.set(segment.recordingId, {
+                            segments: [],
+                            metadata: null
                         });
+                    }
+                    const session = sessionMap.get(segment.recordingId)!;
+                    session.segments.push(segment);
+                    if (segment.metadata) {
+                        session.metadata = segment.metadata; // Keep first metadata for LevelConfig
                     }
                 });
 
-                const recordings = Array.from(recordingMap.values());
-                debugLog(`PhysicsStorage: Found ${recordings.length} recordings`);
+                // Build recording list with aggregated data
+                const recordings: Array<{
+                    id: string;
+                    name: string;
+                    timestamp: number;
+                    duration: number;
+                    frameCount: number;
+                }> = [];
+
+                sessionMap.forEach((session, recordingId) => {
+                    // Sort segments to get first and last
+                    session.segments.sort((a, b) => a.segmentIndex - b.segmentIndex);
+
+                    const firstSegment = session.segments[0];
+                    const lastSegment = session.segments[session.segments.length - 1];
+
+                    // Calculate total frame count across all segments
+                    const totalFrames = session.segments.reduce((sum, seg) => sum + seg.snapshots.length, 0);
+
+                    // Calculate total duration from first to last snapshot across ALL segments
+                    let firstTimestamp = Number.MAX_VALUE;
+                    let lastTimestamp = 0;
+
+                    session.segments.forEach(seg => {
+                        if (seg.snapshots.length > 0) {
+                            const segFirstTimestamp = seg.snapshots[0].timestamp;
+                            const segLastTimestamp = seg.snapshots[seg.snapshots.length - 1].timestamp;
+
+                            if (segFirstTimestamp < firstTimestamp) {
+                                firstTimestamp = segFirstTimestamp;
+                            }
+                            if (segLastTimestamp > lastTimestamp) {
+                                lastTimestamp = segLastTimestamp;
+                            }
+                        }
+                    });
+
+                    const totalDuration = (lastTimestamp - firstTimestamp) / 1000; // Convert to seconds
+
+                    recordings.push({
+                        id: recordingId,
+                        name: recordingId, // Use session ID as name
+                        timestamp: firstSegment.timestamp,
+                        duration: totalDuration,
+                        frameCount: totalFrames
+                    });
+                });
+
+                debugLog(`PhysicsStorage: Found ${recordings.length} sessions (${allSegments.length} total segments)`);
                 resolve(recordings);
             };
 

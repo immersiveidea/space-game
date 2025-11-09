@@ -1,11 +1,12 @@
 import {
-    AbstractMesh, Color3,
+    AbstractMesh,
+    Color3,
     MeshBuilder,
     Observable,
     PBRMaterial,
     PhysicsAggregate,
     Texture,
-    Vector3
+    Vector3,
 } from "@babylonjs/core";
 import { DefaultScene } from "./defaultScene";
 import { RockFactory } from "./rockFactory";
@@ -16,7 +17,6 @@ import {
     Vector3Array,
     validateLevelConfig
 } from "./levelConfig";
-import { GameConfig } from "./gameConfig";
 import { FireProceduralTexture } from "@babylonjs/procedural-textures";
 import { createSphereLightmap } from "./sphereLightmap";
 import debugLog from './debug';
@@ -41,8 +41,11 @@ export class LevelDeserializer {
 
     /**
      * Create all entities from the configuration
+     * @param scoreObservable - Observable for score events
      */
-    public async deserialize(scoreObservable: Observable<ScoreEvent>): Promise<{
+    public async deserialize(
+        scoreObservable: Observable<ScoreEvent>
+    ): Promise<{
         startBase: AbstractMesh | null;
         landingAggregate: PhysicsAggregate | null;
         sun: AbstractMesh;
@@ -51,19 +54,11 @@ export class LevelDeserializer {
     }> {
         debugLog('Deserializing level:', this.config.difficulty);
 
-        // Create entities
         const baseResult = await this.createStartBase();
         const sun = this.createSun();
         const planets = this.createPlanets();
         const asteroids = await this.createAsteroids(scoreObservable);
 
-        /*
-        const dir = new Vector3(-1,-2,-1)
-
-        const light = new DirectionalLight("dirLight", dir, DefaultScene.MainScene);
-        const light2 = new DirectionalLight("dirLight2", dir.negate(), DefaultScene.MainScene);
-        light2.intensity = .5;
-        */
         return {
             startBase: baseResult.baseMesh,
             landingAggregate: baseResult.landingAggregate,

@@ -1,4 +1,4 @@
-import { Vector3 } from "@babylonjs/core";
+import { Vector3, Quaternion, Material, PBRMaterial, StandardMaterial, AbstractMesh, TransformNode } from "@babylonjs/core";
 import { DefaultScene } from "./defaultScene";
 import {
     LevelConfig,
@@ -7,7 +7,11 @@ import {
     SunConfig,
     PlanetConfig,
     AsteroidConfig,
-    Vector3Array
+    Vector3Array,
+    QuaternionArray,
+    Color4Array,
+    MaterialConfig,
+    SceneNodeConfig
 } from "./levelConfig";
 import debugLog from './debug';
 
@@ -19,21 +23,25 @@ export class LevelSerializer {
 
     /**
      * Serialize the current level state to a LevelConfig object
+     * @param difficulty - Difficulty level string
+     * @param includeFullScene - If true, serialize complete scene (materials, hierarchy, assets)
      */
-    public serialize(difficulty: string = 'custom'): LevelConfig {
+    public serialize(difficulty: string = 'custom', includeFullScene: boolean = true): LevelConfig {
         const ship = this.serializeShip();
         const startBase = this.serializeStartBase();
         const sun = this.serializeSun();
         const planets = this.serializePlanets();
         const asteroids = this.serializeAsteroids();
 
-        return {
+        const config: LevelConfig = {
             version: "1.0",
             difficulty,
             timestamp: new Date().toISOString(),
             metadata: {
                 generator: "LevelSerializer",
-                description: `Captured level state at ${new Date().toLocaleString()}`
+                description: `Captured level state at ${new Date().toLocaleString()}`,
+                captureTime: performance.now(),
+                babylonVersion: "8.32.0"
             },
             ship,
             startBase,
@@ -41,6 +49,17 @@ export class LevelSerializer {
             planets,
             asteroids
         };
+
+        // Include full scene serialization if requested
+        if (includeFullScene) {
+            config.materials = this.serializeMaterials();
+            config.sceneHierarchy = this.serializeSceneHierarchy();
+            config.assetReferences = this.serializeAssetReferences();
+
+            debugLog(`LevelSerializer: Serialized ${config.materials.length} materials, ${config.sceneHierarchy.length} scene nodes`);
+        }
+
+        return config;
     }
 
     /**
@@ -230,6 +249,197 @@ export class LevelSerializer {
     }
 
     /**
+     * Serialize all materials in the scene
+     */
+    private serializeMaterials(): MaterialConfig[] {
+        const materials: MaterialConfig[] = [];
+        const seenIds = new Set<string>();
+
+        for (const material of this.scene.materials) {
+            // Skip duplicates
+            if (seenIds.has(material.id)) {
+                continue;
+            }
+            seenIds.add(material.id);
+
+            const materialConfig: MaterialConfig = {
+                id: material.id,
+                name: material.name,
+                type: "Basic",
+                alpha: material.alpha,
+                backFaceCulling: material.backFaceCulling
+            };
+
+            // Handle PBR materials
+            if (material instanceof PBRMaterial) {
+                materialConfig.type = "PBR";
+                if (material.albedoColor) {
+                    materialConfig.albedoColor = [
+                        material.albedoColor.r,
+                        material.albedoColor.g,
+                        material.albedoColor.b
+                    ];
+                }
+                materialConfig.metallic = material.metallic;
+                materialConfig.roughness = material.roughness;
+                if (material.emissiveColor) {
+                    materialConfig.emissiveColor = [
+                        material.emissiveColor.r,
+                        material.emissiveColor.g,
+                        material.emissiveColor.b
+                    ];
+                }
+                materialConfig.emissiveIntensity = material.emissiveIntensity;
+
+                // Capture texture references (not data)
+                materialConfig.textures = {};
+                if (material.albedoTexture) {
+                    materialConfig.textures.albedo = material.albedoTexture.name;
+                }
+                if (material.bumpTexture) {
+                    materialConfig.textures.normal = material.bumpTexture.name;
+                }
+                if (material.metallicTexture) {
+                    materialConfig.textures.metallic = material.metallicTexture.name;
+                }
+                if (material.emissiveTexture) {
+                    materialConfig.textures.emissive = material.emissiveTexture.name;
+                }
+            }
+            // Handle Standard materials
+            else if (material instanceof StandardMaterial) {
+                materialConfig.type = "Standard";
+                if (material.diffuseColor) {
+                    materialConfig.albedoColor = [
+                        material.diffuseColor.r,
+                        material.diffuseColor.g,
+                        material.diffuseColor.b,
+                        1.0
+                    ];
+                }
+                if (material.emissiveColor) {
+                    materialConfig.emissiveColor = [
+                        material.emissiveColor.r,
+                        material.emissiveColor.g,
+                        material.emissiveColor.b
+                    ];
+                }
+            }
+
+            materials.push(materialConfig);
+        }
+
+        return materials;
+    }
+
+    /**
+     * Serialize scene hierarchy (all transform nodes and meshes)
+     */
+    private serializeSceneHierarchy(): SceneNodeConfig[] {
+        const nodes: SceneNodeConfig[] = [];
+        const seenIds = new Set<string>();
+
+        // Serialize all transform nodes
+        for (const node of this.scene.transformNodes) {
+            if (seenIds.has(node.id)) continue;
+            seenIds.add(node.id);
+
+            const nodeConfig: SceneNodeConfig = {
+                id: node.id,
+                name: node.name,
+                type: "TransformNode",
+                position: this.vector3ToArray(node.position),
+                rotation: this.vector3ToArray(node.rotation),
+                scaling: this.vector3ToArray(node.scaling),
+                isEnabled: node.isEnabled(),
+                metadata: node.metadata
+            };
+
+            // Capture quaternion if present
+            if (node.rotationQuaternion) {
+                nodeConfig.rotationQuaternion = this.quaternionToArray(node.rotationQuaternion);
+            }
+
+            // Capture parent reference
+            if (node.parent) {
+                nodeConfig.parentId = node.parent.id;
+            }
+
+            nodes.push(nodeConfig);
+        }
+
+        // Serialize all meshes
+        for (const mesh of this.scene.meshes) {
+            if (seenIds.has(mesh.id)) continue;
+            seenIds.add(mesh.id);
+
+            const nodeConfig: SceneNodeConfig = {
+                id: mesh.id,
+                name: mesh.name,
+                type: mesh.getClassName() === "InstancedMesh" ? "InstancedMesh" : "Mesh",
+                position: this.vector3ToArray(mesh.position),
+                rotation: this.vector3ToArray(mesh.rotation),
+                scaling: this.vector3ToArray(mesh.scaling),
+                isVisible: mesh.isVisible,
+                isEnabled: mesh.isEnabled(),
+                metadata: mesh.metadata
+            };
+
+            // Capture quaternion if present
+            if (mesh.rotationQuaternion) {
+                nodeConfig.rotationQuaternion = this.quaternionToArray(mesh.rotationQuaternion);
+            }
+
+            // Capture parent reference
+            if (mesh.parent) {
+                nodeConfig.parentId = mesh.parent.id;
+            }
+
+            // Capture material reference
+            if (mesh.material) {
+                nodeConfig.materialId = mesh.material.id;
+            }
+
+            // Determine asset reference from mesh source (use full paths)
+            if (mesh.metadata?.source) {
+                nodeConfig.assetReference = mesh.metadata.source;
+            } else if (mesh.name.includes("ship") || mesh.name.includes("Ship")) {
+                nodeConfig.assetReference = "assets/themes/default/models/ship.glb";
+            } else if (mesh.name.includes("asteroid") || mesh.name.includes("Asteroid")) {
+                nodeConfig.assetReference = "assets/themes/default/models/asteroid.glb";
+            } else if (mesh.name.includes("base") || mesh.name.includes("Base")) {
+                nodeConfig.assetReference = "assets/themes/default/models/base.glb";
+            }
+
+            nodes.push(nodeConfig);
+        }
+
+        return nodes;
+    }
+
+    /**
+     * Serialize asset references (mesh ID -> GLB file path)
+     */
+    private serializeAssetReferences(): { [key: string]: string } {
+        const assetRefs: { [key: string]: string } = {};
+
+        // Map common mesh patterns to their source assets (use full paths as keys)
+        for (const mesh of this.scene.meshes) {
+            if (mesh.metadata?.source) {
+                assetRefs[mesh.id] = mesh.metadata.source;
+            } else if (mesh.name.toLowerCase().includes("ship")) {
+                assetRefs[mesh.id] = "assets/themes/default/models/ship.glb";
+            } else if (mesh.name.toLowerCase().includes("asteroid")) {
+                assetRefs[mesh.id] = "assets/themes/default/models/asteroid.glb";
+            } else if (mesh.name.toLowerCase().includes("base")) {
+                assetRefs[mesh.id] = "assets/themes/default/models/base.glb";
+            }
+        }
+
+        return assetRefs;
+    }
+
+    /**
      * Helper to convert Vector3 to array
      */
     private vector3ToArray(vector: Vector3): Vector3Array {
@@ -237,6 +447,18 @@ export class LevelSerializer {
             parseFloat(vector.x.toFixed(3)),
             parseFloat(vector.y.toFixed(3)),
             parseFloat(vector.z.toFixed(3))
+        ];
+    }
+
+    /**
+     * Helper to convert Quaternion to array
+     */
+    private quaternionToArray(quat: Quaternion): QuaternionArray {
+        return [
+            parseFloat(quat.x.toFixed(4)),
+            parseFloat(quat.y.toFixed(4)),
+            parseFloat(quat.z.toFixed(4)),
+            parseFloat(quat.w.toFixed(4))
         ];
     }
 

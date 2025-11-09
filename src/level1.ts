@@ -27,40 +27,44 @@ export class Level1 implements Level {
     private _deserializer: LevelDeserializer;
     private _backgroundStars: BackgroundStars;
     private _physicsRecorder: PhysicsRecorder;
+    private _isReplayMode: boolean;
 
-    constructor(levelConfig: LevelConfig, audioEngine: AudioEngineV2) {
+    constructor(levelConfig: LevelConfig, audioEngine: AudioEngineV2, isReplayMode: boolean = false) {
         this._levelConfig = levelConfig;
         this._audioEngine = audioEngine;
+        this._isReplayMode = isReplayMode;
         this._deserializer = new LevelDeserializer(levelConfig);
-        this._ship = new Ship(audioEngine);
+        this._ship = new Ship(audioEngine, isReplayMode);
 
+        // Only set up XR observables in game mode (not replay mode)
+        if (!isReplayMode) {
+            const xr = DefaultScene.XR;
 
-        const xr = DefaultScene.XR;
+            debugLog('Level1 constructor - Setting up XR observables');
+            debugLog('XR input exists:', !!xr.input);
+            debugLog('onControllerAddedObservable exists:', !!xr.input?.onControllerAddedObservable);
 
-        debugLog('Level1 constructor - Setting up XR observables');
-        debugLog('XR input exists:', !!xr.input);
-        debugLog('onControllerAddedObservable exists:', !!xr.input?.onControllerAddedObservable);
+            xr.baseExperience.onInitialXRPoseSetObservable.add(() => {
+                xr.baseExperience.camera.parent = this._ship.transformNode;
+                const currPose =  xr.baseExperience.camera.globalPosition.y;
+                xr.baseExperience.camera.position = new Vector3(0, 0, 0);
 
-        xr.baseExperience.onInitialXRPoseSetObservable.add(() => {
-            xr.baseExperience.camera.parent = this._ship.transformNode;
-            const currPose =  xr.baseExperience.camera.globalPosition.y;
-            xr.baseExperience.camera.position = new Vector3(0, 0, 0);
+                // Start game timer when XR pose is set
+                this._ship.gameStats.startTimer();
+                debugLog('Game timer started');
 
-            // Start game timer when XR pose is set
-            this._ship.gameStats.startTimer();
-            debugLog('Game timer started');
+                // Start physics recording when gameplay begins
+                if (this._physicsRecorder) {
+                    this._physicsRecorder.startRingBuffer();
+                    debugLog('Physics recorder started');
+                }
 
-            // Start physics recording when gameplay begins
-            if (this._physicsRecorder) {
-                this._physicsRecorder.startRingBuffer();
-                debugLog('Physics recorder started');
-            }
-
-            const observer = xr.input.onControllerAddedObservable.add((controller) => {
-                debugLog('🎮 onControllerAddedObservable FIRED for:', controller.inputSource.handedness);
-                this._ship.addController(controller);
+                const observer = xr.input.onControllerAddedObservable.add((controller) => {
+                    debugLog('🎮 onControllerAddedObservable FIRED for:', controller.inputSource.handedness);
+                    this._ship.addController(controller);
+                });
             });
-        });
+        }
         // Don't call initialize here - let Main call it after registering the observable
     }
 
@@ -69,6 +73,10 @@ export class Level1 implements Level {
     }
 
     public async play() {
+        if (this._isReplayMode) {
+            throw new Error("Cannot call play() in replay mode");
+        }
+
         // Create background music using AudioEngineV2
         const background = await this._audioEngine.createSoundAsync("background", "/song1.mp3", {
             loop: true,
@@ -134,8 +142,6 @@ export class Level1 implements Level {
         this._ship.scoreboard.setRemainingCount(entities.asteroids.length);
         debugLog(`Initialized scoreboard with ${entities.asteroids.length} asteroids`);
 
-
-
         // Create background starfield
         setLoadingMessage("Creating starfield...");
         this._backgroundStars = new BackgroundStars(DefaultScene.MainScene, {
@@ -154,14 +160,19 @@ export class Level1 implements Level {
         });
 
         // Initialize physics recorder (but don't start it yet - will start on XR pose)
-        setLoadingMessage("Initializing physics recorder...");
-        this._physicsRecorder = new PhysicsRecorder(DefaultScene.MainScene);
-        debugLog('Physics recorder initialized (will start on XR pose)');
+        // Only create recorder in game mode, not replay mode
+        if (!this._isReplayMode) {
+            setLoadingMessage("Initializing physics recorder...");
+            this._physicsRecorder = new PhysicsRecorder(DefaultScene.MainScene, this._levelConfig);
+            debugLog('Physics recorder initialized (will start on XR pose)');
+        }
 
-        // Wire up recording keyboard shortcuts
-        this._ship.keyboardInput.onRecordingActionObservable.add((action) => {
-            this.handleRecordingAction(action);
-        });
+        // Wire up recording keyboard shortcuts (only in game mode)
+        if (!this._isReplayMode) {
+            this._ship.keyboardInput.onRecordingActionObservable.add((action) => {
+                this.handleRecordingAction(action);
+            });
+        }
 
         this._initialized = true;
 
@@ -205,6 +216,7 @@ export class Level1 implements Level {
                 break;
         }
     }
+
 
     /**
      * Get the physics recorder instance

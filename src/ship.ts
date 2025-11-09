@@ -50,9 +50,11 @@ export class Ship {
     private _landingAggregate: PhysicsAggregate | null = null;
     private _resupplyTimer: number = 0;
     private _isInLandingZone: boolean = false;
+    private _isReplayMode: boolean;
 
-    constructor(audioEngine?: AudioEngineV2) {
+    constructor(audioEngine?: AudioEngineV2, isReplayMode: boolean = false) {
         this._audioEngine = audioEngine;
+        this._isReplayMode = isReplayMode;
     }
 
     public get scoreboard(): Scoreboard {
@@ -138,46 +140,48 @@ export class Ship {
         this._weapons.setShipStatus(this._scoreboard.shipStatus);
         this._weapons.setGameStats(this._gameStats);
 
-        // Initialize input systems
-        this._keyboardInput = new KeyboardInput(DefaultScene.MainScene);
-        this._keyboardInput.setup();
+        // Initialize input systems (skip in replay mode)
+        if (!this._isReplayMode) {
+            this._keyboardInput = new KeyboardInput(DefaultScene.MainScene);
+            this._keyboardInput.setup();
 
-        this._controllerInput = new ControllerInput();
+            this._controllerInput = new ControllerInput();
 
-        // Wire up shooting events
-        this._keyboardInput.onShootObservable.add(() => {
-            this.handleShoot();
-        });
+            // Wire up shooting events
+            this._keyboardInput.onShootObservable.add(() => {
+                this.handleShoot();
+            });
 
-        this._controllerInput.onShootObservable.add(() => {
-            this.handleShoot();
-        });
+            this._controllerInput.onShootObservable.add(() => {
+                this.handleShoot();
+            });
 
-        // Wire up status screen toggle event
-        this._controllerInput.onStatusScreenToggleObservable.add(() => {
-            if (this._statusScreen) {
-                this._statusScreen.toggle();
-            }
-        });
-
-        // Wire up camera adjustment events
-        this._keyboardInput.onCameraChangeObservable.add((cameraKey) => {
-            if (cameraKey === 1) {
-                this._camera.position.x = 15;
-                this._camera.rotation.y = -Math.PI / 2;
-            }
-        });
-
-        this._controllerInput.onCameraAdjustObservable.add((adjustment) => {
-            if (DefaultScene.XR?.baseExperience?.camera) {
-                const camera = DefaultScene.XR.baseExperience.camera;
-                if (adjustment.direction === "down") {
-                    camera.position.y = camera.position.y - 0.1;
-                } else {
-                    camera.position.y = camera.position.y + 0.1;
+            // Wire up status screen toggle event
+            this._controllerInput.onStatusScreenToggleObservable.add(() => {
+                if (this._statusScreen) {
+                    this._statusScreen.toggle();
                 }
-            }
-        });
+            });
+
+            // Wire up camera adjustment events
+            this._keyboardInput.onCameraChangeObservable.add((cameraKey) => {
+                if (cameraKey === 1) {
+                    this._camera.position.x = 15;
+                    this._camera.rotation.y = -Math.PI / 2;
+                }
+            });
+
+            this._controllerInput.onCameraAdjustObservable.add((adjustment) => {
+                if (DefaultScene.XR?.baseExperience?.camera) {
+                    const camera = DefaultScene.XR.baseExperience.camera;
+                    if (adjustment.direction === "down") {
+                        camera.position.y = camera.position.y - 0.1;
+                    } else {
+                        camera.position.y = camera.position.y + 0.1;
+                    }
+                }
+            });
+        }
 
         // Initialize physics controller
         this._physics = new ShipPhysics();

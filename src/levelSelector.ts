@@ -16,7 +16,15 @@ export function populateLevelSelector(): boolean {
 
     const savedLevels = getSavedLevels();
 
-    if (savedLevels.size === 0) {
+    // Filter to only show recruit and pilot difficulty levels
+    const filteredLevels = new Map<string, LevelConfig>();
+    for (const [name, config] of savedLevels.entries()) {
+        if (config.difficulty === 'recruit' || config.difficulty === 'pilot') {
+            filteredLevels.set(name, config);
+        }
+    }
+
+    if (filteredLevels.size === 0) {
         container.innerHTML = `
             <div style="
                 grid-column: 1 / -1;
@@ -43,7 +51,7 @@ export function populateLevelSelector(): boolean {
 
     // Create level cards
     let html = '';
-    for (const [name, config] of savedLevels.entries()) {
+    for (const [name, config] of filteredLevels.entries()) {
         const timestamp = config.timestamp ? new Date(config.timestamp).toLocaleDateString() : '';
         const description = config.metadata?.description || `${config.asteroids.length} asteroids • ${config.planets.length} planets`;
 

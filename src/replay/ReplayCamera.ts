@@ -48,6 +48,10 @@ export class ReplayCamera {
         this._camera.lowerBetaLimit = 0.1;
         this._camera.upperBetaLimit = Math.PI / 2;
 
+        // Set clipping planes for visibility
+        this._camera.minZ = 0.1;  // Very close near plane
+        this._camera.maxZ = 5000; // Far plane for distant objects
+
         // Mouse wheel zoom speed
         this._camera.wheelPrecision = 20;
 
@@ -55,6 +59,8 @@ export class ReplayCamera {
         this._camera.panningSensibility = 50;
 
         scene.activeCamera = this._camera;
+
+        debugLog("ReplayCamera: Created with clipping planes minZ=0.1, maxZ=5000");
     }
 
     /**
@@ -115,6 +121,7 @@ export class ReplayCamera {
 
         objects.forEach(obj => {
             const pos = obj.position;
+            debugLog(`ReplayCamera: Framing object ${obj.name} at position ${pos.toString()}`);
             minX = Math.min(minX, pos.x);
             minY = Math.min(minY, pos.y);
             minZ = Math.min(minZ, pos.z);

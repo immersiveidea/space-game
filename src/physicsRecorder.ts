@@ -1,6 +1,7 @@
 import { Scene, Vector3, Quaternion, AbstractMesh } from "@babylonjs/core";
 import debugLog from "./debug";
 import { PhysicsStorage } from "./physicsStorage";
+import { LevelConfig } from "./levelConfig";
 
 /**
  * Represents the physics state of a single object at a point in time
@@ -33,6 +34,7 @@ export interface RecordingMetadata {
     frameCount: number;
     recordingDuration: number; // milliseconds
     physicsUpdateRate: number; // Hz
+    levelConfig?: LevelConfig; // Full scene state at recording time
 }
 
 /**
@@ -80,9 +82,11 @@ export class PhysicsRecorder {
     private _autoSaveInterval: number = 10000; // Save every 10 seconds
     private _lastAutoSaveTime: number = 0;
     private _currentSessionId: string = "";
+    private _levelConfig: LevelConfig | null = null;
 
-    constructor(scene: Scene) {
+    constructor(scene: Scene, levelConfig?: LevelConfig) {
         this._scene = scene;
+        this._levelConfig = levelConfig || null;
 
         // Initialize IndexedDB storage
         this._storage = new PhysicsStorage();
@@ -168,10 +172,12 @@ export class PhysicsRecorder {
         const timestamp = performance.now() - this._startTime;
         const objects: PhysicsObjectState[] = [];
 
-        // Get all physics-enabled meshes
+        // Get all physics-enabled meshes AND transform nodes
         const physicsMeshes = this._scene.meshes.filter(mesh => mesh.physicsBody !== null && mesh.physicsBody !== undefined);
+        const physicsTransformNodes = this._scene.transformNodes.filter(node => node.physicsBody !== null && node.physicsBody !== undefined);
+        const allPhysicsObjects = [...physicsMeshes, ...physicsTransformNodes];
 
-        for (const mesh of physicsMeshes) {
+        for (const mesh of allPhysicsObjects) {
             const body = mesh.physicsBody;
 
             // Double-check body still exists and has transformNode (can be disposed between filter and here)
@@ -300,13 +306,17 @@ export class PhysicsRecorder {
         const snapshotsToSave = [...this._autoSaveBuffer];
         this._autoSaveBuffer = [];
 
+        // Use the LevelConfig passed to constructor
+        const levelConfig = this._levelConfig || undefined;
+
         // Create a recording from the buffered snapshots
         const metadata: RecordingMetadata = {
             startTime: snapshotsToSave[0].timestamp,
             endTime: snapshotsToSave[snapshotsToSave.length - 1].timestamp,
             frameCount: snapshotsToSave.length,
             recordingDuration: snapshotsToSave[snapshotsToSave.length - 1].timestamp - snapshotsToSave[0].timestamp,
-            physicsUpdateRate: this._physicsUpdateRate
+            physicsUpdateRate: this._physicsUpdateRate,
+            levelConfig // Include complete scene state
         };
 
         const recording: PhysicsRecording = {
@@ -319,7 +329,8 @@ export class PhysicsRecorder {
             await this._storage.saveRecording(this._currentSessionId, recording);
 
             const duration = (metadata.recordingDuration / 1000).toFixed(1);
-            debugLog(`PhysicsRecorder: Auto-saved ${snapshotsToSave.length} frames (${duration}s) to IndexedDB`);
+            const configSize = levelConfig ? `with scene state (${JSON.stringify(levelConfig).length} bytes)` : 'without scene state';
+            debugLog(`PhysicsRecorder: Auto-saved ${snapshotsToSave.length} frames (${duration}s) ${configSize} to IndexedDB`);
         } catch (error) {
             debugLog("PhysicsRecorder: Error during auto-save", error);
         }

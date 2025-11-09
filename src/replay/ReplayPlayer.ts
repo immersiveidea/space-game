@@ -1,15 +1,11 @@
 import {
     AbstractMesh,
     Observable,
-    PhysicsAggregate,
-    PhysicsMotionType,
-    PhysicsShapeType,
     Quaternion,
     Scene,
     Vector3
 } from "@babylonjs/core";
 import { PhysicsRecording, PhysicsSnapshot } from "../physicsRecorder";
-import { ReplayAssetRegistry } from "./ReplayAssetRegistry";
 import debugLog from "../debug";
 
 /**
@@ -19,7 +15,6 @@ import debugLog from "../debug";
 export class ReplayPlayer {
     private _scene: Scene;
     private _recording: PhysicsRecording;
-    private _assetRegistry: ReplayAssetRegistry;
     private _replayObjects: Map<string, AbstractMesh> = new Map();
 
     // Playback state
@@ -27,26 +22,28 @@ export class ReplayPlayer {
     private _isPlaying: boolean = false;
     private _playbackSpeed: number = 1.0;
 
-    // Timing
-    private _physicsHz: number;
-    private _frameDuration: number; // milliseconds per physics frame
+    // Timing (timestamp-based, not Hz-based)
+    private _playbackStartTime: number = 0; // Real-world time when playback started
+    private _recordingStartTimestamp: number = 0; // First snapshot's timestamp
     private _lastUpdateTime: number = 0;
-    private _accumulatedTime: number = 0;
 
     // Observables
     public onPlayStateChanged: Observable<boolean> = new Observable<boolean>();
     public onFrameChanged: Observable<number> = new Observable<number>();
 
-    constructor(scene: Scene, recording: PhysicsRecording, assetRegistry: ReplayAssetRegistry) {
+    constructor(scene: Scene, recording: PhysicsRecording) {
         this._scene = scene;
         this._recording = recording;
-        this._assetRegistry = assetRegistry;
-        this._physicsHz = recording.metadata.physicsUpdateRate || 7.2;
-        this._frameDuration = 1000 / this._physicsHz; // ~138.9ms at 7.2 Hz
+
+        // Store first snapshot's timestamp as our recording start reference
+        if (recording.snapshots.length > 0) {
+            this._recordingStartTimestamp = recording.snapshots[0].timestamp;
+        }
     }
 
     /**
-     * Initialize replay by creating all meshes from first snapshot
+     * Initialize replay by finding existing meshes in the scene
+     * (Level1.initialize() has already created all objects)
      */
     public async initialize(): Promise<void> {
         if (this._recording.snapshots.length === 0) {
@@ -55,35 +52,24 @@ export class ReplayPlayer {
         }
 
         const firstSnapshot = this._recording.snapshots[0];
-        debugLog(`ReplayPlayer: Creating ${firstSnapshot.objects.length} replay objects`);
+        debugLog(`ReplayPlayer: Initializing replay for ${firstSnapshot.objects.length} objects`);
+        debugLog(`ReplayPlayer: Object IDs in snapshot: ${firstSnapshot.objects.map(o => o.id).join(', ')}`);
 
+        // Find all existing meshes in the scene (already created by Level1.initialize())
         for (const objState of firstSnapshot.objects) {
-            const mesh = this._assetRegistry.createReplayMesh(objState.id);
-            if (!mesh) {
-                continue; // Skip objects we can't create (like ammo)
-            }
+            const mesh = this._scene.getMeshByName(objState.id) as AbstractMesh;
 
-            this._replayObjects.set(objState.id, mesh);
-
-            // Create physics body (ANIMATED = kinematic, we control position directly)
-            try {
-                const agg = new PhysicsAggregate(
-                    mesh,
-                    PhysicsShapeType.MESH,
-                    {
-                        mass: objState.mass,
-                        restitution: objState.restitution
-                    },
-                    this._scene
-                );
-                agg.body.setMotionType(PhysicsMotionType.ANIMATED);
-            } catch (error) {
-                debugLog(`ReplayPlayer: Could not create physics for ${objState.id}`, error);
+            if (mesh) {
+                this._replayObjects.set(objState.id, mesh);
+                debugLog(`ReplayPlayer: Found ${objState.id} in scene (physics: ${!!mesh.physicsBody})`);
+            } else {
+                debugLog(`ReplayPlayer: WARNING - Object ${objState.id} not found in scene`);
             }
         }
 
         // Apply first frame state
         this.applySnapshot(firstSnapshot);
+
         debugLog(`ReplayPlayer: Initialized with ${this._replayObjects.size} objects`);
     }
 
@@ -96,13 +82,14 @@ export class ReplayPlayer {
         }
 
         this._isPlaying = true;
-        this._lastUpdateTime = performance.now();
+        this._playbackStartTime = performance.now();
+        this._lastUpdateTime = this._playbackStartTime;
         this.onPlayStateChanged.notifyObservers(true);
 
         // Use scene.onBeforeRenderObservable for smooth updates
         this._scene.onBeforeRenderObservable.add(this.updateCallback);
 
-        debugLog("ReplayPlayer: Playback started");
+        debugLog("ReplayPlayer: Playback started (timestamp-based)");
     }
 
     /**
@@ -132,48 +119,65 @@ export class ReplayPlayer {
     }
 
     /**
-     * Update callback for render loop
+     * Update callback for render loop (timestamp-based)
      */
     private updateCallback = (): void => {
-        if (!this._isPlaying) {
+        if (!this._isPlaying || this._recording.snapshots.length === 0) {
             return;
         }
 
         const now = performance.now();
-        const deltaTime = (now - this._lastUpdateTime) * this._playbackSpeed;
-        this._lastUpdateTime = now;
 
-        this._accumulatedTime += deltaTime;
+        // Calculate elapsed playback time (with speed multiplier)
+        const elapsedPlaybackTime = (now - this._playbackStartTime) * this._playbackSpeed;
 
-        // Update when enough time has passed for next frame
-        while (this._accumulatedTime >= this._frameDuration) {
-            this._accumulatedTime -= this._frameDuration;
-            this.advanceFrame();
+        // Calculate target recording timestamp
+        const targetTimestamp = this._recordingStartTimestamp + elapsedPlaybackTime;
+
+        // Find the correct frame for this timestamp
+        let targetFrameIndex = this._currentFrameIndex;
+
+        // Advance to the frame that matches our target timestamp
+        while (targetFrameIndex < this._recording.snapshots.length - 1 &&
+               this._recording.snapshots[targetFrameIndex + 1].timestamp <= targetTimestamp) {
+            targetFrameIndex++;
         }
 
-        // Interpolate between frames for smooth motion
-        const alpha = this._accumulatedTime / this._frameDuration;
-        this.interpolateFrame(alpha);
-    };
+        // If we advanced frames, update and notify
+        if (targetFrameIndex !== this._currentFrameIndex) {
+            this._currentFrameIndex = targetFrameIndex;
 
-    /**
-     * Advance to next frame
-     */
-    private advanceFrame(): void {
-        this._currentFrameIndex++;
+            // Debug: Log frame advancement every 10 frames
+            if (this._currentFrameIndex % 10 === 0) {
+                const snapshot = this._recording.snapshots[this._currentFrameIndex];
+                debugLog(`ReplayPlayer: Frame ${this._currentFrameIndex}/${this._recording.snapshots.length}, timestamp: ${snapshot.timestamp.toFixed(1)}ms, objects: ${snapshot.objects.length}`);
+            }
 
-        if (this._currentFrameIndex >= this._recording.snapshots.length) {
-            // End of recording
-            this._currentFrameIndex = this._recording.snapshots.length - 1;
+            this.applySnapshot(this._recording.snapshots[this._currentFrameIndex]);
+            this.onFrameChanged.notifyObservers(this._currentFrameIndex);
+        }
+
+        // Check if we reached the end
+        if (this._currentFrameIndex >= this._recording.snapshots.length - 1 &&
+            targetTimestamp >= this._recording.snapshots[this._recording.snapshots.length - 1].timestamp) {
             this.pause();
             debugLog("ReplayPlayer: Reached end of recording");
             return;
         }
 
-        const snapshot = this._recording.snapshots[this._currentFrameIndex];
-        this.applySnapshot(snapshot);
-        this.onFrameChanged.notifyObservers(this._currentFrameIndex);
-    }
+        // Interpolate between current and next frame for smooth visuals
+        if (this._currentFrameIndex < this._recording.snapshots.length - 1) {
+            const currentSnapshot = this._recording.snapshots[this._currentFrameIndex];
+            const nextSnapshot = this._recording.snapshots[this._currentFrameIndex + 1];
+
+            const frameDuration = nextSnapshot.timestamp - currentSnapshot.timestamp;
+            const frameElapsed = targetTimestamp - currentSnapshot.timestamp;
+            const alpha = frameDuration > 0 ? Math.min(frameElapsed / frameDuration, 1.0) : 0;
+
+            this.interpolateFrame(alpha);
+        }
+    };
+
 
     /**
      * Apply a snapshot's state to all objects
@@ -185,30 +189,30 @@ export class ReplayPlayer {
                 continue;
             }
 
-            // Apply position
-            mesh.position.set(
+            const newPosition = new Vector3(
                 objState.position[0],
                 objState.position[1],
                 objState.position[2]
             );
 
-            // Apply rotation (quaternion)
-            if (!mesh.rotationQuaternion) {
-                mesh.rotationQuaternion = new Quaternion();
-            }
-            mesh.rotationQuaternion.set(
+            const newRotation = new Quaternion(
                 objState.rotation[0],
                 objState.rotation[1],
                 objState.rotation[2],
                 objState.rotation[3]
             );
 
-            // Update physics body transform if exists
+            // Update mesh transform directly
+            mesh.position.copyFrom(newPosition);
+            if (!mesh.rotationQuaternion) {
+                mesh.rotationQuaternion = new Quaternion();
+            }
+            mesh.rotationQuaternion.copyFrom(newRotation);
+
+            // For ANIMATED bodies, sync physics from mesh
+            // (ANIMATED bodies should follow their transform node)
             if (mesh.physicsBody) {
-                mesh.physicsBody.setTargetTransform(
-                    mesh.position,
-                    mesh.rotationQuaternion
-                );
+                mesh.physicsBody.disablePreStep = false;
             }
         }
     }
@@ -235,24 +239,37 @@ export class ReplayPlayer {
                 continue;
             }
 
+            // Create temporary vectors for interpolation
+            const interpPosition = new Vector3();
+            const interpRotation = new Quaternion();
+
             // Lerp position
             Vector3.LerpToRef(
                 new Vector3(...objState.position),
                 new Vector3(...nextState.position),
                 alpha,
-                mesh.position
+                interpPosition
             );
 
             // Slerp rotation
-            if (!mesh.rotationQuaternion) {
-                mesh.rotationQuaternion = new Quaternion();
-            }
             Quaternion.SlerpToRef(
                 new Quaternion(...objState.rotation),
                 new Quaternion(...nextState.rotation),
                 alpha,
-                mesh.rotationQuaternion
+                interpRotation
             );
+
+            // Apply interpolated transform to mesh
+            mesh.position.copyFrom(interpPosition);
+            if (!mesh.rotationQuaternion) {
+                mesh.rotationQuaternion = new Quaternion();
+            }
+            mesh.rotationQuaternion.copyFrom(interpRotation);
+
+            // Physics body will sync from mesh if ANIMATED
+            if (mesh.physicsBody) {
+                mesh.physicsBody.disablePreStep = false;
+            }
         }
     }
 
@@ -263,7 +280,14 @@ export class ReplayPlayer {
         this._currentFrameIndex = Math.max(0, Math.min(frameIndex, this._recording.snapshots.length - 1));
         const snapshot = this._recording.snapshots[this._currentFrameIndex];
         this.applySnapshot(snapshot);
-        this._accumulatedTime = 0; // Reset interpolation
+
+        // Reset playback timing to match the new frame's timestamp
+        if (this._isPlaying) {
+            const targetTimestamp = snapshot.timestamp;
+            const elapsedRecordingTime = targetTimestamp - this._recordingStartTimestamp;
+            this._playbackStartTime = performance.now() - (elapsedRecordingTime / this._playbackSpeed);
+        }
+
         this.onFrameChanged.notifyObservers(this._currentFrameIndex);
     }
 

@@ -8,6 +8,58 @@
 export type Vector3Array = [number, number, number];
 
 /**
+ * 4D quaternion stored as array [x, y, z, w]
+ */
+export type QuaternionArray = [number, number, number, number];
+
+/**
+ * 4D color stored as array [r, g, b, a] (0-1 range)
+ */
+export type Color4Array = [number, number, number, number];
+
+/**
+ * Material configuration for PBR materials
+ */
+export interface MaterialConfig {
+    id: string;
+    name: string;
+    type: "PBR" | "Standard" | "Basic";
+    albedoColor?: Color4Array;
+    metallic?: number;
+    roughness?: number;
+    emissiveColor?: Vector3Array;
+    emissiveIntensity?: number;
+    alpha?: number;
+    backFaceCulling?: boolean;
+    textures?: {
+        albedo?: string; // Asset reference or data URL
+        normal?: string;
+        metallic?: string;
+        roughness?: string;
+        emissive?: string;
+    };
+}
+
+/**
+ * Scene hierarchy node (TransformNode or Mesh)
+ */
+export interface SceneNodeConfig {
+    id: string;
+    name: string;
+    type: "TransformNode" | "Mesh" | "InstancedMesh";
+    position: Vector3Array;
+    rotation?: Vector3Array;
+    rotationQuaternion?: QuaternionArray;
+    scaling?: Vector3Array;
+    parentId?: string; // Reference to parent node
+    materialId?: string; // Reference to material
+    assetReference?: string; // For meshes loaded from GLB
+    isVisible?: boolean;
+    isEnabled?: boolean;
+    metadata?: any;
+}
+
+/**
  * Ship configuration
  */
 export interface ShipConfig {
@@ -82,6 +134,8 @@ export interface LevelConfig {
     metadata?: {
         author?: string;
         description?: string;
+        babylonVersion?: string;
+        captureTime?: number;
         [key: string]: any;
     };
 
@@ -93,6 +147,11 @@ export interface LevelConfig {
 
     // Optional: include original difficulty config for reference
     difficultyConfig?: DifficultyConfig;
+
+    // New fields for full scene serialization
+    materials?: MaterialConfig[];
+    sceneHierarchy?: SceneNodeConfig[];
+    assetReferences?: { [key: string]: string }; // mesh id -> asset path (e.g., "ship" -> "ship.glb")
 }
 
 /**

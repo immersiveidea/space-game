@@ -19,8 +19,8 @@
     <!-- Game View -->
     <div data-view="game">
       <canvas id="gameCanvas"></canvas>
-      <a href="#/editor" class="editor-link">📝 Level Editor</a>
-      <a href="#/settings" class="settings-link">⚙️ Settings</a>
+      <a href="#/editor" class="editor-link" style="display: none;">📝 Level Editor</a>
+      <a href="#/settings" class="settings-link" style="display: none;">⚙️ Settings</a>
       <div id="mainDiv">
         <div id="loadingDiv">Loading...</div>
         <div id="levelSelect">
@@ -56,9 +56,12 @@
           <div id="levelCardsContainer" class="card-container">
             <!-- Level cards will be dynamically populated from localStorage -->
           </div>
-          <div style="text-align: center; margin-top: 20px;">
+          <div style="text-align: center; margin-top: 20px; display: none;">
             <button id="testLevelBtn" class="test-level-button">
               🧪 Test Scene (Debug)
+            </button>
+            <button id="viewReplaysBtn" class="test-level-button" style="margin-left: 10px;">
+              📹 View Replays
             </button>
             <br>
             <a href="#/editor" style="color: #4CAF50; text-decoration: none; font-size: 1.1em;">

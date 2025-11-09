@@ -27,6 +27,8 @@ import {hasSavedLevels, populateLevelSelector} from "./levelSelector";
 import {LevelConfig} from "./levelConfig";
 import {generateDefaultLevels} from "./levelEditor";
 import debugLog from './debug';
+import {ReplaySelectionScreen} from "./replay/ReplaySelectionScreen";
+import {ReplayManager} from "./replay/ReplayManager";
 
 // Set to true to run minimal controller debug test
 const DEBUG_CONTROLLERS = false;
@@ -41,6 +43,7 @@ export class Main {
     private _gameState: GameState = GameState.DEMO;
     private _engine: Engine | WebGPUEngine;
     private _audioEngine: AudioEngineV2;
+    private _replayManager: ReplayManager | null = null;
     constructor() {
         if (!navigator.xr) {
             setLoadingMessage("This browser does not support WebXR");
@@ -169,6 +172,90 @@ export class Main {
                 debugLog('[Main] Click listener added to test button');
             } else {
                 console.warn('[Main] Test level button not found in DOM');
+            }
+
+            // View Replays button handler
+            const viewReplaysBtn = document.querySelector('#viewReplaysBtn');
+            debugLog('[Main] View Replays button found:', !!viewReplaysBtn);
+
+            if (viewReplaysBtn) {
+                viewReplaysBtn.addEventListener('click', async () => {
+                    debugLog('[Main] ========== VIEW REPLAYS BUTTON CLICKED ==========');
+
+                    // Initialize engine and physics if not already done
+                    if (!this._started) {
+                        this._started = true;
+                        await this.initialize();
+                    }
+
+                    // Hide main menu
+                    const levelSelect = document.querySelector('#levelSelect') as HTMLElement;
+                    const editorLink = document.querySelector('.editor-link') as HTMLElement;
+                    const settingsLink = document.querySelector('.settings-link') as HTMLElement;
+
+                    if (levelSelect) {
+                        levelSelect.style.display = 'none';
+                    }
+                    if (editorLink) {
+                        editorLink.style.display = 'none';
+                    }
+                    if (settingsLink) {
+                        settingsLink.style.display = 'none';
+                    }
+
+                    // Show replay selection screen
+                    const selectionScreen = new ReplaySelectionScreen(
+                        async (recordingId: string) => {
+                            // Play callback - start replay
+                            debugLog(`[Main] Starting replay for recording: ${recordingId}`);
+                            selectionScreen.dispose();
+
+                            // Create replay manager if not exists
+                            if (!this._replayManager) {
+                                this._replayManager = new ReplayManager(
+                                    this._engine as Engine,
+                                    () => {
+                                        // On exit callback - return to main menu
+                                        debugLog('[Main] Exiting replay, returning to menu');
+                                        if (levelSelect) {
+                                            levelSelect.style.display = 'block';
+                                        }
+                                        if (editorLink) {
+                                            editorLink.style.display = 'block';
+                                        }
+                                        if (settingsLink) {
+                                            settingsLink.style.display = 'block';
+                                        }
+                                    }
+                                );
+                            }
+
+                            // Start replay
+                            if (this._replayManager) {
+                                await this._replayManager.startReplay(recordingId);
+                            }
+                        },
+                        () => {
+                            // Cancel callback - return to main menu
+                            debugLog('[Main] Replay selection cancelled');
+                            selectionScreen.dispose();
+                            if (levelSelect) {
+                                levelSelect.style.display = 'block';
+                            }
+                            if (editorLink) {
+                                editorLink.style.display = 'block';
+                            }
+                            if (settingsLink) {
+                                settingsLink.style.display = 'block';
+                            }
+                        }
+                    );
+
+                    await selectionScreen.initialize();
+                });
+                debugLog('[Main] Click listener added to view replays button');
+            } else {
+                console.warn('[Main] View Replays button not found in DOM');
             }
         });
     }
