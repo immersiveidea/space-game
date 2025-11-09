@@ -313,8 +313,7 @@ export class LevelSerializer {
                     materialConfig.albedoColor = [
                         material.diffuseColor.r,
                         material.diffuseColor.g,
-                        material.diffuseColor.b,
-                        1.0
+                        material.diffuseColor.b
                     ];
                 }
                 if (material.emissiveColor) {

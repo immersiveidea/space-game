@@ -24,7 +24,7 @@ export interface MaterialConfig {
     id: string;
     name: string;
     type: "PBR" | "Standard" | "Basic";
-    albedoColor?: Color4Array;
+    albedoColor?: Vector3Array; // RGB color (Color3)
     metallic?: number;
     roughness?: number;
     emissiveColor?: Vector3Array;

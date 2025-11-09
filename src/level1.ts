@@ -4,7 +4,8 @@ import {
     AbstractMesh,
     Observable,
     PhysicsAggregate,
-    Vector3
+    Vector3,
+    WebXRState
 } from "@babylonjs/core";
 import {Ship} from "./ship";
 import Level from "./level";
@@ -47,7 +48,7 @@ export class Level1 implements Level {
             xr.baseExperience.onInitialXRPoseSetObservable.add(() => {
                 xr.baseExperience.camera.parent = this._ship.transformNode;
                 const currPose =  xr.baseExperience.camera.globalPosition.y;
-                xr.baseExperience.camera.position = new Vector3(0, 0, 0);
+                xr.baseExperience.camera.position = new Vector3(0, 1.5, 0);
 
                 // Start game timer when XR pose is set
                 this._ship.gameStats.startTimer();
@@ -87,7 +88,7 @@ export class Level1 implements Level {
         }
 
         // If XR is available and session is active, check for controllers
-        if (DefaultScene.XR && DefaultScene.XR.baseExperience.state === 4) { // State 4 = IN_XR
+        if (DefaultScene.XR && DefaultScene.XR.baseExperience.state === WebXRState.IN_XR) {
             // XR session already active, just check for controllers
             debugLog('XR session already active, checking for controllers. Count:', DefaultScene.XR.input.controllers.length);
             DefaultScene.XR.input.controllers.forEach((controller, index) => {

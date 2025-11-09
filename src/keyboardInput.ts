@@ -78,7 +78,7 @@ export class KeyboardInput {
 
         document.onkeydown = (ev) => {
             // Recording controls (with modifiers)
-            if (ev.key === 'r' || ev.key === 'R') {
+            /*if (ev.key === 'r' || ev.key === 'R') {
                 if (ev.ctrlKey || ev.metaKey) {
                     // Ctrl+R or Cmd+R: Toggle long recording
                     ev.preventDefault(); // Prevent browser reload
@@ -93,7 +93,7 @@ export class KeyboardInput {
                     this._onRecordingActionObservable.notifyObservers("exportRingBuffer");
                     return;
                 }
-            }
+            }*/
 
             switch (ev.key) {
                 case 'i':
@@ -130,6 +130,12 @@ export class KeyboardInput {
                     break;
                 case 'ArrowDown':
                     this._rightStick.y = 1;
+                    break;
+                case 'ArrowLeft':
+                    this._rightStick.x = -1;
+                    break;
+                case 'ArrowRight':
+                    this._rightStick.x = 1;
                     break;
             }
         };

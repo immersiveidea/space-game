@@ -99,6 +99,30 @@ export class Main {
             this._currentLevel.getReadyObservable().add(async () => {
                 setLoadingMessage("Starting game...");
 
+                // If we entered XR before level creation, manually setup camera parenting
+                // (This is needed because onInitialXRPoseSetObservable won't fire if we're already in XR)
+                if (DefaultScene.XR && xrSession && DefaultScene.XR.baseExperience.state === 2) { // WebXRState.IN_XR = 2
+                    const level1 = this._currentLevel as Level1;
+                    const ship = (level1 as any)._ship;
+
+                    if (ship && ship.transformNode) {
+                        debugLog('Manually parenting XR camera to ship transformNode');
+                        DefaultScene.XR.baseExperience.camera.parent = ship.transformNode;
+                        DefaultScene.XR.baseExperience.camera.position = new Vector3(0, 1.5, 0);
+
+                        // Also start timer and recording here (since onInitialXRPoseSetObservable won't fire)
+                        ship.gameStats.startTimer();
+                        debugLog('Game timer started (manual)');
+
+                        if ((level1 as any)._physicsRecorder) {
+                            (level1 as any)._physicsRecorder.startRingBuffer();
+                            debugLog('Physics recorder started (manual)');
+                        }
+                    } else {
+                        debugLog('WARNING: Could not parent XR camera - ship or transformNode not found');
+                    }
+                }
+
                 // Remove UI
                 mainDiv.remove();
 
