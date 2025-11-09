@@ -49,6 +49,7 @@ export class ControllerInput {
     private _onCameraAdjustObservable: Observable<CameraAdjustment> =
         new Observable<CameraAdjustment>();
     private _onStatusScreenToggleObservable: Observable<void> = new Observable<void>();
+    private _enabled: boolean = true;
 
     constructor() {
         this._controllerObservable.add(this.handleControllerEvent.bind(this));
@@ -79,10 +80,30 @@ export class ControllerInput {
      * Get current input state (stick positions)
      */
     public getInputState() {
+        if (!this._enabled) {
+            return {
+                leftStick: Vector2.Zero(),
+                rightStick: Vector2.Zero(),
+            };
+        }
         return {
             leftStick: this._leftStick.clone(),
             rightStick: this._rightStick.clone(),
         };
+    }
+
+    /**
+     * Enable or disable controller input
+     */
+    public setEnabled(enabled: boolean): void {
+        this._enabled = enabled;
+        if (!enabled) {
+            // Reset stick values when disabled
+            this._leftStick.x = 0;
+            this._leftStick.y = 0;
+            this._rightStick.x = 0;
+            this._rightStick.y = 0;
+        }
     }
 
     /**
@@ -199,6 +220,16 @@ export class ControllerInput {
      * Handle controller events (thumbsticks and buttons)
      */
     private handleControllerEvent(controllerEvent: ControllerEvent): void {
+        // Don't process ship control inputs when disabled (but allow status screen toggle)
+        if (!this._enabled && controllerEvent.type === "thumbstick") {
+            return;
+        }
+
+        if (!this._enabled && controllerEvent.type === "button" &&
+            !(controllerEvent.component.id === "x-button" && controllerEvent.hand === "left")) {
+            return;
+        }
+
         if (controllerEvent.type === "thumbstick") {
             if (controllerEvent.hand === "left") {
                 this._leftStick.x = controllerEvent.axisData.x;
@@ -235,6 +266,7 @@ export class ControllerInput {
                 }
                 if (controllerEvent.component.id === "x-button" && controllerEvent.hand === "left") {
                     // Only trigger on button press, not release
+                    // X button always works, even when disabled, to allow toggling status screen
                     if (controllerEvent.pressed) {
                         this._onStatusScreenToggleObservable.notifyObservers();
                     }

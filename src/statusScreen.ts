@@ -1,5 +1,6 @@
 import {
     AdvancedDynamicTexture,
+    Button,
     Control,
     Rectangle,
     StackPanel,
@@ -14,6 +15,7 @@ import {
     Vector3
 } from "@babylonjs/core";
 import { GameStats } from "./gameStats";
+import { DefaultScene } from "./defaultScene";
 
 /**
  * Status screen that displays game statistics
@@ -35,9 +37,25 @@ export class StatusScreen {
     private _accuracyText: TextBlock;
     private _fuelConsumedText: TextBlock;
 
-    constructor(scene: Scene, gameStats: GameStats) {
+    // Buttons
+    private _replayButton: Button;
+    private _exitButton: Button;
+    private _resumeButton: Button;
+
+    // Callbacks
+    private _onReplayCallback: (() => void) | null = null;
+    private _onExitCallback: (() => void) | null = null;
+    private _onResumeCallback: (() => void) | null = null;
+
+    // Track whether game has ended
+    private _isGameEnded: boolean = false;
+
+    constructor(scene: Scene, gameStats: GameStats, onReplay?: () => void, onExit?: () => void, onResume?: () => void) {
         this._scene = scene;
         this._gameStats = gameStats;
+        this._onReplayCallback = onReplay || null;
+        this._onExitCallback = onExit || null;
+        this._onResumeCallback = onResume || null;
     }
 
     /**
@@ -108,6 +126,70 @@ export class StatusScreen {
         this._fuelConsumedText = this.createStatText("Fuel Consumed: 0%");
         mainPanel.addControl(this._fuelConsumedText);
 
+        // Add spacing before buttons
+        const spacer2 = this.createSpacer(50);
+        mainPanel.addControl(spacer2);
+
+        // Create button bar
+        const buttonBar = new StackPanel("buttonBar");
+        buttonBar.isVertical = false;
+        buttonBar.height = "80px";
+        buttonBar.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
+        buttonBar.spacing = 20;
+
+        // Create Resume button (only shown when game hasn't ended)
+        this._resumeButton = Button.CreateSimpleButton("resumeButton", "RESUME GAME");
+        this._resumeButton.width = "300px";
+        this._resumeButton.height = "60px";
+        this._resumeButton.color = "white";
+        this._resumeButton.background = "#00ff88";
+        this._resumeButton.cornerRadius = 10;
+        this._resumeButton.thickness = 0;
+        this._resumeButton.fontSize = "30px";
+        this._resumeButton.fontWeight = "bold";
+        this._resumeButton.onPointerClickObservable.add(() => {
+            if (this._onResumeCallback) {
+                this._onResumeCallback();
+            }
+        });
+        buttonBar.addControl(this._resumeButton);
+
+        // Create Replay button (only shown when game has ended)
+        this._replayButton = Button.CreateSimpleButton("replayButton", "REPLAY LEVEL");
+        this._replayButton.width = "300px";
+        this._replayButton.height = "60px";
+        this._replayButton.color = "white";
+        this._replayButton.background = "#00ff88";
+        this._replayButton.cornerRadius = 10;
+        this._replayButton.thickness = 0;
+        this._replayButton.fontSize = "30px";
+        this._replayButton.fontWeight = "bold";
+        this._replayButton.onPointerClickObservable.add(() => {
+            if (this._onReplayCallback) {
+                this._onReplayCallback();
+            }
+        });
+        buttonBar.addControl(this._replayButton);
+
+        // Create Exit VR button
+        this._exitButton = Button.CreateSimpleButton("exitButton", "EXIT VR");
+        this._exitButton.width = "300px";
+        this._exitButton.height = "60px";
+        this._exitButton.color = "white";
+        this._exitButton.background = "#cc3333";
+        this._exitButton.cornerRadius = 10;
+        this._exitButton.thickness = 0;
+        this._exitButton.fontSize = "30px";
+        this._exitButton.fontWeight = "bold";
+        this._exitButton.onPointerClickObservable.add(() => {
+            if (this._onExitCallback) {
+                this._onExitCallback();
+            }
+        });
+        buttonBar.addControl(this._exitButton);
+
+        mainPanel.addControl(buttonBar);
+
         this._texture.addControl(mainPanel);
 
         // Initially hide the screen
@@ -166,12 +248,59 @@ export class StatusScreen {
     }
 
     /**
-     * Show the status screen
+     * Enable VR controller picking for button interaction
      */
-    public show(): void {
+    private enablePointerSelection(): void {
+        // Get the stored pointer selection feature
+        const pointerFeature = (DefaultScene.XR as any)?.pointerSelectionFeature;
+        if (pointerFeature && DefaultScene.XR?.baseExperience?.state === 2) { // WebXRState.IN_XR = 2
+            try {
+                // Attach the feature to enable pointer interaction
+                pointerFeature.attach();
+            } catch (error) {
+                console.warn('Failed to attach pointer selection:', error);
+            }
+        }
+    }
+
+    /**
+     * Disable VR controller picking
+     */
+    private disablePointerSelection(): void {
+        // Get the stored pointer selection feature
+        const pointerFeature = (DefaultScene.XR as any)?.pointerSelectionFeature;
+        if (pointerFeature) {
+            try {
+                // Detach the feature to disable pointer interaction
+                pointerFeature.detach();
+            } catch (error) {
+                console.warn('Failed to detach pointer selection:', error);
+            }
+        }
+    }
+
+    /**
+     * Show the status screen
+     * @param isGameEnded - true if game has ended (death/stranded/victory), false if manually paused
+     */
+    public show(isGameEnded: boolean = false): void {
         if (!this._screenMesh) {
             return;
         }
+
+        // Store game ended state
+        this._isGameEnded = isGameEnded;
+
+        // Show/hide appropriate buttons based on whether game has ended
+        if (this._resumeButton) {
+            this._resumeButton.isVisible = !isGameEnded;
+        }
+        if (this._replayButton) {
+            this._replayButton.isVisible = isGameEnded;
+        }
+
+        // Enable pointer selection for button interaction
+        this.enablePointerSelection();
 
         // Update statistics before showing
         this.updateStatistics();
@@ -188,6 +317,9 @@ export class StatusScreen {
         if (!this._screenMesh) {
             return;
         }
+
+        // Disable pointer selection when hiding
+        this.disablePointerSelection();
 
         this._screenMesh.setEnabled(false);
         this._isVisible = false;

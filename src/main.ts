@@ -99,11 +99,21 @@ export class Main {
             this._currentLevel.getReadyObservable().add(async () => {
                 setLoadingMessage("Starting game...");
 
+                // Get ship and set up replay observable
+                const level1 = this._currentLevel as Level1;
+                const ship = (level1 as any)._ship;
+
+                // Listen for replay requests from the ship
+                if (ship) {
+                    ship.onReplayRequestObservable.add(() => {
+                        debugLog('Replay requested - reloading page');
+                        window.location.reload();
+                    });
+                }
+
                 // If we entered XR before level creation, manually setup camera parenting
                 // (This is needed because onInitialXRPoseSetObservable won't fire if we're already in XR)
                 if (DefaultScene.XR && xrSession && DefaultScene.XR.baseExperience.state === 2) { // WebXRState.IN_XR = 2
-                    const level1 = this._currentLevel as Level1;
-                    const ship = (level1 as any)._ship;
 
                     if (ship && ship.transformNode) {
                         debugLog('Manually parenting XR camera to ship transformNode');
@@ -315,7 +325,8 @@ export class Main {
         if (navigator.xr) {
             try {
                 DefaultScene.XR = await WebXRDefaultExperience.CreateAsync(DefaultScene.MainScene, {
-                    disablePointerSelection: true,
+                    // Don't disable pointer selection - we need it for status screen buttons
+                    // Will detach it during gameplay and attach when status screen is shown
                     disableTeleportation: true,
                     disableNearInteraction: true,
                     disableHandTracking: true,
@@ -323,6 +334,19 @@ export class Main {
                 });
                 debugLog(WebXRFeaturesManager.GetAvailableFeatures());
                 debugLog("WebXR initialized successfully");
+
+                // Store pointer selection feature reference and detach it initially
+                if (DefaultScene.XR) {
+                    const pointerFeature = DefaultScene.XR.baseExperience.featuresManager.getEnabledFeature(
+                        "xr-controller-pointer-selection"
+                    );
+                    if (pointerFeature) {
+                        (DefaultScene.XR as any).pointerSelectionFeature = pointerFeature;
+                        // Detach immediately to prevent interaction during gameplay
+                        pointerFeature.detach();
+                        debugLog("Pointer selection feature stored and detached");
+                    }
+                }
             } catch (error) {
                 debugLog("WebXR initialization failed, falling back to flat mode:", error);
                 DefaultScene.XR = null;

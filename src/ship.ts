@@ -3,6 +3,7 @@ import {
     Color3,
     FreeCamera,
     Mesh,
+    Observable,
     PhysicsAggregate,
     PhysicsMotionType,
     PhysicsShapeType,
@@ -52,6 +53,12 @@ export class Ship {
     private _isInLandingZone: boolean = false;
     private _isReplayMode: boolean;
 
+    // Observable for replay requests
+    public onReplayRequestObservable: Observable<void> = new Observable<void>();
+
+    // Auto-show status screen flag
+    private _statusScreenAutoShown: boolean = false;
+
     constructor(audioEngine?: AudioEngineV2, isReplayMode: boolean = false) {
         this._audioEngine = audioEngine;
         this._isReplayMode = isReplayMode;
@@ -67,6 +74,10 @@ export class Ship {
 
     public get keyboardInput(): KeyboardInput {
         return this._keyboardInput;
+    }
+
+    public get isInLandingZone(): boolean {
+        return this._isInLandingZone;
     }
 
     public set position(newPosition: Vector3) {
@@ -159,7 +170,17 @@ export class Ship {
             // Wire up status screen toggle event
             this._controllerInput.onStatusScreenToggleObservable.add(() => {
                 if (this._statusScreen) {
-                    this._statusScreen.toggle();
+                    if (this._statusScreen.isVisible) {
+                        // Hide status screen and re-enable controls
+                        this._statusScreen.hide();
+                        this._keyboardInput?.setEnabled(true);
+                        this._controllerInput?.setEnabled(true);
+                    } else {
+                        // Show status screen (manual pause, not game end) and disable controls
+                        this._statusScreen.show(false);
+                        this._keyboardInput?.setEnabled(false);
+                        this._controllerInput?.setEnabled(false);
+                    }
                 }
             });
 
@@ -195,6 +216,9 @@ export class Ship {
                 this._frameCount = 0;
                 this.updatePhysics();
             }
+
+            // Check game end conditions every frame (but only acts once)
+            this.checkGameEndConditions();
         });
 
         // Setup camera
@@ -240,9 +264,99 @@ export class Ship {
             }
         });
 
-        // Initialize status screen
-        this._statusScreen = new StatusScreen(DefaultScene.MainScene, this._gameStats);
+        // Initialize status screen with callbacks
+        this._statusScreen = new StatusScreen(
+            DefaultScene.MainScene,
+            this._gameStats,
+            () => this.handleReplayRequest(),
+            () => this.handleExitVR(),
+            () => this.handleResume()
+        );
         this._statusScreen.initialize(this._camera);
+    }
+
+    /**
+     * Handle replay button click from status screen
+     */
+    private handleReplayRequest(): void {
+        debugLog('Replay button clicked - notifying observers');
+        this.onReplayRequestObservable.notifyObservers();
+    }
+
+    /**
+     * Handle exit VR button click from status screen
+     */
+    private handleExitVR(): void {
+        debugLog('Exit VR button clicked - refreshing browser');
+        window.location.reload();
+    }
+
+    /**
+     * Handle resume button click from status screen
+     */
+    private handleResume(): void {
+        debugLog('Resume button clicked - hiding status screen and re-enabling controls');
+        this._statusScreen.hide();
+        this._keyboardInput?.setEnabled(true);
+        this._controllerInput?.setEnabled(true);
+    }
+
+    /**
+     * Check game-ending conditions and auto-show status screen
+     * Conditions:
+     * 1. Ship outside landing zone AND hull < 0.01 (death)
+     * 2. Ship outside landing zone AND fuel < 0.01 AND velocity < 1 (stranded)
+     * 3. All asteroids destroyed AND ship inside landing zone (victory)
+     */
+    private checkGameEndConditions(): void {
+        // Skip if already auto-shown or status screen doesn't exist
+        if (this._statusScreenAutoShown || !this._statusScreen || !this._scoreboard) {
+            return;
+        }
+
+        // Skip if no physics body yet
+        if (!this._ship?.physicsBody) {
+            return;
+        }
+
+        // Get current ship status
+        const hull = this._scoreboard.shipStatus.hull;
+        const fuel = this._scoreboard.shipStatus.fuel;
+        const asteroidsRemaining = this._scoreboard.remaining;
+
+        // Calculate total linear velocity
+        const linearVelocity = this._ship.physicsBody.getLinearVelocity();
+        const totalVelocity = linearVelocity.length();
+
+        // Check condition 1: Death by hull damage (outside landing zone)
+        if (!this._isInLandingZone && hull < 0.01) {
+            debugLog('Game end condition met: Hull critical outside landing zone');
+            this._statusScreen.show(true);
+            this._keyboardInput?.setEnabled(false);
+            this._controllerInput?.setEnabled(false);
+            this._statusScreenAutoShown = true;
+            return;
+        }
+
+        // Check condition 2: Stranded (outside landing zone, no fuel, low velocity)
+        if (!this._isInLandingZone && fuel < 0.01 && totalVelocity < 1) {
+            debugLog('Game end condition met: Stranded (no fuel, low velocity)');
+            this._statusScreen.show(true);
+            this._keyboardInput?.setEnabled(false);
+            this._controllerInput?.setEnabled(false);
+            this._statusScreenAutoShown = true;
+            return;
+        }
+
+        // Check condition 3: Victory (all asteroids destroyed, inside landing zone)
+        if (asteroidsRemaining <= 0 && this._isInLandingZone) {
+            debugLog('Game end condition met: Victory (all asteroids destroyed)');
+            this._statusScreen.show(true);
+            this._keyboardInput?.setEnabled(false);
+            this._controllerInput?.setEnabled(false);
+            this._statusScreenAutoShown = true;
+            return;
+        }
     }
 
     /**
@@ -302,16 +416,22 @@ export class Ship {
             return;
         }
 
-        // Check if ship is still in the landing zone by checking distance
-        // Since it's a trigger, we need to track position
-        const shipPos = this._ship.physicsBody.transformNode.position;
-        const landingPos = this._landingAggregate.transformNode.position;
-        const distance = Vector3.Distance(shipPos, landingPos);
-
-        // Assume landing zone radius is approximately 20 units (adjust as needed)
+        // Check if ship mesh intersects with landing zone mesh
         const wasInZone = this._isInLandingZone;
-        this._isInLandingZone = distance < 20;
 
+        // Get the meshes from the transform nodes
+        const shipMesh = this._ship.getChildMeshes()[0];
+        const landingMesh = this._landingAggregate.transformNode as Mesh;
+
+        // Use mesh intersection for accurate zone detection
+        if (shipMesh && landingMesh) {
+            this._isInLandingZone = shipMesh.intersectsMesh(landingMesh, false);
+        } else {
+            // Fallback: if meshes not available, assume not in zone
+            this._isInLandingZone = false;
+        }
+
+        // Log zone transitions
         if (this._isInLandingZone && !wasInZone) {
             debugLog("Ship entered landing zone - resupply active");
         } else if (!this._isInLandingZone && wasInZone) {
@@ -372,12 +492,11 @@ export class Ship {
     public setLandingZone(landingAggregate: PhysicsAggregate): void {
         this._landingAggregate = landingAggregate;
 
-        // Listen for trigger events to detect when ship enters/exits landing zone
+        // Listen for trigger events for debugging (actual detection uses mesh intersection)
         landingAggregate.body.getCollisionObservable().add((collisionEvent) => {
             // Check if the collision is with our ship
             if (collisionEvent.collider === this._ship.physicsBody) {
-                this._isInLandingZone = true;
-                debugLog("Ship entered landing zone - resupply active");
+                debugLog("Physics trigger fired for landing zone");
             }
         });
     }

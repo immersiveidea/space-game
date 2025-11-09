@@ -21,6 +21,7 @@ export class KeyboardInput {
     private _onCameraChangeObservable: Observable<number> = new Observable<number>();
     private _onRecordingActionObservable: Observable<RecordingAction> = new Observable<RecordingAction>();
     private _scene: Scene;
+    private _enabled: boolean = true;
 
     constructor(scene: Scene) {
         this._scene = scene;
@@ -51,10 +52,30 @@ export class KeyboardInput {
      * Get current input state (stick positions)
      */
     public getInputState() {
+        if (!this._enabled) {
+            return {
+                leftStick: Vector2.Zero(),
+                rightStick: Vector2.Zero(),
+            };
+        }
         return {
             leftStick: this._leftStick.clone(),
             rightStick: this._rightStick.clone(),
         };
+    }
+
+    /**
+     * Enable or disable keyboard input
+     */
+    public setEnabled(enabled: boolean): void {
+        this._enabled = enabled;
+        if (!enabled) {
+            // Reset stick values when disabled
+            this._leftStick.x = 0;
+            this._leftStick.y = 0;
+            this._rightStick.x = 0;
+            this._rightStick.y = 0;
+        }
     }
 
     /**
@@ -77,6 +98,28 @@ export class KeyboardInput {
         };
 
         document.onkeydown = (ev) => {
+            // Always allow inspector and camera toggle, even when disabled
+            if (ev.key === 'i') {
+                // Open Babylon Inspector
+                import("@babylonjs/inspector").then((inspector) => {
+                    inspector.Inspector.Show(this._scene, {
+                        overlay: true,
+                        showExplorer: true,
+                    });
+                });
+                return;
+            }
+
+            if (ev.key === '1') {
+                this._onCameraChangeObservable.notifyObservers(1);
+                return;
+            }
+
+            // Don't process ship control inputs when disabled
+            if (!this._enabled) {
+                return;
+            }
+
             // Recording controls (with modifiers)
             /*if (ev.key === 'r' || ev.key === 'R') {
                 if (ev.ctrlKey || ev.metaKey) {
@@ -96,18 +139,6 @@ export class KeyboardInput {
             }*/
 
             switch (ev.key) {
-                case 'i':
-                    // Open Babylon Inspector
-                    import("@babylonjs/inspector").then((inspector) => {
-                        inspector.Inspector.Show(this._scene, {
-                            overlay: true,
-                            showExplorer: true,
-                        });
-                    });
-                    break;
-                case '1':
-                    this._onCameraChangeObservable.notifyObservers(1);
-                    break;
                 case ' ':
                     this._onShootObservable.notifyObservers();
                     break;
