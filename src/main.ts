@@ -45,16 +45,9 @@ export class Main {
     private _audioEngine: AudioEngineV2;
     private _replayManager: ReplayManager | null = null;
     constructor() {
-        if (!navigator.xr) {
-            setLoadingMessage("This browser does not support WebXR");
-            return;
-        }
-
-
         // Listen for level selection event
         window.addEventListener('levelSelected', async (e: CustomEvent) => {
             this._started = true;
-            await this.initialize();
             const {levelName, config} = e.detail as {levelName: string, config: LevelConfig};
 
             debugLog(`Starting level: ${levelName}`);
@@ -74,25 +67,43 @@ export class Main {
             if (settingsLink) {
                 settingsLink.style.display = 'none';
             }
-            setLoadingMessage("Initializing Level...");
+            setLoadingMessage("Initializing...");
+
+            // Initialize engine and XR first
+            await this.initialize();
+
+            // If XR is available, enter XR immediately (while we have user activation)
+            let xrSession = null;
+            if (DefaultScene.XR) {
+                try {
+                    setLoadingMessage("Entering VR...");
+                    xrSession = await DefaultScene.XR.baseExperience.enterXRAsync('immersive-vr', 'local-floor');
+                    debugLog('XR session started successfully');
+                } catch (error) {
+                    debugLog('Failed to enter XR, will fall back to flat mode:', error);
+                    DefaultScene.XR = null; // Disable XR for this session
+                }
+            }
 
             // Unlock audio engine on user interaction
             if (this._audioEngine) {
                 await this._audioEngine.unlockAsync();
             }
 
+            setLoadingMessage("Loading level...");
+
             // Create and initialize level from config
             this._currentLevel = new Level1(config, this._audioEngine);
 
             // Wait for level to be ready
-            this._currentLevel.getReadyObservable().add(() => {
-                setLoadingMessage("Level Ready! Entering VR...");
+            this._currentLevel.getReadyObservable().add(async () => {
+                setLoadingMessage("Starting game...");
 
-                // Small delay to show message
-                setTimeout(() => {
-                    mainDiv.remove();
-                    this.play();
-                }, 500);
+                // Remove UI
+                mainDiv.remove();
+
+                // Start the game (XR session already active, or flat mode)
+                await this.play();
             });
 
             // Now initialize the level (after observable is registered)
@@ -146,21 +157,17 @@ export class Main {
 
                     // Wait for level to be ready
                     debugLog('[Main] Registering ready observable...');
-                    this._currentLevel.getReadyObservable().add(() => {
+                    this._currentLevel.getReadyObservable().add(async () => {
                         debugLog('[Main] ========== TEST LEVEL READY OBSERVABLE FIRED ==========');
                         setLoadingMessage("Test Scene Ready! Entering VR...");
-                        debugLog('[Main] Setting timeout to enter VR...');
 
-                        // Small delay to show message
-                        setTimeout(() => {
-                            debugLog('[Main] Timeout fired, removing mainDiv and calling play()');
-                            if (mainDiv) {
-                                mainDiv.remove();
-                                debugLog('[Main] mainDiv removed');
-                            }
-                            debugLog('[Main] About to call this.play()...');
-                            this.play();
-                        }, 500);
+                        // Remove UI and play immediately (must maintain user activation for XR)
+                        if (mainDiv) {
+                            mainDiv.remove();
+                            debugLog('[Main] mainDiv removed');
+                        }
+                        debugLog('[Main] About to call this.play()...');
+                        await this.play();
                     });
                     debugLog('[Main] Ready observable registered');
 
@@ -280,17 +287,26 @@ export class Main {
         setLoadingMessage("Initializing.");
         await this.setupScene();
 
-        DefaultScene.XR = await WebXRDefaultExperience.CreateAsync(DefaultScene.MainScene, {
-            disablePointerSelection: true,
-            disableTeleportation: true,
-            disableNearInteraction: true,
-            disableHandTracking: true,
-            disableDefaultUI: true
-
-        });
-        debugLog(WebXRFeaturesManager.GetAvailableFeatures());
-        //DefaultScene.XR.baseExperience.featuresManager.enableFeature(WebXRFeatureName.LAYERS, "latest", {preferMultiviewOnInit: true});
-
+        // Try to initialize WebXR if available
+        if (navigator.xr) {
+            try {
+                DefaultScene.XR = await WebXRDefaultExperience.CreateAsync(DefaultScene.MainScene, {
+                    disablePointerSelection: true,
+                    disableTeleportation: true,
+                    disableNearInteraction: true,
+                    disableHandTracking: true,
+                    disableDefaultUI: true
+                });
+                debugLog(WebXRFeaturesManager.GetAvailableFeatures());
+                debugLog("WebXR initialized successfully");
+            } catch (error) {
+                debugLog("WebXR initialization failed, falling back to flat mode:", error);
+                DefaultScene.XR = null;
+            }
+        } else {
+            debugLog("WebXR not available, using flat camera mode");
+            DefaultScene.XR = null;
+        }
 
         setLoadingMessage("Get Ready!");
 

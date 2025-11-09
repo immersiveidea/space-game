@@ -200,10 +200,17 @@ export class Ship {
         // Setup camera
         this._camera = new FreeCamera(
             "Flat Camera",
-            new Vector3(0, 0.5, 0),
+            new Vector3(0, 1.5, 0),
             DefaultScene.MainScene
         );
         this._camera.parent = this._ship;
+
+        // Set as active camera if XR is not available
+        if (!DefaultScene.XR && !this._isReplayMode) {
+            DefaultScene.MainScene.activeCamera = this._camera;
+            //this._camera.attachControl(DefaultScene.MainScene.getEngine().getRenderingCanvas(), true);
+            debugLog('Flat camera set as active camera');
+        }
 
         // Create sight reticle
         this._sight = new Sight(DefaultScene.MainScene, this._ship, {

@@ -37,7 +37,7 @@ export class Level1 implements Level {
         this._ship = new Ship(audioEngine, isReplayMode);
 
         // Only set up XR observables in game mode (not replay mode)
-        if (!isReplayMode) {
+        if (!isReplayMode && DefaultScene.XR) {
             const xr = DefaultScene.XR;
 
             debugLog('Level1 constructor - Setting up XR observables');
@@ -78,29 +78,63 @@ export class Level1 implements Level {
         }
 
         // Create background music using AudioEngineV2
-        const background = await this._audioEngine.createSoundAsync("background", "/song1.mp3", {
-            loop: true,
-            volume: 0.5
-        });
-        background.play();
-
-        // Enter XR mode
-        const xr = await DefaultScene.XR.baseExperience.enterXRAsync('immersive-vr', 'local-floor');
-        // Check for controllers that are already connected after entering XR
-        debugLog('Checking for controllers after entering XR. Count:', DefaultScene.XR.input.controllers.length);
-        DefaultScene.XR.input.controllers.forEach((controller, index) => {
-            debugLog(`Controller ${index} - handedness: ${controller.inputSource.handedness}`);
-            this._ship.addController(controller);
-        });
-
-        // Wait and check again after a delay (controllers might connect later)
-        debugLog('Waiting 2 seconds to check for controllers again...');
-        setTimeout(() => {
-            debugLog('After 2 second delay - controller count:', DefaultScene.XR.input.controllers.length);
-            DefaultScene.XR.input.controllers.forEach((controller, index) => {
-                debugLog(`  Late controller ${index} - handedness: ${controller.inputSource.handedness}`);
+        if (this._audioEngine) {
+            const background = await this._audioEngine.createSoundAsync("background", "/song1.mp3", {
+                loop: true,
+                volume: 0.5
             });
-        }, 2000);
+            background.play();
+        }
+
+        // If XR is available and session is active, check for controllers
+        if (DefaultScene.XR && DefaultScene.XR.baseExperience.state === 4) { // State 4 = IN_XR
+            // XR session already active, just check for controllers
+            debugLog('XR session already active, checking for controllers. Count:', DefaultScene.XR.input.controllers.length);
+            DefaultScene.XR.input.controllers.forEach((controller, index) => {
+                debugLog(`Controller ${index} - handedness: ${controller.inputSource.handedness}`);
+                this._ship.addController(controller);
+            });
+
+            // Wait and check again after a delay (controllers might connect later)
+            debugLog('Waiting 2 seconds to check for controllers again...');
+            setTimeout(() => {
+                debugLog('After 2 second delay - controller count:', DefaultScene.XR.input.controllers.length);
+                DefaultScene.XR.input.controllers.forEach((controller, index) => {
+                    debugLog(`  Late controller ${index} - handedness: ${controller.inputSource.handedness}`);
+                });
+            }, 2000);
+        } else if (DefaultScene.XR) {
+            // XR available but not entered yet, try to enter
+            try {
+                const xr = await DefaultScene.XR.baseExperience.enterXRAsync('immersive-vr', 'local-floor');
+                debugLog('Entered XR mode from play()');
+                // Check for controllers
+                DefaultScene.XR.input.controllers.forEach((controller, index) => {
+                    debugLog(`Controller ${index} - handedness: ${controller.inputSource.handedness}`);
+                    this._ship.addController(controller);
+                });
+            } catch (error) {
+                debugLog('Failed to enter XR from play(), falling back to flat mode:', error);
+                // Start flat mode
+                this._ship.gameStats.startTimer();
+                debugLog('Game timer started (flat mode)');
+
+                if (this._physicsRecorder) {
+                    this._physicsRecorder.startRingBuffer();
+                    debugLog('Physics recorder started (flat mode)');
+                }
+            }
+        } else {
+            // Flat camera mode - start game timer and physics recording immediately
+            debugLog('Playing in flat camera mode (no XR)');
+            this._ship.gameStats.startTimer();
+            debugLog('Game timer started');
+
+            if (this._physicsRecorder) {
+                this._physicsRecorder.startRingBuffer();
+                debugLog('Physics recorder started');
+            }
+        }
     }
 
     public dispose() {
@@ -154,8 +188,11 @@ export class Level1 implements Level {
 
         // Set up camera follow for stars (keeps stars at infinite distance)
         DefaultScene.MainScene.onBeforeRenderObservable.add(() => {
-            if (this._backgroundStars && DefaultScene.XR.baseExperience.camera) {
-                this._backgroundStars.followCamera(DefaultScene.XR.baseExperience.camera.position);
+            if (this._backgroundStars) {
+                const camera = DefaultScene.XR?.baseExperience?.camera || DefaultScene.MainScene.activeCamera;
+                if (camera) {
+                    this._backgroundStars.followCamera(camera.position);
+                }
             }
         });
 
