@@ -100,7 +100,7 @@ export class LevelSerializer {
     }
 
     /**
-     * Serialize start base state
+     * Serialize start base state (position and GLB paths)
      */
     private serializeStartBase(): StartBaseConfig {
         const startBase = this.scene.getMeshByName("startBase");
@@ -109,31 +109,18 @@ export class LevelSerializer {
             console.warn("Start base not found, using defaults");
             return {
                 position: [0, 0, 0],
-                diameter: 10,
-                height: 1,
-                color: [1, 1, 0]
+                baseGlbPath: 'base.glb'
             };
         }
 
         const position = this.vector3ToArray(startBase.position);
 
-        // Try to extract diameter and height from scaling or metadata
-        // Assuming cylinder was created with specific dimensions
-        const diameter = 10; // Default from Level1
-        const height = 1;    // Default from Level1
-
-        // Get color from material if available
-        let color: Vector3Array = [1, 1, 0]; // Default yellow
-        if (startBase.material && (startBase.material as any).diffuseColor) {
-            const diffuseColor = (startBase.material as any).diffuseColor;
-            color = [diffuseColor.r, diffuseColor.g, diffuseColor.b];
-        }
+        // Capture GLB path from metadata if available, otherwise use default
+        const baseGlbPath = startBase.metadata?.baseGlbPath || 'base.glb';
 
         return {
             position,
-            diameter,
-            height,
-            color
+            baseGlbPath
         };
     }
 
@@ -191,7 +178,7 @@ export class LevelSerializer {
             const diameter = boundingInfo.boundingSphere.radiusWorld * 2;
 
             // Get texture path from material
-            let texturePath = "/planetTextures/Arid/Arid_01-512x512.png"; // Default
+            let texturePath = "/assets/materials/planetTextures/Arid/Arid_01-512x512.png"; // Default
             if (mesh.material && (mesh.material as any).diffuseTexture) {
                 const texture = (mesh.material as any).diffuseTexture;
                 texturePath = texture.url || texturePath;
@@ -222,7 +209,8 @@ export class LevelSerializer {
 
         for (const mesh of asteroidMeshes) {
             const position = this.vector3ToArray(mesh.position);
-            const scaling = this.vector3ToArray(mesh.scaling);
+            // Use uniform scale (assume uniform scaling, take x component)
+            const scale = parseFloat(mesh.scaling.x.toFixed(3));
 
             // Get velocities from physics body
             let linearVelocity: Vector3Array = [0, 0, 0];
@@ -238,7 +226,7 @@ export class LevelSerializer {
             asteroids.push({
                 id: mesh.name,
                 position,
-                scaling,
+                scale,
                 linearVelocity,
                 angularVelocity,
                 mass

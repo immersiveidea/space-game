@@ -36,7 +36,7 @@ export function createSun() : AbstractMesh {
 export function createPlanet(position: Vector3, diameter: number, name: string) : AbstractMesh {
     const planet = MeshBuilder.CreateSphere(name, {diameter: diameter, segments: 32}, DefaultScene.MainScene);
     const material = new StandardMaterial(name + "-material", DefaultScene.MainScene);
-    const texture = new Texture("/planetTextures/Arid/Arid_01-512x512.png", DefaultScene.MainScene);
+    const texture = new Texture("/assets/materials/planetTextures/Arid/Arid_01-512x512.png", DefaultScene.MainScene);
     material.diffuseTexture = texture;
     material.ambientTexture = texture;
     material.roughness = 1;

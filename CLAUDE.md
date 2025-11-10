@@ -101,7 +101,7 @@ Located in `level1.ts:getDifficultyConfig()`
 ### Asset Loading
 - 3D models: GLB format (cockpit, asteroids)
 - Particle systems: JSON format in `public/systems/`
-- Planet textures: Organized by biome in `public/planetTextures/`
+- Planet textures: Organized by biome in `public/assets/materials/planetTextures/`
 - Audio: MP3 format in public root
 
 ### Performance Considerations
@@ -128,7 +128,10 @@ src/
 
 public/
   systems/             - Particle system definitions
-  planetTextures/      - Biome-based planet textures
+  assets/
+    materials/
+      planetTextures/  - Biome-based planet textures
+    themes/            - Themed assets
   cockpit*.glb         - Ship interior models
   asteroid*.glb        - Asteroid mesh variants
   *.mp3                - Audio assets

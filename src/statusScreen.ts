@@ -16,6 +16,7 @@ import {
 } from "@babylonjs/core";
 import { GameStats } from "./gameStats";
 import { DefaultScene } from "./defaultScene";
+import { ProgressionManager } from "./progression";
 
 /**
  * Status screen that displays game statistics
@@ -41,21 +42,27 @@ export class StatusScreen {
     private _replayButton: Button;
     private _exitButton: Button;
     private _resumeButton: Button;
+    private _nextLevelButton: Button;
 
     // Callbacks
     private _onReplayCallback: (() => void) | null = null;
     private _onExitCallback: (() => void) | null = null;
     private _onResumeCallback: (() => void) | null = null;
+    private _onNextLevelCallback: (() => void) | null = null;
 
     // Track whether game has ended
     private _isGameEnded: boolean = false;
 
-    constructor(scene: Scene, gameStats: GameStats, onReplay?: () => void, onExit?: () => void, onResume?: () => void) {
+    // Track current level name for progression
+    private _currentLevelName: string | null = null;
+
+    constructor(scene: Scene, gameStats: GameStats, onReplay?: () => void, onExit?: () => void, onResume?: () => void, onNextLevel?: () => void) {
         this._scene = scene;
         this._gameStats = gameStats;
         this._onReplayCallback = onReplay || null;
         this._onExitCallback = onExit || null;
         this._onResumeCallback = onResume || null;
+        this._onNextLevelCallback = onNextLevel || null;
     }
 
     /**
@@ -154,8 +161,25 @@ export class StatusScreen {
         });
         buttonBar.addControl(this._resumeButton);
 
+        // Create Next Level button (only shown when game has ended and there's a next level)
+        this._nextLevelButton = Button.CreateSimpleButton("nextLevelButton", "NEXT LEVEL");
+        this._nextLevelButton.width = "300px";
+        this._nextLevelButton.height = "60px";
+        this._nextLevelButton.color = "white";
+        this._nextLevelButton.background = "#0088ff";
+        this._nextLevelButton.cornerRadius = 10;
+        this._nextLevelButton.thickness = 0;
+        this._nextLevelButton.fontSize = "30px";
+        this._nextLevelButton.fontWeight = "bold";
+        this._nextLevelButton.onPointerClickObservable.add(() => {
+            if (this._onNextLevelCallback) {
+                this._onNextLevelCallback();
+            }
+        });
+        buttonBar.addControl(this._nextLevelButton);
+
         // Create Replay button (only shown when game has ended)
-        this._replayButton = Button.CreateSimpleButton("replayButton", "REPLAY LEVEL");
+        this._replayButton = Button.CreateSimpleButton("replayButton", "REPLAY");
         this._replayButton.width = "300px";
         this._replayButton.height = "60px";
         this._replayButton.color = "white";
@@ -280,10 +304,18 @@ export class StatusScreen {
     }
 
     /**
+     * Set the current level name for progression tracking
+     */
+    public setCurrentLevel(levelName: string): void {
+        this._currentLevelName = levelName;
+    }
+
+    /**
      * Show the status screen
      * @param isGameEnded - true if game has ended (death/stranded/victory), false if manually paused
+     * @param victory - true if the level was completed successfully
      */
-    public show(isGameEnded: boolean = false): void {
+    public show(isGameEnded: boolean = false, victory: boolean = false): void {
         if (!this._screenMesh) {
             return;
         }
@@ -291,12 +323,31 @@ export class StatusScreen {
         // Store game ended state
         this._isGameEnded = isGameEnded;
 
+        // Mark level as complete if victory and we have a level name
+        const progression = ProgressionManager.getInstance();
+        if (victory && this._currentLevelName) {
+            const stats = this._gameStats.getStats();
+            const gameTimeSeconds = this.parseGameTime(stats.gameTime);
+            progression.markLevelComplete(this._currentLevelName, {
+                completionTime: gameTimeSeconds,
+                accuracy: stats.accuracy // Already a number from getAccuracy()
+            });
+        }
+
+        // Determine if there's a next level
+        const nextLevel = progression.getNextLevel();
+        const hasNextLevel = nextLevel !== null;
+
         // Show/hide appropriate buttons based on whether game has ended
         if (this._resumeButton) {
             this._resumeButton.isVisible = !isGameEnded;
         }
         if (this._replayButton) {
             this._replayButton.isVisible = isGameEnded;
+        }
+        if (this._nextLevelButton) {
+            // Only show Next Level if game ended in victory and there's a next level
+            this._nextLevelButton.isVisible = isGameEnded && victory && hasNextLevel;
         }
 
         // Enable pointer selection for button interaction
@@ -308,6 +359,19 @@ export class StatusScreen {
         // Simply enable the mesh - position/rotation handled by parenting
         this._screenMesh.setEnabled(true);
         this._isVisible = true;
+    }
+
+    /**
+     * Parse game time string (MM:SS) to seconds
+     */
+    private parseGameTime(timeString: string): number {
+        const parts = timeString.split(':');
+        if (parts.length === 2) {
+            const minutes = parseInt(parts[0], 10);
+            const seconds = parseInt(parts[1], 10);
+            return minutes * 60 + seconds;
+        }
+        return 0;
     }
 
     /**

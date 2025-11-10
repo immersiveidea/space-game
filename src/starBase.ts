@@ -10,6 +10,7 @@ import {DefaultScene} from "./defaultScene";
 import {GameConfig} from "./gameConfig";
 import debugLog from "./debug";
 import loadAsset from "./utils/loadAsset";
+import {Vector3Array} from "./levelConfig";
 
 export interface StarBaseResult {
     baseMesh: AbstractMesh;
@@ -18,17 +19,29 @@ export interface StarBaseResult {
 
 /**
  * Create and load the star base mesh
- * @param position - Position for the star base
+ * @param position - Position for the star base (defaults to [0, 0, 0])
+ * @param baseGlbPath - Path to the base GLB file (defaults to 'base.glb')
  * @returns Promise resolving to the loaded star base mesh and landing aggregate
  */
 export default class StarBase {
-    public static async buildStarBase(): Promise<StarBaseResult> {
+    public static async buildStarBase(position?: Vector3Array, baseGlbPath: string = 'base.glb'): Promise<StarBaseResult> {
         const config = GameConfig.getInstance();
         const scene = DefaultScene.MainScene;
-        const importMeshes = await loadAsset('base.glb');
+        const importMeshes = await loadAsset(baseGlbPath);
 
         const baseMesh = importMeshes.meshes.get('Base');
         const landingMesh = importMeshes.meshes.get('BaseLandingZone');
+
+        // Store the GLB path in metadata for serialization
+        if (baseMesh) {
+            baseMesh.metadata = baseMesh.metadata || {};
+            baseMesh.metadata.baseGlbPath = baseGlbPath;
+        }
+
+        // Apply position to both meshes (defaults to [0, 0, 0])
+        const pos = position ? new Vector3(position[0], position[1], position[2]) : new Vector3(0, 0, 0);
+        baseMesh.position = pos.clone();
+        landingMesh.position = pos.clone();
 
         let landingAgg: PhysicsAggregate | null = null;
 

@@ -30,6 +30,14 @@ export class LevelDeserializer {
     private config: LevelConfig;
 
     constructor(config: LevelConfig) {
+        // HYBRID MIGRATION NOTE: If validation fails due to legacy data,
+        // consider adding migration logic here before validation:
+        //
+        // config = migrateLegacyFormat(config);
+        //
+        // This would allow smooth transition for users with old localStorage data
+        // See levelConfig.ts validateLevelConfig() for example migration code
+
         // Validate config first
         const validation = validateLevelConfig(config);
         if (!validation.valid) {
@@ -72,7 +80,9 @@ export class LevelDeserializer {
      * Create the start base from config
      */
     private async createStartBase() {
-        return await StarBase.buildStarBase();
+        const position = this.config.startBase?.position;
+        const baseGlbPath = this.config.startBase?.baseGlbPath || 'base.glb';
+        return await StarBase.buildStarBase(position, baseGlbPath);
     }
 
     /**
@@ -166,7 +176,7 @@ export class LevelDeserializer {
             const rock = await RockFactory.createRock(
                 i,
                 this.arrayToVector3(asteroidConfig.position),
-                this.arrayToVector3(asteroidConfig.scaling),
+                asteroidConfig.scale,
                 this.arrayToVector3(asteroidConfig.linearVelocity),
                 this.arrayToVector3(asteroidConfig.angularVelocity),
                 scoreObservable

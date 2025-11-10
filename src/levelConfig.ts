@@ -74,10 +74,9 @@ export interface ShipConfig {
  * All fields optional to allow levels without start bases
  */
 export interface StartBaseConfig {
-    position?: Vector3Array;
-    diameter?: number;
-    height?: number;
-    color?: Vector3Array; // RGB values 0-1
+    position?: Vector3Array;  // Defaults to [0, 0, 0] if not specified
+    baseGlbPath?: string;     // Path to base GLB model (defaults to 'base.glb')
+    landingGlbPath?: string;  // Path to landing zone GLB model (uses same file as base, different mesh name)
 }
 
 /**
@@ -106,7 +105,7 @@ export interface PlanetConfig {
 export interface AsteroidConfig {
     id: string;
     position: Vector3Array;
-    scaling: Vector3Array;
+    scale: number;  // Uniform scale applied to all axes
     linearVelocity: Vector3Array;
     angularVelocity?: Vector3Array;
     mass?: number;
@@ -192,12 +191,6 @@ export function validateLevelConfig(config: any): ValidationResult {
         if (config.startBase.position && (!Array.isArray(config.startBase.position) || config.startBase.position.length !== 3)) {
             errors.push('Invalid startBase.position - must be [x, y, z] array');
         }
-        if (config.startBase.diameter !== undefined && typeof config.startBase.diameter !== 'number') {
-            errors.push('Invalid startBase.diameter - must be a number');
-        }
-        if (config.startBase.height !== undefined && typeof config.startBase.height !== 'number') {
-            errors.push('Invalid startBase.height - must be a number');
-        }
     }
 
     // Check sun
@@ -236,6 +229,17 @@ export function validateLevelConfig(config: any): ValidationResult {
     if (!Array.isArray(config.asteroids)) {
         errors.push('Missing or invalid asteroids array');
     } else {
+        // HYBRID MIGRATION NOTE: If we need to support legacy localStorage data,
+        // add migration here before validation:
+        //
+        // config.asteroids = config.asteroids.map((a, i) => ({
+        //     ...a,
+        //     id: a.id || `asteroid-${i}`,                    // Auto-generate missing ids
+        //     scale: a.scale || a.scaling?.[0] || a.size || 1 // Migrate from old formats
+        // }));
+        //
+        // This would auto-heal old data with "scaling" array or "size" property
+
         config.asteroids.forEach((asteroid: any, idx: number) => {
             if (!asteroid.id || typeof asteroid.id !== 'string') {
                 errors.push(`Asteroid ${idx}: missing or invalid id`);
@@ -243,8 +247,8 @@ export function validateLevelConfig(config: any): ValidationResult {
             if (!Array.isArray(asteroid.position) || asteroid.position.length !== 3) {
                 errors.push(`Asteroid ${idx}: invalid position - must be [x, y, z] array`);
             }
-            if (!Array.isArray(asteroid.scaling) || asteroid.scaling.length !== 3) {
-                errors.push(`Asteroid ${idx}: invalid scaling - must be [x, y, z] array`);
+            if (typeof asteroid.scale !== 'number' || asteroid.scale <= 0) {
+                errors.push(`Asteroid ${idx}: invalid scale - must be a positive number`);
             }
             if (!Array.isArray(asteroid.linearVelocity) || asteroid.linearVelocity.length !== 3) {
                 errors.push(`Asteroid ${idx}: invalid linearVelocity - must be [x, y, z] array`);

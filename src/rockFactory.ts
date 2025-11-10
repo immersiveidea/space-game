@@ -98,12 +98,12 @@ export class RockFactory {
         debugLog(this._asteroidMesh);
     }
 
-    public static async createRock(i: number, position: Vector3, size: Vector3,
+    public static async createRock(i: number, position: Vector3, scale: number,
                                    linearVelocitry: Vector3, angularVelocity: Vector3, score: Observable<ScoreEvent>): Promise<Rock> {
 
         const rock = new InstancedMesh("asteroid-" +i, this._asteroidMesh as Mesh);
         debugLog(rock.id);
-        rock.scaling = size;
+        rock.scaling = new Vector3(scale, scale, scale);
         rock.position = position;
         //rock.material = this._rockMaterial;
         rock.name = "asteroid-" + i;

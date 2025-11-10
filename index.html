@@ -12,8 +12,6 @@
         }
       });
     </script>
-    <link rel="prefetch" href="/background.mp3"/>
-    <link rel="prefetch" href="/8192.webp"/>
   </head>
   <body>
     <!-- Game View -->
@@ -26,9 +24,32 @@
         <div id="levelSelect">
 
 
-          <!-- Controls Section -->
-          <div class="controls-info">
-            <h2>🎮 How to Play</h2>
+          <!-- Hero Section -->
+          <div style="text-align: center; margin-bottom: 40px;">
+            <h1 style="font-size: 3em; margin-bottom: 15px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">
+              🚀 Space Combat VR
+            </h1>
+            <p style="font-size: 1.3em; color: #aaa; margin-bottom: 30px;">
+              Pilot your spaceship through asteroid fields and complete missions
+            </p>
+          </div>
+
+          <!-- Level Selection Section -->
+          <div style="margin-bottom: 40px;">
+            <h2 style="text-align: center; margin-bottom: 10px; font-size: 1.8em;">Your Mission</h2>
+            <p style="text-align: center; color: #888; margin-bottom: 30px; font-size: 1.1em;">
+              Complete levels to unlock new challenges and the level editor
+            </p>
+            <div id="levelCardsContainer" class="card-container">
+              <!-- Level cards will be dynamically populated from localStorage -->
+            </div>
+          </div>
+
+          <!-- Controls Section (Collapsed by default) -->
+          <details class="controls-info" style="margin-top: 50px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 30px;">
+            <summary style="cursor: pointer; font-size: 1.3em; font-weight: bold; margin-bottom: 20px; user-select: none; color: #667eea;">
+              🎮 How to Play (Click to expand)
+            </summary>
             <div class="controls-grid">
               <div class="control-section">
                 <h3>VR Controllers (Required for VR)</h3>
@@ -52,11 +73,7 @@
             <p class="controls-note">
               ⚠️ <strong>Note:</strong> This game is designed for VR headsets with controllers. Desktop controls are provided for preview and testing purposes only.
             </p>
-          </div>
-            <h1>Select Your Level</h1>
-          <div id="levelCardsContainer" class="card-container">
-            <!-- Level cards will be dynamically populated from localStorage -->
-          </div>
+          </details>
           <div style="text-align: center; margin-top: 20px; display: none;">
             <button id="testLevelBtn" class="test-level-button">
               🧪 Test Scene (Debug)
@@ -165,12 +182,8 @@
               </div>
             </div>
             <div class="form-group">
-              <label for="baseDiameter">Diameter</label>
-              <input type="number" id="baseDiameter" value="10" step="1" min="1">
-            </div>
-            <div class="form-group">
-              <label for="baseHeight">Height</label>
-              <input type="number" id="baseHeight" value="1" step="0.1" min="0.1">
+              <label>Base GLB Path</label>
+              <input type="text" id="baseGlbPath" value="base.glb" placeholder="base.glb">
             </div>
           </div>
 

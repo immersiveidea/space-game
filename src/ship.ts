@@ -314,7 +314,8 @@ export class Ship {
             this._gameStats,
             () => this.handleReplayRequest(),
             () => this.handleExitVR(),
-            () => this.handleResume()
+            () => this.handleResume(),
+            () => this.handleNextLevel()
         );
         this._statusScreen.initialize(this._camera);
     }
@@ -343,6 +344,16 @@ export class Ship {
         this._statusScreen.hide();
         this._keyboardInput?.setEnabled(true);
         this._controllerInput?.setEnabled(true);
+    }
+
+    /**
+     * Handle next level button click from status screen
+     */
+    private handleNextLevel(): void {
+        debugLog('Next Level button clicked - navigating to level selector');
+        // Navigate back to level selector (root route)
+        window.location.hash = '#/';
+        window.location.reload();
     }
 
     /**
@@ -375,7 +386,7 @@ export class Ship {
         // Check condition 1: Death by hull damage (outside landing zone)
         if (!this._isInLandingZone && hull < 0.01) {
             debugLog('Game end condition met: Hull critical outside landing zone');
-            this._statusScreen.show(true);
+            this._statusScreen.show(true, false); // Game ended, not victory
             this._keyboardInput?.setEnabled(false);
             this._controllerInput?.setEnabled(false);
             this._statusScreenAutoShown = true;
@@ -385,7 +396,7 @@ export class Ship {
         // Check condition 2: Stranded (outside landing zone, no fuel, low velocity)
         if (!this._isInLandingZone && fuel < 0.01 && totalVelocity < 1) {
             debugLog('Game end condition met: Stranded (no fuel, low velocity)');
-            this._statusScreen.show(true);
+            this._statusScreen.show(true, false); // Game ended, not victory
             this._keyboardInput?.setEnabled(false);
             this._controllerInput?.setEnabled(false);
             this._statusScreenAutoShown = true;
@@ -395,7 +406,7 @@ export class Ship {
         // Check condition 3: Victory (all asteroids destroyed, inside landing zone)
         if (asteroidsRemaining <= 0 && this._isInLandingZone) {
             debugLog('Game end condition met: Victory (all asteroids destroyed)');
-            this._statusScreen.show(true);
+            this._statusScreen.show(true, true); // Game ended, VICTORY!
             this._keyboardInput?.setEnabled(false);
             this._controllerInput?.setEnabled(false);
             this._statusScreenAutoShown = true;

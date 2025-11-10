@@ -159,10 +159,9 @@ export class LevelGenerator {
 
             const position: Vector3Array = [x, y, z];
 
-            // Random size
+            // Random size (uniform scale)
             const sizeRange = config.rockSizeMax - config.rockSizeMin;
-            const size = Math.random() * sizeRange + config.rockSizeMin;
-            const scaling: Vector3Array = [size, size, size];
+            const scale = Math.random() * sizeRange + config.rockSizeMin;
 
             // Calculate initial velocity based on force applied in Level1
             // Velocity should be tangential to the sphere (perpendicular to radius)
@@ -182,7 +181,7 @@ export class LevelGenerator {
             asteroids.push({
                 id: `asteroid-${i}`,
                 position,
-                scaling,
+                scale,
                 linearVelocity,
                 angularVelocity: [0, 0, 0],
                 mass

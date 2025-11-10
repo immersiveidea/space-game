@@ -9,6 +9,9 @@ export class GameConfig {
     // Physics settings
     public physicsEnabled: boolean = true;
 
+    // Feature flags
+    public progressionEnabled: boolean = false; // Set to false for simple rookie level
+
     // Ship physics tuning parameters
     public shipPhysics = {
         maxLinearVelocity: 200,
@@ -42,6 +45,7 @@ export class GameConfig {
         const config = {
             physicsEnabled: this.physicsEnabled,
             debug: this.debug,
+            progressionEnabled: this.progressionEnabled,
             shipPhysics: this.shipPhysics
         };
         localStorage.setItem('game-config', JSON.stringify(config));
@@ -57,6 +61,7 @@ export class GameConfig {
                 const config = JSON.parse(stored);
                 this.physicsEnabled = config.physicsEnabled ?? true;
                 this.debug = config.debug ?? false;
+                this.progressionEnabled = config.progressionEnabled ?? false;
 
                 // Load ship physics with fallback to defaults
                 if (config.shipPhysics) {
@@ -81,6 +86,7 @@ export class GameConfig {
     public reset(): void {
         this.physicsEnabled = true;
         this.debug = false;
+        this.progressionEnabled = false;
         this.shipPhysics = {
             maxLinearVelocity: 200,
             maxAngularVelocity: 1.4,

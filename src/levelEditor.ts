@@ -1,5 +1,5 @@
 import { LevelGenerator } from "./levelGenerator";
-import { LevelConfig, DifficultyConfig, validateLevelConfig } from "./levelConfig";
+import { LevelConfig, DifficultyConfig, validateLevelConfig, Vector3Array } from "./levelConfig";
 import debugLog from './debug';
 
 const STORAGE_KEY = 'space-game-levels';
@@ -171,8 +171,7 @@ class LevelEditor {
         (document.getElementById('baseX') as HTMLInputElement).value = config.startBase.position[0].toString();
         (document.getElementById('baseY') as HTMLInputElement).value = config.startBase.position[1].toString();
         (document.getElementById('baseZ') as HTMLInputElement).value = config.startBase.position[2].toString();
-        (document.getElementById('baseDiameter') as HTMLInputElement).value = config.startBase.diameter.toString();
-        (document.getElementById('baseHeight') as HTMLInputElement).value = config.startBase.height.toString();
+        (document.getElementById('baseGlbPath') as HTMLInputElement).value = config.startBase.baseGlbPath || 'base.glb';
 
         // Sun
         (document.getElementById('sunX') as HTMLInputElement).value = config.sun.position[0].toString();
@@ -597,8 +596,110 @@ export function getSavedLevel(name: string): LevelConfig | null {
 }
 
 /**
+ * Generate a simple rookie level with 4 asteroids
+ * Asteroids at 100-200 distance with 20-100 tangential velocities
+ */
+function generateSimpleRookieLevel(): void {
+    debugLog('Creating simple rookie level with 4 asteroids...');
+
+    const levelsMap = new Map<string, LevelConfig>();
+
+    // Create base level structure
+    const config: LevelConfig = {
+        version: "1.0",
+        difficulty: "rookie",
+        timestamp: new Date().toISOString(),
+        metadata: {
+            author: 'System',
+            description: 'Simple rookie training mission with 4 asteroids',
+            type: 'default'
+        },
+        ship: {
+            position: [0, 1, 0],
+            rotation: [0, 0, 0],
+            linearVelocity: [0, 0, 0],
+            angularVelocity: [0, 0, 0]
+        },
+        startBase: {
+            position: [0, 0, 0],
+            baseGlbPath: 'base.glb'
+        },
+        sun: {
+            position: [0, 0, 400],
+            diameter: 50,
+            intensity: 1000000
+        },
+        planets: [],
+        asteroids: [],
+        difficultyConfig: {
+            rockCount: 4,
+            forceMultiplier: 1.0,
+            rockSizeMin: 3,
+            rockSizeMax: 5,
+            distanceMin: 100,
+            distanceMax: 200
+        }
+    };
+
+    // Generate 4 asteroids with tangential velocities
+    const basePosition = [0, 0, 0]; // Start base position
+
+    for (let i = 0; i < 4; i++) {
+        // Random distance between 100-200
+        const distance = 100 + Math.random() * 100;
+
+        // Random angle around the base
+        const angle = (Math.PI * 2 / 4) * i + (Math.random() - 0.5) * 0.5;
+
+        // Position at distance and angle
+        const x = basePosition[0] + distance * Math.cos(angle);
+        const z = basePosition[2] + distance * Math.sin(angle);
+        const y = basePosition[1] + (Math.random() - 0.5) * 20; // Some vertical variation
+
+        // Calculate tangent direction (perpendicular to radial)
+        const tangentX = -Math.sin(angle);
+        const tangentZ = Math.cos(angle);
+
+        // Random tangential speed between 20-100
+        const speed = 20 + Math.random() * 80;
+
+        const linearVelocity: Vector3Array = [
+            tangentX * speed,
+            (Math.random() - 0.5) * 10, // Small vertical velocity
+            tangentZ * speed
+        ];
+
+        // Random size between min and max
+        const scale = 3 + Math.random() * 2;
+
+        // Random rotation
+        const angularVelocity: Vector3Array = [
+            (Math.random() - 0.5) * 2,
+            (Math.random() - 0.5) * 2,
+            (Math.random() - 0.5) * 2
+        ];
+
+        config.asteroids.push({
+            id: `asteroid-${i}`,
+            position: [x, y, z],
+            scale,
+            linearVelocity,
+            angularVelocity
+        });
+    }
+
+    levelsMap.set('Rookie Training', config);
+    debugLog('Generated simple rookie level with 4 asteroids');
+
+    // Save to localStorage
+    const levelsArray = Array.from(levelsMap.entries());
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(levelsArray));
+    debugLog('Simple rookie level saved to localStorage');
+}
+
+/**
  * Generate default levels if localStorage is empty
- * Creates 4 levels: recruit, pilot, captain, commander
+ * Creates either a simple rookie level or 6 themed levels based on progression flag
  */
 export function generateDefaultLevels(): void {
     const existing = getSavedLevels();
@@ -607,30 +708,82 @@ export function generateDefaultLevels(): void {
         return;
     }
 
-    debugLog('No saved levels found, generating 4 default levels...');
+    // Check progression flag from GameConfig
+    const GameConfig = (window as any).GameConfig;
+    const progressionEnabled = GameConfig?.getInstance().progressionEnabled ?? false;
 
-    const difficulties = ['recruit', 'pilot', 'captain', 'commander'];
+    if (!progressionEnabled) {
+        debugLog('Progression disabled - generating simple rookie level...');
+        generateSimpleRookieLevel();
+        return;
+    }
+
+    debugLog('No saved levels found, generating 6 default levels...');
+
+    // Define themed default levels with descriptions
+    const defaultLevels = [
+        {
+            name: 'Tutorial: Asteroid Field',
+            difficulty: 'recruit',
+            description: 'Learn the basics of ship control and asteroid destruction in a calm sector of space.',
+            estimatedTime: '3-5 minutes'
+        },
+        {
+            name: 'Rescue Mission',
+            difficulty: 'pilot',
+            description: 'Clear a path through moderate asteroid density to reach the stranded station.',
+            estimatedTime: '5-8 minutes'
+        },
+        {
+            name: 'Deep Space Patrol',
+            difficulty: 'captain',
+            description: 'Patrol a dangerous sector with heavy asteroid activity. Watch your fuel!',
+            estimatedTime: '8-12 minutes'
+        },
+        {
+            name: 'Enemy Territory',
+            difficulty: 'commander',
+            description: 'Navigate through hostile space with high-speed asteroids and limited resources.',
+            estimatedTime: '12-15 minutes'
+        },
+        {
+            name: 'The Gauntlet',
+            difficulty: 'commander',
+            description: 'Face maximum asteroid density in this ultimate test of piloting skill.',
+            estimatedTime: '15-20 minutes'
+        },
+        {
+            name: 'Final Challenge',
+            difficulty: 'commander',
+            description: 'The ultimate challenge - survive the most chaotic asteroid field in known space.',
+            estimatedTime: '20+ minutes'
+        }
+    ];
+
     const levelsMap = new Map<string, LevelConfig>();
 
-    for (const difficulty of difficulties) {
-        const generator = new LevelGenerator(difficulty);
+    for (const level of defaultLevels) {
+        const generator = new LevelGenerator(level.difficulty);
         const config = generator.generate();
 
-        // Add metadata
+        // Add rich metadata
         config.metadata = {
             author: 'System',
-            description: `Default ${difficulty} level`
+            description: level.description,
+            estimatedTime: level.estimatedTime,
+            type: 'default',
+            difficulty: level.difficulty
         };
 
-        levelsMap.set(difficulty, config);
-        debugLog(`Generated default level: ${difficulty}`);
+        levelsMap.set(level.name, config);
+        debugLog(`Generated default level: ${level.name} (${level.difficulty})`);
     }
 
     // Save all levels to localStorage
     const levelsArray = Array.from(levelsMap.entries());
     localStorage.setItem(STORAGE_KEY, JSON.stringify(levelsArray));
 
-    debugLog('Default levels saved to localStorage');
+    debugLog(`${defaultLevels.length} default levels saved to localStorage`);
 }
 
 // Export for manual initialization if needed

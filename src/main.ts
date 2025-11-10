@@ -118,6 +118,12 @@ export class Main {
 
                 // Listen for replay requests from the ship
                 if (ship) {
+                    // Set current level name for progression tracking
+                    if (ship._statusScreen) {
+                        ship._statusScreen.setCurrentLevel(levelName);
+                        debugLog(`Set current level for progression: ${levelName}`);
+                    }
+
                     ship.onReplayRequestObservable.add(() => {
                         debugLog('Replay requested - reloading page');
                         window.location.reload();
@@ -472,16 +478,10 @@ export class Main {
 
 // Setup router
 router.on('/', () => {
-    // Check if there are saved levels
-    if (!hasSavedLevels()) {
-        debugLog('No saved levels found, redirecting to editor');
-        router.navigate('/editor');
-        return;
-    }
-
+    // Always show game view with level selector (no editor redirect)
     showView('game');
 
-    // Populate level selector
+    // Populate level selector (will show default levels if no custom levels)
     populateLevelSelector();
 
     // Initialize game if not in debug mode
