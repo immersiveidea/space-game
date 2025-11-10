@@ -3,7 +3,7 @@ import {
     AudioEngineV2,
     DistanceConstraint,
     InstancedMesh,
-    Mesh, MeshBuilder,
+    Mesh,
     Observable,
     PhysicsAggregate,
     PhysicsBody,
@@ -78,10 +78,11 @@ export class RockFactory {
             "/assets/themes/default/audio/explosion.mp3",
             {
                 loop: false,
-                volume: 5.0,
+                volume: 1.0,
                 spatialEnabled: true,
-                spatialDistanceModel: "exponential",
+                spatialDistanceModel: "linear",
                 spatialMaxDistance: 500,
+                spatialMinUpdateTime: .5,
                 spatialRolloffFactor: 1
             }
         );
@@ -145,10 +146,9 @@ export class RockFactory {
                             position: asteroidPosition.toString()
                         });
 
-                        // Create temporary TransformNode for spatial audio
-                        const explosionNode = MeshBuilder.CreateSphere(
+                        // Create lightweight TransformNode for spatial audio (no geometry needed)
+                        const explosionNode = new TransformNode(
                             `explosion_${asteroidMesh.id}_${Date.now()}`,
-                            {diameter: 1},
                             DefaultScene.MainScene
                         );
                         explosionNode.position = asteroidPosition;
@@ -175,7 +175,7 @@ export class RockFactory {
                                 RockFactory._explosionSound.spatial.detach();
                                 explosionNode.dispose();
                                 debugLog('[RockFactory] Cleaned up explosion node and detached sound');
-                            }, 850);
+                            }, 4500);
                         } else {
                             debugLog('[RockFactory] ERROR: _explosionSound not loaded!');
                             explosionNode.dispose();
