@@ -32,6 +32,7 @@ import {ReplayManager} from "./replay/ReplayManager";
 import {AuthService} from "./authService";
 import {updateUserProfile} from "./loginScreen";
 import {Preloader} from "./preloader";
+import {DiscordWidget} from "./discordWidget";
 
 // Set to true to run minimal controller debug test
 const DEBUG_CONTROLLERS = false;
@@ -473,6 +474,20 @@ export class Main {
                         pointerFeature.detach();
                         debugLog("Pointer selection feature stored and detached");
                     }
+
+                    // Hide Discord widget when entering VR, show when exiting
+                    DefaultScene.XR.baseExperience.onStateChangedObservable.add((state) => {
+                        const discord = (window as any).__discordWidget as DiscordWidget;
+                        if (discord) {
+                            if (state === 2) { // WebXRState.IN_XR
+                                debugLog('[Main] Entering VR - hiding Discord widget');
+                                discord.hide();
+                            } else if (state === 0) { // WebXRState.NOT_IN_XR
+                                debugLog('[Main] Exiting VR - showing Discord widget');
+                                discord.show();
+                            }
+                        }
+                    });
                 }
                 this.reportProgress(40, 'VR support enabled');
             } catch (error) {
@@ -609,6 +624,26 @@ router.on('/', async () => {
 
             // Initialize demo mode without engine (just for UI purposes)
             const demo = new Demo(main);
+        }
+
+        // Initialize Discord widget (if not already initialized)
+        if (!(window as any).__discordWidget) {
+            debugLog('[Router] Initializing Discord widget');
+            const discord = new DiscordWidget();
+
+            // Initialize with your server and channel IDs
+            discord.initialize({
+                server: '1112846185913401475', // Replace with your Discord server ID
+                channel: '1437561367908581406', // Replace with your Discord channel ID
+                color: '#667eea',
+                glyph: ['💬', '✖️'],
+                notifications: true
+            }).then(() => {
+                debugLog('[Router] Discord widget ready');
+                (window as any).__discordWidget = discord;
+            }).catch(error => {
+                console.error('[Router] Failed to initialize Discord widget:', error);
+            });
         }
     }
 
