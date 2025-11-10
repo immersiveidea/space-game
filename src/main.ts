@@ -29,6 +29,9 @@ import {generateDefaultLevels} from "./levelEditor";
 import debugLog from './debug';
 import {ReplaySelectionScreen} from "./replay/ReplaySelectionScreen";
 import {ReplayManager} from "./replay/ReplayManager";
+import {AuthService} from "./authService";
+import {updateUserProfile} from "./loginScreen";
+import {Preloader} from "./preloader";
 
 // Set to true to run minimal controller debug test
 const DEBUG_CONTROLLERS = false;
@@ -44,13 +47,18 @@ export class Main {
     private _engine: Engine | WebGPUEngine;
     private _audioEngine: AudioEngineV2;
     private _replayManager: ReplayManager | null = null;
-    constructor() {
+    private _initialized: boolean = false;
+    private _assetsLoaded: boolean = false;
+    private _progressCallback: ((percent: number, message: string) => void) | null = null;
+
+    constructor(progressCallback?: (percent: number, message: string) => void) {
+        this._progressCallback = progressCallback || null;
         // Listen for level selection event
         window.addEventListener('levelSelected', async (e: CustomEvent) => {
             this._started = true;
             const {levelName, config} = e.detail as {levelName: string, config: LevelConfig};
 
-            debugLog(`Starting level: ${levelName}`);
+            debugLog(`[Main] Starting level: ${levelName}`);
 
             // Hide all UI elements
             const mainDiv = document.querySelector('#mainDiv');
@@ -67,100 +75,140 @@ export class Main {
             if (settingsLink) {
                 settingsLink.style.display = 'none';
             }
-            setLoadingMessage("Initializing...");
 
-            // Initialize engine and XR first
-            await this.initialize();
+            // Show preloader for initialization
+            const preloader = new Preloader();
+            this._progressCallback = (percent, message) => {
+                preloader.updateProgress(percent, message);
+            };
 
-            // If XR is available, enter XR immediately (while we have user activation)
-            let xrSession = null;
-            if (DefaultScene.XR) {
-                try {
-                    setLoadingMessage("Entering VR...");
-                    xrSession = await DefaultScene.XR.baseExperience.enterXRAsync('immersive-vr', 'local-floor');
-                    debugLog('XR session started successfully');
-                } catch (error) {
-                    debugLog('Failed to enter XR, will fall back to flat mode:', error);
-                    DefaultScene.XR = null; // Disable XR for this session
+            try {
+                // Initialize engine if this is first time
+                if (!this._initialized) {
+                    debugLog('[Main] First level selected - initializing engine');
+                    preloader.updateProgress(0, 'Initializing game engine...');
+                    await this.initializeEngine();
                 }
-            }
 
-            // Unlock audio engine on user interaction
-            if (this._audioEngine) {
-                await this._audioEngine.unlockAsync();
-            }
+                // Load assets if this is the first level being played
+                if (!this._assetsLoaded) {
+                    preloader.updateProgress(40, 'Loading 3D models and textures...');
+                    debugLog('[Main] Loading assets for first time');
 
-            // Now load audio assets (after unlock)
-            setLoadingMessage("Loading audio assets...");
-            await RockFactory.initAudio(this._audioEngine);
+                    // Load visual assets (meshes, particles)
+                    ParticleHelper.BaseAssetsUrl = window.location.href;
+                    await RockFactory.init();
+                    this._assetsLoaded = true;
 
-            // Attach audio listener to camera for spatial audio
-            const camera = DefaultScene.XR?.baseExperience?.camera || DefaultScene.MainScene.activeCamera;
-            if (camera && this._audioEngine.listener) {
-                this._audioEngine.listener.attach(camera);
-                debugLog('[Main] Audio listener attached to camera for spatial audio');
-            } else {
-                debugLog('[Main] WARNING: Could not attach audio listener - camera or listener not available');
-            }
+                    debugLog('[Main] Assets loaded successfully');
+                    preloader.updateProgress(60, 'Assets loaded');
+                }
 
-            setLoadingMessage("Loading level...");
+                preloader.updateProgress(70, 'Preparing VR session...');
 
-            // Create and initialize level from config
-            this._currentLevel = new Level1(config, this._audioEngine);
+                // Initialize WebXR for this level
+                await this.initialize();
 
-            // Wait for level to be ready
-            this._currentLevel.getReadyObservable().add(async () => {
-                setLoadingMessage("Starting game...");
-
-                // Get ship and set up replay observable
-                const level1 = this._currentLevel as Level1;
-                const ship = (level1 as any)._ship;
-
-                // Listen for replay requests from the ship
-                if (ship) {
-                    // Set current level name for progression tracking
-                    if (ship._statusScreen) {
-                        ship._statusScreen.setCurrentLevel(levelName);
-                        debugLog(`Set current level for progression: ${levelName}`);
+                // If XR is available, enter XR immediately (while we have user activation)
+                let xrSession = null;
+                if (DefaultScene.XR) {
+                    try {
+                        preloader.updateProgress(75, 'Entering VR...');
+                        xrSession = await DefaultScene.XR.baseExperience.enterXRAsync('immersive-vr', 'local-floor');
+                        debugLog('XR session started successfully');
+                    } catch (error) {
+                        debugLog('Failed to enter XR, will fall back to flat mode:', error);
+                        DefaultScene.XR = null; // Disable XR for this session
                     }
-
-                    ship.onReplayRequestObservable.add(() => {
-                        debugLog('Replay requested - reloading page');
-                        window.location.reload();
-                    });
                 }
 
-                // If we entered XR before level creation, manually setup camera parenting
-                // (This is needed because onInitialXRPoseSetObservable won't fire if we're already in XR)
-                if (DefaultScene.XR && xrSession && DefaultScene.XR.baseExperience.state === 2) { // WebXRState.IN_XR = 2
+                // Unlock audio engine on user interaction
+                if (this._audioEngine) {
+                    await this._audioEngine.unlockAsync();
+                }
 
-                    if (ship && ship.transformNode) {
-                        debugLog('Manually parenting XR camera to ship transformNode');
-                        DefaultScene.XR.baseExperience.camera.parent = ship.transformNode;
-                        DefaultScene.XR.baseExperience.camera.position = new Vector3(0, 1.5, 0);
+                // Now load audio assets (after unlock)
+                preloader.updateProgress(80, 'Loading audio...');
+                await RockFactory.initAudio(this._audioEngine);
 
-                        // Also start timer and recording here (since onInitialXRPoseSetObservable won't fire)
-                        ship.gameStats.startTimer();
-                        debugLog('Game timer started (manual)');
+                // Attach audio listener to camera for spatial audio
+                const camera = DefaultScene.XR?.baseExperience?.camera || DefaultScene.MainScene.activeCamera;
+                if (camera && this._audioEngine.listener) {
+                    this._audioEngine.listener.attach(camera);
+                    debugLog('[Main] Audio listener attached to camera for spatial audio');
+                } else {
+                    debugLog('[Main] WARNING: Could not attach audio listener - camera or listener not available');
+                }
 
-                        if ((level1 as any)._physicsRecorder) {
-                            (level1 as any)._physicsRecorder.startRingBuffer();
-                            debugLog('Physics recorder started (manual)');
+                preloader.updateProgress(90, 'Creating level...');
+
+                // Create and initialize level from config
+                this._currentLevel = new Level1(config, this._audioEngine);
+
+                // Wait for level to be ready
+                this._currentLevel.getReadyObservable().add(async () => {
+                    preloader.updateProgress(95, 'Starting game...');
+
+                    // Get ship and set up replay observable
+                    const level1 = this._currentLevel as Level1;
+                    const ship = (level1 as any)._ship;
+
+                    // Listen for replay requests from the ship
+                    if (ship) {
+                        // Set current level name for progression tracking
+                        if (ship._statusScreen) {
+                            ship._statusScreen.setCurrentLevel(levelName);
+                            debugLog(`Set current level for progression: ${levelName}`);
                         }
-                    } else {
-                        debugLog('WARNING: Could not parent XR camera - ship or transformNode not found');
+
+                        ship.onReplayRequestObservable.add(() => {
+                            debugLog('Replay requested - reloading page');
+                            window.location.reload();
+                        });
                     }
-                }
 
-                // Remove UI
-                mainDiv.remove();
+                    // If we entered XR before level creation, manually setup camera parenting
+                    // (This is needed because onInitialXRPoseSetObservable won't fire if we're already in XR)
+                    if (DefaultScene.XR && xrSession && DefaultScene.XR.baseExperience.state === 2) { // WebXRState.IN_XR = 2
 
-                // Start the game (XR session already active, or flat mode)
-                await this.play();
-            });
+                        if (ship && ship.transformNode) {
+                            debugLog('Manually parenting XR camera to ship transformNode');
+                            DefaultScene.XR.baseExperience.camera.parent = ship.transformNode;
+                            DefaultScene.XR.baseExperience.camera.position = new Vector3(0, 1.5, 0);
 
-            // Now initialize the level (after observable is registered)
-            await this._currentLevel.initialize();
+                            // Also start timer and recording here (since onInitialXRPoseSetObservable won't fire)
+                            ship.gameStats.startTimer();
+                            debugLog('Game timer started (manual)');
+
+                            if ((level1 as any)._physicsRecorder) {
+                                (level1 as any)._physicsRecorder.startRingBuffer();
+                                debugLog('Physics recorder started (manual)');
+                            }
+                        } else {
+                            debugLog('WARNING: Could not parent XR camera - ship or transformNode not found');
+                        }
+                    }
+
+                    // Hide preloader
+                    preloader.updateProgress(100, 'Ready!');
+                    setTimeout(() => {
+                        preloader.hide();
+                    }, 500);
+
+                    // Remove UI
+                    mainDiv.remove();
+
+                    // Start the game (XR session already active, or flat mode)
+                    await this.play();
+                });
+
+                // Now initialize the level (after observable is registered)
+                await this._currentLevel.initialize();
+
+            } catch (error) {
+                console.error('[Main] Level initialization failed:', error);
+                preloader.updateProgress(0, 'Failed to load level. Please refresh and try again.');
+            }
         });
 
         // Listen for test level button click
@@ -333,6 +381,55 @@ export class Main {
         });
     }
     private _started = false;
+
+    /**
+     * Public method to initialize the game engine
+     * Call this to preload all assets before showing the level selector
+     */
+    public async initializeEngine(): Promise<void> {
+        if (this._initialized) {
+            debugLog('[Main] Engine already initialized, skipping');
+            return;
+        }
+
+        debugLog('[Main] Starting engine initialization');
+
+        // Progress: 0-30% - Scene setup
+        this.reportProgress(0, 'Initializing 3D engine...');
+        await this.setupScene();
+        this.reportProgress(30, '3D engine ready');
+
+        // Progress: 30-100% - WebXR, physics, assets
+        await this.initialize();
+
+        this._initialized = true;
+        this.reportProgress(100, 'All systems ready!');
+        debugLog('[Main] Engine initialization complete');
+    }
+
+    /**
+     * Report loading progress to callback
+     */
+    private reportProgress(percent: number, message: string): void {
+        if (this._progressCallback) {
+            this._progressCallback(percent, message);
+        }
+    }
+
+    /**
+     * Check if engine is initialized
+     */
+    public isInitialized(): boolean {
+        return this._initialized;
+    }
+
+    /**
+     * Get the audio engine (for external use)
+     */
+    public getAudioEngine(): AudioEngineV2 {
+        return this._audioEngine;
+    }
+
     public async play() {
         debugLog('[Main] play() called');
         debugLog('[Main] Current level exists:', !!this._currentLevel);
@@ -350,10 +447,8 @@ export class Main {
         this._gameState = GameState.DEMO;
     }
     private async initialize() {
-        setLoadingMessage("Initializing.");
-        await this.setupScene();
-
-        // Try to initialize WebXR if available
+        // Try to initialize WebXR if available (30-40%)
+        this.reportProgress(35, 'Checking VR support...');
         if (navigator.xr) {
             try {
                 DefaultScene.XR = await WebXRDefaultExperience.CreateAsync(DefaultScene.MainScene, {
@@ -379,31 +474,26 @@ export class Main {
                         debugLog("Pointer selection feature stored and detached");
                     }
                 }
+                this.reportProgress(40, 'VR support enabled');
             } catch (error) {
                 debugLog("WebXR initialization failed, falling back to flat mode:", error);
                 DefaultScene.XR = null;
+                this.reportProgress(40, 'Desktop mode (VR not available)');
             }
         } else {
             debugLog("WebXR not available, using flat camera mode");
             DefaultScene.XR = null;
+            this.reportProgress(40, 'Desktop mode');
         }
 
-        setLoadingMessage("Get Ready!");
-
-        //const photoDome1 = new PhotoDome("testdome", '/8192.webp', {size: 1000}, DefaultScene.MainScene);
-        //photoDome1.material.diffuseTexture.hasAlpha = true;
-        //photoDome1.material.alpha = .3;
-
-        //const photoDome2 = new PhotoDome("testdome", '/8192.webp', {size: 2000}, DefaultScene.MainScene);
-        //photoDome2.rotation.y = Math.PI;
-        //photoDome2.rotation.x = Math.PI/2;
         DefaultScene.MainScene.onAfterRenderObservable.add(() => {
-          //  photoDome1.position = DefaultScene.MainScene.activeCamera.globalPosition;
-          //  photoDome2.position = DefaultScene.MainScene.activeCamera.globalPosition;
+          // Reserved for photo domes if needed
         });
     }
 
     private async setupScene() {
+        // 0-10%: Engine initialization
+        this.reportProgress(5, 'Creating rendering engine...');
 
         if (webGpu) {
             this._engine = new WebGPUEngine(canvas);
@@ -418,19 +508,21 @@ export class Main {
         window.onresize = () => {
             this._engine.resize();
         }
+
+        this.reportProgress(10, 'Creating scenes...');
         DefaultScene.DemoScene = new Scene(this._engine);
         DefaultScene.MainScene = new Scene(this._engine);
 
         DefaultScene.MainScene.ambientColor = new Color3(.2,.2,.2);
         DefaultScene.MainScene.clearColor = new Color3(0, 0, 0).toColor4();
 
-
-        setLoadingMessage("Initializing Physics Engine..");
+        // 10-20%: Physics
+        this.reportProgress(15, 'Loading physics engine...');
         await this.setupPhysics();
-        setLoadingMessage("Physics Engine Ready!");
+        this.reportProgress(20, 'Physics engine ready');
 
-        // Initialize AudioEngineV2 with spatial audio support
-        setLoadingMessage("Initializing Audio Engine...");
+        // 20-30%: Audio
+        this.reportProgress(22, 'Initializing spatial audio...');
         this._audioEngine = await CreateAudioEngineAsync({
             volume: 1.0,
             listenerAutoUpdate: true,
@@ -438,22 +530,14 @@ export class Main {
             resumeOnInteraction: true
         });
         debugLog('Audio engine created with spatial audio enabled');
+        this.reportProgress(30, 'Audio engine ready');
 
-        setLoadingMessage("Loading visual assets...");
-        ParticleHelper.BaseAssetsUrl = window.location.href;
-        await RockFactory.init();
-        setLoadingMessage("Visual assets loaded!");
+        // Assets (meshes, textures) will be loaded when user selects a level
+        // This makes initial load faster
 
-
-        window.setTimeout(()=>{
-            if (!this._started) {
-                this._started = true;
-                setLoadingMessage("Ready!");
-            }
-        })
-
+        // Start render loop
         this._engine.runRenderLoop(() => {
-                DefaultScene.MainScene.render();
+            DefaultScene.MainScene.render();
         });
     }
 
@@ -477,22 +561,58 @@ export class Main {
 }
 
 // Setup router
-router.on('/', () => {
-    // Always show game view with level selector (no editor redirect)
+router.on('/', async () => {
+    debugLog('[Router] Home route triggered');
+
+    // Always show game view
     showView('game');
+    debugLog('[Router] Game view shown');
 
-    // Populate level selector (will show default levels if no custom levels)
-    populateLevelSelector();
+    // Initialize auth service (but don't block on it)
+    try {
+        const authService = AuthService.getInstance();
+        debugLog('[Router] Initializing auth service...');
+        await authService.initialize();
+        debugLog('[Router] Auth service initialized');
 
-    // Initialize game if not in debug mode
+        // Check if user is authenticated
+        const isAuthenticated = await authService.isAuthenticated();
+        const user = authService.getUser();
+        debugLog('[Router] Auth check - authenticated:', isAuthenticated, 'user:', user);
+
+        if (isAuthenticated && user) {
+            // User is authenticated - update profile display
+            debugLog('User authenticated:', user?.email || user?.name || 'Unknown');
+            updateUserProfile(user.name || user.email || 'Player');
+        } else {
+            // User not authenticated - show login/signup button
+            debugLog('User not authenticated, showing login button');
+            updateUserProfile(null); // This will show login button instead
+        }
+    } catch (error) {
+        // Auth failed, but allow game to continue
+        debugLog('Auth initialization failed, continuing without auth:', error);
+        updateUserProfile(null);
+    }
+
+    // Just show the level selector - don't initialize anything yet!
     if (!DEBUG_CONTROLLERS) {
-        // Check if already initialized
-        if (!(window as any).__gameInitialized) {
+        debugLog('[Router] Populating level selector (no engine initialization yet)');
+        populateLevelSelector();
+
+        // Create Main instance lazily only if it doesn't exist
+        // But don't initialize it yet - that will happen on level selection
+        if (!(window as any).__mainInstance) {
+            debugLog('[Router] Creating Main instance (not initialized)');
             const main = new Main();
+            (window as any).__mainInstance = main;
+
+            // Initialize demo mode without engine (just for UI purposes)
             const demo = new Demo(main);
-            (window as any).__gameInitialized = true;
         }
     }
+
+    debugLog('[Router] Home route handler complete');
 });
 
 router.on('/editor', () => {

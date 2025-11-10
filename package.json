@@ -23,6 +23,7 @@
     "@babylonjs/materials": "8.36.1",
     "@babylonjs/serializers": "8.36.1",
     "@babylonjs/procedural-textures": "8.36.1",
+    "@auth0/auth0-spa-js": "^2.8.0",
     "openai": "4.52.3"
   },
   "devDependencies": {

@@ -17,6 +17,8 @@ import {
 import { GameStats } from "./gameStats";
 import { DefaultScene } from "./defaultScene";
 import { ProgressionManager } from "./progression";
+import { AuthService } from "./authService";
+import { FacebookShare, ShareData } from "./facebookShare";
 
 /**
  * Status screen that displays game statistics
@@ -43,6 +45,7 @@ export class StatusScreen {
     private _exitButton: Button;
     private _resumeButton: Button;
     private _nextLevelButton: Button;
+    private _shareButton: Button | null = null;
 
     // Callbacks
     private _onReplayCallback: (() => void) | null = null;
@@ -214,6 +217,32 @@ export class StatusScreen {
 
         mainPanel.addControl(buttonBar);
 
+        // Create share button bar (separate row for social sharing)
+        const shareBar = new StackPanel("shareBar");
+        shareBar.isVertical = false;
+        shareBar.height = "80px";
+        shareBar.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
+        shareBar.spacing = 20;
+        shareBar.paddingTop = "20px";
+
+        // Create Share button (only shown when user is authenticated with Facebook)
+        this._shareButton = Button.CreateSimpleButton("shareButton", "📱 SHARE ON FACEBOOK");
+        this._shareButton.width = "400px";
+        this._shareButton.height = "60px";
+        this._shareButton.color = "white";
+        this._shareButton.background = "#1877f2"; // Facebook blue
+        this._shareButton.cornerRadius = 10;
+        this._shareButton.thickness = 0;
+        this._shareButton.fontSize = "28px";
+        this._shareButton.fontWeight = "bold";
+        this._shareButton.isVisible = false; // Hidden by default, shown only for Facebook users
+        this._shareButton.onPointerClickObservable.add(() => {
+            this.handleShareClick();
+        });
+        shareBar.addControl(this._shareButton);
+
+        mainPanel.addControl(shareBar);
+
         this._texture.addControl(mainPanel);
 
         // Initially hide the screen
@@ -350,6 +379,21 @@ export class StatusScreen {
             this._nextLevelButton.isVisible = isGameEnded && victory && hasNextLevel;
         }
 
+        // Show share button only if game ended in victory and user is authenticated with Facebook
+        if (this._shareButton) {
+            const authService = AuthService.getInstance();
+            const isFacebookUser = authService.isAuthenticatedWithFacebook();
+            this._shareButton.isVisible = isGameEnded && victory && isFacebookUser;
+
+            // Initialize Facebook SDK if needed
+            if (this._shareButton.isVisible) {
+                const fbShare = FacebookShare.getInstance();
+                fbShare.initialize().catch(error => {
+                    console.error('Failed to initialize Facebook SDK:', error);
+                });
+            }
+        }
+
         // Enable pointer selection for button interaction
         this.enablePointerSelection();
 
@@ -408,6 +452,71 @@ export class StatusScreen {
      */
     public get isVisible(): boolean {
         return this._isVisible;
+    }
+
+    /**
+     * Handle Facebook share button click
+     */
+    private async handleShareClick(): Promise<void> {
+        const stats = this._gameStats.getStats();
+        const fbShare = FacebookShare.getInstance();
+
+        // Prepare share data
+        const shareData: ShareData = {
+            levelName: this._currentLevelName || 'Unknown Level',
+            gameTime: stats.gameTime,
+            asteroidsDestroyed: stats.asteroidsDestroyed,
+            accuracy: stats.accuracy,
+            completed: true
+        };
+
+        // Try to share via Facebook SDK
+        const success = await fbShare.shareResults(shareData);
+
+        if (!success) {
+            // Fallback to Web Share API or copy to clipboard
+            const webShareSuccess = await fbShare.shareWithWebAPI(shareData);
+
+            if (!webShareSuccess) {
+                // Final fallback - copy to clipboard
+                const copied = await fbShare.copyToClipboard(shareData);
+                if (copied) {
+                    // Show notification (you could add a toast notification here)
+                    console.log('Results copied to clipboard!');
+
+                    // Update button text temporarily to show feedback
+                    if (this._shareButton) {
+                        const originalText = this._shareButton.textBlock?.text;
+                        if (this._shareButton.textBlock) {
+                            this._shareButton.textBlock.text = "✓ COPIED TO CLIPBOARD";
+                        }
+                        setTimeout(() => {
+                            if (this._shareButton?.textBlock && originalText) {
+                                this._shareButton.textBlock.text = originalText;
+                            }
+                        }, 2000);
+                    }
+                }
+            }
+        } else {
+            // Success! Show feedback
+            if (this._shareButton) {
+                const originalText = this._shareButton.textBlock?.text;
+                const originalColor = this._shareButton.background;
+
+                if (this._shareButton.textBlock) {
+                    this._shareButton.textBlock.text = "✓ SHARED!";
+                }
+                this._shareButton.background = "#00ff88";
+
+                setTimeout(() => {
+                    if (this._shareButton?.textBlock && originalText) {
+                        this._shareButton.textBlock.text = originalText;
+                        this._shareButton.background = originalColor;
+                    }
+                }, 2000);
+            }
+        }
     }
 
     /**

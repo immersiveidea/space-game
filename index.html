@@ -17,6 +17,19 @@
     <!-- Game View -->
     <div data-view="game">
       <canvas id="gameCanvas"></canvas>
+      <!-- User Profile Display (appears in top right when authenticated) -->
+      <div id="userProfile" style="
+        position: absolute;
+        top: 20px;
+        right: 20px;
+        z-index: 1000;
+        display: flex;
+        align-items: center;
+        background: rgba(0, 0, 0, 0.7);
+        padding: 10px 15px;
+        border-radius: 6px;
+        border: 1px solid rgba(102, 126, 234, 0.3);
+      "></div>
       <a href="#/editor" class="editor-link" style="display: none;">📝 Level Editor</a>
       <a href="#/settings" class="settings-link" style="display: none;">⚙️ Settings</a>
       <div id="mainDiv">

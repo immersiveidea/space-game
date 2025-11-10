@@ -24,7 +24,7 @@ export class Router {
     /**
      * Register a route handler
      */
-    public on(path: string, handler: () => void): void {
+    public on(path: string, handler: () => void | Promise<void>): void {
         this.routes.set(path, handler);
     }
 
@@ -45,7 +45,7 @@ export class Router {
     /**
      * Handle route changes
      */
-    private handleRoute(): void {
+    private async handleRoute(): Promise<void> {
         // Get hash without the #
         let hash = window.location.hash.slice(1) || '/';
 
@@ -59,12 +59,12 @@ export class Router {
         // Find and execute route handler
         const handler = this.routes.get(hash);
         if (handler) {
-            handler();
+            await handler();
         } else {
             // Default to root if route not found
             const defaultHandler = this.routes.get('/');
             if (defaultHandler) {
-                defaultHandler();
+                await defaultHandler();
             }
         }
     }
