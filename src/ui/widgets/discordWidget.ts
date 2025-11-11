@@ -24,33 +24,47 @@ export class DiscordWidget {
    * @param options - Widget configuration
    */
   async initialize(options: DiscordWidgetOptions): Promise<void> {
-    // Load the Crate script if not already loaded
-    if (!this.scriptLoaded) {
-      console.log('[DiscordWidget] Loading Crate script...');
-      await this.loadCrateScript();
-      this.scriptLoaded = true;
+    try {
+      // Load the Crate script if not already loaded
+      if (!this.scriptLoaded) {
+        console.log('[DiscordWidget] Loading Crate script...');
+        await this.loadCrateScript();
+        this.scriptLoaded = true;
+        console.log('[DiscordWidget] Crate script loaded');
+      }
+
+      // Wait for Crate to be available on window
+      console.log('[DiscordWidget] Waiting for Crate constructor...');
+      await this.waitForCrate();
+      console.log('[DiscordWidget] Crate constructor available');
+
+      // Initialize the Crate widget
+      const defaultOptions: DiscordWidgetOptions = {
+        location: ['bottom', 'right'],
+        color: '#7289DA',
+        glyph: ['💬', '✖️'],
+        notifications: true,
+        indicator: true,
+        ...options
+      };
+
+      console.log('[DiscordWidget] Initializing Crate with options:', defaultOptions);
+
+      // @ts-ignore - Crate is loaded from CDN
+      this.crate = new window.Crate(defaultOptions);
+
+      console.log('[DiscordWidget] Crate instance created, setting up event listeners...');
+      this.setupEventListeners();
+      console.log('[DiscordWidget] Successfully initialized');
+    } catch (error) {
+      console.error('[DiscordWidget] Initialization failed:', error);
+      console.error('[DiscordWidget] Error details:', {
+        name: error?.constructor?.name,
+        message: error?.message,
+        stack: error?.stack
+      });
+      throw error; // Re-throw to be caught by caller
     }
-
-    // Wait for Crate to be available on window
-    await this.waitForCrate();
-
-    // Initialize the Crate widget
-    const defaultOptions: DiscordWidgetOptions = {
-      location: ['bottom', 'right'],
-      color: '#7289DA',
-      glyph: ['💬', '✖️'],
-      notifications: true,
-      indicator: true,
-      ...options
-    };
-
-    console.log('[DiscordWidget] Initializing Crate with options:', defaultOptions);
-
-    // @ts-ignore - Crate is loaded from CDN
-    this.crate = new window.Crate(defaultOptions);
-
-    this.setupEventListeners();
-    console.log('[DiscordWidget] Successfully initialized');
   }
 
   /**
@@ -117,6 +131,30 @@ export class DiscordWidget {
       this.isVisible = visible;
       console.log('[DiscordWidget] Chat visibility:', visible);
     });
+
+    // Listen for any errors from the widget
+    this.crate.on('error', (error: any) => {
+      console.error('[DiscordWidget] Widget error event:', error);
+    });
+
+    // Monitor window errors that might be related to Discord widget
+    const originalErrorHandler = window.onerror;
+    window.onerror = (message, source, lineno, colno, error) => {
+      if (source?.includes('widgetbot') || message?.toString().includes('GraphQL')) {
+        console.error('[DiscordWidget] Window error (possibly related):', {
+          message,
+          source,
+          lineno,
+          colno,
+          error
+        });
+      }
+      // Call original handler if it existed
+      if (originalErrorHandler) {
+        return originalErrorHandler(message, source, lineno, colno, error);
+      }
+      return false;
+    };
   }
 
   /**

@@ -623,9 +623,7 @@ router.on('/', async () => {
             const demo = new Demo(main);
         }
 
-        // Discord widget initialization - DISABLED FOR NOW
-        // Uncomment to enable Discord chat widget
-        /*
+        // Discord widget initialization with enhanced error logging
         if (!(window as any).__discordWidget) {
             debugLog('[Router] Initializing Discord widget');
             const discord = new DiscordWidget();
@@ -642,9 +640,14 @@ router.on('/', async () => {
                 (window as any).__discordWidget = discord;
             }).catch(error => {
                 console.error('[Router] Failed to initialize Discord widget:', error);
+                console.error('[Router] Error type:', error?.constructor?.name);
+                console.error('[Router] Error message:', error?.message);
+                console.error('[Router] Error stack:', error?.stack);
+                if (error?.response) {
+                    console.error('[Router] GraphQL response error:', error.response);
+                }
             });
         }
-        */
     }
 
     debugLog('[Router] Home route handler complete');
