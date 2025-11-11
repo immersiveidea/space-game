@@ -9,7 +9,6 @@ import {
     PhysicsBody,
     PhysicsMotionType,
     PhysicsShapeType,
-    StaticSound,
     TransformNode,
     Vector3
 } from "@babylonjs/core";
@@ -37,8 +36,6 @@ export class RockFactory {
     private static _asteroidMesh: AbstractMesh;
     private static _explosionManager: ExplosionManager;
     private static _orbitCenter: PhysicsAggregate;
-    private static _explosionSound: StaticSound;
-    private static _audioEngine: AudioEngineV2 | null = null;
 
     /**
      * Initialize non-audio assets (meshes, explosion manager)
@@ -67,29 +64,9 @@ export class RockFactory {
      * Call this AFTER audio engine is unlocked
      */
     public static async initAudio(audioEngine: AudioEngineV2) {
-        this._audioEngine = audioEngine;
-
-        // Load explosion sound with spatial audio using AudioEngineV2 API
-        debugLog('[RockFactory] === LOADING EXPLOSION SOUND (AudioEngineV2) ===');
-        debugLog('[RockFactory] Audio engine exists:', !!audioEngine);
-
-        this._explosionSound = await audioEngine.createSoundAsync(
-            "explosionSound",
-            "/assets/themes/default/audio/explosion.mp3",
-            {
-                loop: false,
-                volume: 1.0,
-                spatialEnabled: true,
-                spatialDistanceModel: "linear",
-                spatialMaxDistance: 500,
-                spatialMinUpdateTime: .5,
-                spatialRolloffFactor: 1
-            }
-        );
-
-        debugLog('[RockFactory] ✓ Explosion sound loaded successfully');
-        debugLog('[RockFactory] Spatial enabled:', !!this._explosionSound.spatial);
-        debugLog('[RockFactory] === EXPLOSION SOUND READY ===');
+        debugLog('[RockFactory] Initializing audio via ExplosionManager');
+        await this._explosionManager.initAudio(audioEngine);
+        debugLog('[RockFactory] Audio initialization complete');
     }
     private static async loadMesh() {
         debugLog('loading mesh');
@@ -139,61 +116,36 @@ export class RockFactory {
 
                         // Get the asteroid mesh before disposing
                         const asteroidMesh = eventData.collider.transformNode as AbstractMesh;
-                        const asteroidPosition = asteroidMesh.getAbsolutePosition();
                         debugLog('[RockFactory] Asteroid mesh to explode:', {
                             name: asteroidMesh.name,
                             id: asteroidMesh.id,
-                            position: asteroidPosition.toString()
+                            position: asteroidMesh.getAbsolutePosition().toString()
                         });
 
-                        // Create lightweight TransformNode for spatial audio (no geometry needed)
-                        const explosionNode = new TransformNode(
-                            `explosion_${asteroidMesh.id}_${Date.now()}`,
-                            DefaultScene.MainScene
-                        );
-                        explosionNode.position = asteroidPosition;
-
-                        // Play spatial explosion sound using AudioEngineV2 API
-                        if (RockFactory._explosionSound) {
-                            debugLog('[RockFactory] Playing explosion sound with spatial audio');
-                            debugLog('[RockFactory] Explosion position:', asteroidPosition.toString());
-
-                            // Get camera/listener position for debugging
-                            const camera = DefaultScene.XR?.baseExperience?.camera || DefaultScene.MainScene.activeCamera;
-                            if (camera) {
-                                const distance = Vector3.Distance(camera.globalPosition, asteroidPosition);
-                                debugLog('[RockFactory] Distance to explosion:', distance);
-                            }
-
-                            // Attach sound to the explosion node using AudioEngineV2 spatial API
-                            RockFactory._explosionSound.spatial.attach(explosionNode);
-                            RockFactory._explosionSound.play();
-                            debugLog('[RockFactory] Sound attached and playing');
-
-                            // Clean up after sound finishes (850ms)
-                            setTimeout(() => {
-                                RockFactory._explosionSound.spatial.detach();
-                                explosionNode.dispose();
-                                debugLog('[RockFactory] Cleaned up explosion node and detached sound');
-                            }, 4500);
-                        } else {
-                            debugLog('[RockFactory] ERROR: _explosionSound not loaded!');
-                            explosionNode.dispose();
+                        // Dispose asteroid physics objects BEFORE explosion (to prevent double-disposal)
+                        debugLog('[RockFactory] Disposing asteroid physics objects...');
+                        if (eventData.collider.shape) {
+                            eventData.collider.shape.dispose();
+                        }
+                        if (eventData.collider) {
+                            eventData.collider.dispose();
                         }
 
-                        // Play explosion using ExplosionManager (clones mesh internally)
-                        debugLog('[RockFactory] Calling ExplosionManager.playExplosion()...');
+                        // Play explosion (visual + audio handled by ExplosionManager)
+                        // Note: ExplosionManager will dispose the asteroid mesh after explosion
                         RockFactory._explosionManager.playExplosion(asteroidMesh);
-                        debugLog('[RockFactory] Explosion call completed');
 
-                        // Now dispose the physics objects and original mesh
-                        debugLog('[RockFactory] Disposing physics objects and meshes...');
-                        eventData.collider.shape.dispose();
-                        eventData.collider.transformNode.dispose();
-                        eventData.collider.dispose();
-                        eventData.collidedAgainst.shape.dispose();
-                        eventData.collidedAgainst.transformNode.dispose();
-                        eventData.collidedAgainst.dispose();
+                        // Dispose projectile physics objects
+                        debugLog('[RockFactory] Disposing projectile physics objects...');
+                        if (eventData.collidedAgainst.shape) {
+                            eventData.collidedAgainst.shape.dispose();
+                        }
+                        if (eventData.collidedAgainst.transformNode) {
+                            eventData.collidedAgainst.transformNode.dispose();
+                        }
+                        if (eventData.collidedAgainst) {
+                            eventData.collidedAgainst.dispose();
+                        }
                         debugLog('[RockFactory] Disposal complete');
                     }
                 }

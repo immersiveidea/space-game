@@ -1,8 +1,9 @@
 import {
-    AbstractMesh,
+    AbstractMesh, AudioEngineV2, Color3, InstancedMesh,
     Mesh, MeshBuilder,
     MeshExploder,
-    Scene,
+    Scene, SoundState, StandardMaterial, StaticSound,
+    TransformNode,
     Vector3
 } from "@babylonjs/core";
 import {DefaultScene} from "../../core/defaultScene";
@@ -26,6 +27,10 @@ export interface ExplosionConfig {
 export class ExplosionManager {
     private scene: Scene;
     private config: Required<ExplosionConfig>;
+    private _debrisBaseMesh: Mesh;
+    private audioEngine: AudioEngineV2 | null = null;
+    private explosionSounds: StaticSound[] = [];
+    private soundPoolSize: number = 5;
 
     // Default configuration
     private static readonly DEFAULT_CONFIG: Required<ExplosionConfig> = {
@@ -37,6 +42,17 @@ export class ExplosionManager {
     constructor(scene: Scene, config?: ExplosionConfig) {
         this.scene = scene;
         this.config = { ...ExplosionManager.DEFAULT_CONFIG, ...config };
+        this._debrisBaseMesh = MeshBuilder.CreateIcoSphere(
+            'debrisBase',
+            {
+                radius: .2,
+                subdivisions:  2
+            }, DefaultScene.MainScene
+        );
+        const debrisMaterial = new StandardMaterial('debrisMaterial', DefaultScene.MainScene);
+        debrisMaterial.emissiveColor = new Color3(1,1,0);
+        this._debrisBaseMesh.material = debrisMaterial;
+        this._debrisBaseMesh.setEnabled(false);
     }
 
     /**
@@ -47,70 +63,123 @@ export class ExplosionManager {
     }
 
     /**
+     * Initialize audio for explosions (called after audio engine is unlocked)
+     */
+    public async initAudio(audioEngine: AudioEngineV2): Promise<void> {
+        this.audioEngine = audioEngine;
+
+        debugLog(`ExplosionManager: Initializing audio with pool size ${this.soundPoolSize}`);
+
+        // Create sound pool for concurrent explosions
+        for (let i = 0; i < this.soundPoolSize; i++) {
+            const sound = await audioEngine.createSoundAsync(
+                `explosionSound_${i}`,
+                "/assets/themes/default/audio/explosion.mp3",
+                {
+                    loop: false,
+                    volume: 1.0,
+                    spatialEnabled: true,
+                    spatialDistanceModel: "linear",
+                    spatialMaxDistance: 500,
+                    spatialMinUpdateTime: 0.5,
+                    spatialRolloffFactor: 1
+                }
+            );
+            this.explosionSounds.push(sound);
+        }
+
+        debugLog(`ExplosionManager: Loaded ${this.explosionSounds.length} explosion sounds`);
+    }
+
+    /**
+     * Get an available sound from the pool
+     */
+    private getAvailableSound(): StaticSound | null {
+        // Find a sound that's not currently playing
+        for (const sound of this.explosionSounds) {
+            if (sound.state !== SoundState.Started && sound.state !== SoundState.Starting) {
+                return sound;
+            }
+        }
+
+        // If all sounds are playing, reuse the first one (will cut off the oldest)
+        debugLog("ExplosionManager: All sounds in pool are playing, reusing sound 0");
+        return this.explosionSounds[0] || null;
+    }
+
+    /**
+     * Play explosion audio at a specific position
+     */
+    private playExplosionAudio(position: Vector3): void {
+        if (!this.audioEngine) {
+            // Audio not initialized, skip silently
+            return;
+        }
+
+        const sound = this.getAvailableSound();
+        if (!sound) {
+            debugLog("ExplosionManager: No sound available in pool");
+            return;
+        }
+
+        // Create lightweight TransformNode for spatial audio positioning
+        const explosionNode = new TransformNode(`explosionAudio_${Date.now()}`, this.scene);
+        explosionNode.position = position.clone();
+
+        try {
+            // Attach spatial sound to the node
+            sound.spatial.attach(explosionNode);
+            sound.play();
+
+            // Cleanup after explosion duration (synchronized with visual effect)
+            setTimeout(() => {
+                if (sound.spatial) {
+                    sound.spatial.detach();
+                }
+                explosionNode.dispose();
+            }, this.config.duration);
+        } catch (error) {
+            debugLog("ExplosionManager: Error playing explosion audio", error);
+            explosionNode.dispose();
+        }
+    }
+
+    /**
      * Create sphere debris pieces for explosion
      * MeshExploder requires an array of separate meshes
      * @param mesh The mesh to explode (used for position/scale)
      * @param pieces Number of pieces to create
      * @returns Array of sphere mesh objects
      */
-    private splitIntoSeparateMeshes(mesh: Mesh, pieces: number = 32): Mesh[] {
+    private splitIntoSeparateMeshes(position: Vector3, pieces: number = 32): InstancedMesh[] {
         debugLog(`[ExplosionManager] Creating ${pieces} sphere debris pieces`);
-        debugLog('[ExplosionManager] Base mesh info:', {
-            position: mesh.position.toString(),
-            scaling: mesh.scaling.toString(),
-            hasMaterial: !!mesh.material
-        });
 
-        const meshPieces: Mesh[] = [];
-        const basePosition = mesh.position.clone();
-        const baseScale = mesh.scaling.clone();
+        const meshPieces: InstancedMesh[] = [];
 
         // Create material for debris
-        const material = mesh.material?.clone('debris-material');
-        if (material) {
-            //(material as any).emissiveColor = Color3.Yellow();
-            debugLog('[ExplosionManager] Material cloned successfully');
-        } else {
-            console.warn('[ExplosionManager] WARNING: No material on base mesh');
-        }
 
-        // Create sphere debris scattered around the original mesh position
-        debugLog(baseScale);
-        const avgScale = (baseScale.x + baseScale.y + baseScale.z) / 3;
-        const debrisSize = avgScale * 0.3; // Size relative to asteroid
-
-        debugLog('[ExplosionManager] Debris parameters:', {
-            avgScale,
-            debrisSize,
-            offsetRadius: avgScale * 0.5
-        });
 
         for (let i = 0; i < pieces; i++) {
             try {
                 // Create a small sphere for debris
-                const sphere = MeshBuilder.CreateIcoSphere(
-                    `${mesh.name}_debris_${i}`,
-                    {
-                     radius: debrisSize,
-                        subdivisions:  2
-                    }, DefaultScene.MainScene
-                );
+                const sphere = new InstancedMesh(
+                    `debris_${i}`,
+                    this._debrisBaseMesh);
+
 
                 // Position spheres in a small cluster around the original position
-                const offsetRadius = avgScale * 0.5;
+                const offsetRadius = 1;
                 const angle1 = (i / pieces) * Math.PI * 2;
                 const angle2 = Math.random() * Math.PI;
 
                 sphere.position = new Vector3(
-                    basePosition.x + Math.sin(angle2) * Math.cos(angle1) * offsetRadius,
-                    basePosition.y + Math.sin(angle2) * Math.sin(angle1) * offsetRadius,
-                    basePosition.z + Math.cos(angle2) * offsetRadius
+                    position.x + Math.sin(angle2) * Math.cos(angle1) * offsetRadius,
+                    position.y + Math.sin(angle2) * Math.sin(angle1) * offsetRadius,
+                    position.z + Math.cos(angle2) * offsetRadius
                 );
 
-                sphere.material = material;
                 sphere.isVisible = true;
                 sphere.setEnabled(true);
-
                 meshPieces.push(sphere);
             } catch (error) {
                 console.error(`[ExplosionManager] ERROR creating debris piece ${i}:`, error);
@@ -143,6 +212,10 @@ export class ExplosionManager {
             scaling: mesh.scaling.toString()
         });
 
+        // Play explosion audio at the mesh's position
+        const explosionPosition = mesh.getAbsolutePosition();
+        this.playExplosionAudio(explosionPosition);
+
         // Get the source mesh if this is an instanced mesh
         let sourceMesh: Mesh;
         if ((mesh as any).sourceMesh) {
@@ -155,56 +228,40 @@ export class ExplosionManager {
 
         // Clone the source mesh so we don't affect the original
         debugLog('[ExplosionManager] Cloning mesh...');
-        const meshToExplode = sourceMesh.clone("exploding-" + mesh.name, null, true, false);
-        if (!meshToExplode) {
-            console.error('[ExplosionManager] ERROR: Failed to clone mesh for explosion');
-            return;
-        }
-        debugLog('[ExplosionManager] Mesh cloned successfully');
-
+        mesh.computeWorldMatrix(true);
         // Apply the instance's transformation to the cloned mesh
-        meshToExplode.position = mesh.getAbsolutePosition().clone();
-        meshToExplode.rotation = mesh.rotation.clone();
-        meshToExplode.scaling = mesh.scaling.clone();
-        meshToExplode.setEnabled(true);
+        const position = mesh.getAbsolutePosition().clone();
 
         // Force world matrix computation
-        meshToExplode.computeWorldMatrix(true);
+
 
         // Check if mesh has proper geometry
-        if (!meshToExplode.getTotalVertices || meshToExplode.getTotalVertices() === 0) {
+        if (!mesh.getTotalVertices || mesh.getTotalVertices() === 0) {
             console.error('[ExplosionManager] ERROR: Mesh has no vertices, cannot explode');
-            meshToExplode.dispose();
+            mesh.dispose();
             return;
         }
-
-        debugLog(`[ExplosionManager] Mesh ready for explosion:`, {
-            name: meshToExplode.name,
-            vertices: meshToExplode.getTotalVertices(),
-            position: meshToExplode.position.toString(),
-            scaling: meshToExplode.scaling.toString()
-        });
 
         // Split the mesh into separate mesh objects (MeshExploder requirement)
         debugLog('[ExplosionManager] Splitting mesh into pieces...');
-        const meshPieces = this.splitIntoSeparateMeshes(meshToExplode, 12);
+        const meshPieces = this.splitIntoSeparateMeshes(position, 12);
 
         if (meshPieces.length === 0) {
             console.error('[ExplosionManager] ERROR: Failed to split mesh into pieces');
-            meshToExplode.dispose();
+            mesh.dispose();
             return;
         }
 
         // Original mesh is no longer needed - the pieces replace it
         debugLog('[ExplosionManager] Disposing original cloned mesh');
-        meshToExplode.dispose();
+        mesh.dispose();
 
         // Create the exploder with the array of separate meshes
         // The second parameter is optional - it's the center mesh to explode from
         // If not provided, MeshExploder will auto-calculate the center
         debugLog('[ExplosionManager] Creating MeshExploder...');
         try {
-            const exploder = new MeshExploder(meshPieces);
+            const exploder = new MeshExploder((meshPieces as unknown) as Mesh[]);
             debugLog('[ExplosionManager] MeshExploder created successfully');
 
             debugLog(`[ExplosionManager] Starting explosion animation:`, {
@@ -278,7 +335,7 @@ export class ExplosionManager {
     /**
      * Clean up explosion meshes
      */
-    private cleanupExplosion(meshPieces: Mesh[]): void {
+    private cleanupExplosion(meshPieces: InstancedMesh[]): void {
         debugLog('[ExplosionManager] Starting cleanup of explosion meshes...');
 
         let disposedCount = 0;
@@ -301,6 +358,7 @@ export class ExplosionManager {
      * Dispose of the explosion manager
      */
     public dispose(): void {
+        this._debrisBaseMesh.dispose(false, true);
         // Nothing to dispose with MeshExploder approach
         debugLog("ExplosionManager disposed");
     }
