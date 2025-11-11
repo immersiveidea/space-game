@@ -34,18 +34,19 @@ export class ExplosionManager {
 
     // Default configuration
     private static readonly DEFAULT_CONFIG: Required<ExplosionConfig> = {
-        duration: 1000,
-        explosionForce: 5,
+        duration: 2000,
+        explosionForce: 10,
         frameRate: 60
     };
 
     constructor(scene: Scene, config?: ExplosionConfig) {
         this.scene = scene;
         this.config = { ...ExplosionManager.DEFAULT_CONFIG, ...config };
+        debugLog(this.config);
         this._debrisBaseMesh = MeshBuilder.CreateIcoSphere(
             'debrisBase',
             {
-                radius: .2,
+                radius: 1,
                 subdivisions:  2
             }, DefaultScene.MainScene
         );
@@ -130,14 +131,13 @@ export class ExplosionManager {
             // Attach spatial sound to the node
             sound.spatial.attach(explosionNode);
             sound.play();
-
-            // Cleanup after explosion duration (synchronized with visual effect)
-            setTimeout(() => {
-                if (sound.spatial) {
-                    sound.spatial.detach();
-                }
+            sound.onEndedObservable.addOnce(() => {
+                //Cleanup after sound ends.
+                sound.spatial.detach();
                 explosionNode.dispose();
-            }, this.config.duration);
+            })
+
+
         } catch (error) {
             debugLog("ExplosionManager: Error playing explosion audio", error);
             explosionNode.dispose();

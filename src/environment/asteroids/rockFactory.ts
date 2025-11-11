@@ -48,8 +48,8 @@ export class RockFactory {
         this._orbitCenter = new PhysicsAggregate(node, PhysicsShapeType.SPHERE, {radius: .1, mass: 1000}, DefaultScene.MainScene );
         this._orbitCenter.body.setMotionType(PhysicsMotionType.ANIMATED);
         this._explosionManager = new ExplosionManager(DefaultScene.MainScene, {
-            duration: 800,
-            explosionForce: 20.0,
+            duration: 2000,
+            explosionForce: 150.0,
             frameRate: 60
         });
         await this._explosionManager.initialize();
@@ -102,7 +102,6 @@ export class RockFactory {
             const body = agg.body;
             const constraint = new DistanceConstraint(Vector3.Distance(position, this._orbitCenter.body.transformNode.position), DefaultScene.MainScene);
             body.addConstraint(this._orbitCenter.body, constraint);
-
             body.setLinearDamping(0)
             body.setMotionType(PhysicsMotionType.DYNAMIC);
             body.setCollisionCallbackEnabled(true);

@@ -21,6 +21,7 @@ interface VoiceMessage {
     interrupt: boolean;         // If true, interrupt current playback
     repeatInterval?: number;    // Milliseconds between repeats (0 or undefined = no repeat)
     lastPlayedTime?: number;    // Timestamp when message was last played (for repeat timing)
+    stateKey?: string;          // Warning state key (e.g., "warning_fuel") to track ownership
 }
 
 /**
@@ -130,19 +131,19 @@ export class VoiceAudioSystem {
             this._warningStates.add(`danger_${statusType}`);
             // Clear warning state if it exists (danger supersedes warning)
             this.clearWarningState(`warning_${statusType}`);
-            this.queueMessage(['danger', statusType], VoiceMessagePriority.HIGH, false, 2000);
+            this.queueMessage(['danger', statusType], VoiceMessagePriority.HIGH, false, 2000, `danger_${statusType}`);
         }
         // Warning (10% <= x < 30%) - repeat every 4 seconds ONLY if not in danger
         else if (percentage >= 0.2 && percentage < 0.5 && !this._warningStates.has(`warning_${statusType}`) && !this._warningStates.has(`danger_${statusType}`)) {
             debugLog(`VoiceAudioSystem: Warning triggered for ${statusType} (${(percentage * 100).toFixed(1)}%)`);
             this._warningStates.add(`warning_${statusType}`);
-            this.queueMessage(['warning', statusType], VoiceMessagePriority.NORMAL, false, 4000);
+            this.queueMessage(['warning', statusType], VoiceMessagePriority.NORMAL, false, 4000, `warning_${statusType}`);
         }
         // Empty (= 0) - no repeat
         else if (newValue === 0 && !this._warningStates.has(`empty_${statusType}`)) {
             debugLog(`VoiceAudioSystem: EMPTY warning triggered for ${statusType}`);
             this._warningStates.add(`empty_${statusType}`);
-            this.queueMessage([statusType, 'empty'], VoiceMessagePriority.HIGH, false);
+            this.queueMessage([statusType, 'empty'], VoiceMessagePriority.HIGH, false, 0, `empty_${statusType}`);
         }
     }
 
@@ -154,7 +155,8 @@ export class VoiceAudioSystem {
         sounds: string[],
         priority: VoiceMessagePriority = VoiceMessagePriority.NORMAL,
         interrupt: boolean = false,
-        repeatInterval: number = 0
+        repeatInterval: number = 0,
+        stateKey?: string
     ): void {
         if (!this._audioEngine) {
             debugLog('VoiceAudioSystem: Cannot queue message - audio not initialized');
@@ -165,7 +167,8 @@ export class VoiceAudioSystem {
             sounds,
             priority,
             interrupt,
-            repeatInterval: repeatInterval > 0 ? repeatInterval : undefined
+            repeatInterval: repeatInterval > 0 ? repeatInterval : undefined,
+            stateKey
         };
 
         // If interrupt flag is set, stop current playback and clear queue
@@ -224,12 +227,17 @@ export class VoiceAudioSystem {
 
                         // Check if this message should repeat
                         if (this._currentMessage.repeatInterval && this._currentMessage.repeatInterval > 0) {
-                            // Record the time this message finished
-                            this._currentMessage.lastPlayedTime = performance.now();
+                            // Only re-queue if the warning state still exists
+                            if (!this._currentMessage.stateKey || this._warningStates.has(this._currentMessage.stateKey)) {
+                                // Record the time this message finished
+                                this._currentMessage.lastPlayedTime = performance.now();
 
-                            // Re-queue the message for repeat
-                            this._queue.push({ ...this._currentMessage });
-                            debugLog(`VoiceAudioSystem: Message re-queued for repeat in ${this._currentMessage.repeatInterval}ms`);
+                                // Re-queue the message for repeat
+                                this._queue.push({ ...this._currentMessage });
+                                debugLog(`VoiceAudioSystem: Message re-queued for repeat in ${this._currentMessage.repeatInterval}ms`);
+                            } else {
+                                debugLog(`VoiceAudioSystem: Message NOT re-queued - warning state '${this._currentMessage.stateKey}' cleared`);
+                            }
                         }
 
                         this._isPlaying = false;
@@ -311,12 +319,22 @@ export class VoiceAudioSystem {
     }
 
     /**
-     * Clear a specific warning state (allows warning to re-trigger)
+     * Clear a specific warning state and remove matching messages from queue
      */
     public clearWarningState(key: string): void {
         if (this._warningStates.has(key)) {
             this._warningStates.delete(key);
-            debugLog(`VoiceAudioSystem: Cleared warning state '${key}'`);
+
+            // Remove all messages with this state key from queue
+            const originalLength = this._queue.length;
+            this._queue = this._queue.filter(msg => msg.stateKey !== key);
+
+            const removed = originalLength - this._queue.length;
+            if (removed > 0) {
+                debugLog(`VoiceAudioSystem: Cleared warning state '${key}' and purged ${removed} queued message(s)`);
+            } else {
+                debugLog(`VoiceAudioSystem: Cleared warning state '${key}'`);
+            }
         }
     }
 
