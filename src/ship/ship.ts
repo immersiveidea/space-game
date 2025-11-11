@@ -24,6 +24,7 @@ import { KeyboardInput } from "./input/keyboardInput";
 import { ControllerInput } from "./input/controllerInput";
 import { ShipPhysics } from "./shipPhysics";
 import { ShipAudio } from "./shipAudio";
+import { VoiceAudioSystem } from "./voiceAudioSystem";
 import { WeaponSystem } from "./weaponSystem";
 import { StatusScreen } from "../ui/hud/statusScreen";
 import { GameStats } from "../game/gameStats";
@@ -40,6 +41,7 @@ export class Ship {
     private _controllerInput: ControllerInput;
     private _physics: ShipPhysics;
     private _audio: ShipAudio;
+    private _voiceAudio: VoiceAudioSystem;
     private _weapons: WeaponSystem;
     private _statusScreen: StatusScreen;
     private _gameStats: GameStats;
@@ -187,6 +189,12 @@ export class Ship {
         if (this._audioEngine) {
             this._audio = new ShipAudio(this._audioEngine);
             await this._audio.initialize();
+
+            // Initialize voice audio system
+            this._voiceAudio = new VoiceAudioSystem();
+            await this._voiceAudio.initialize(this._audioEngine);
+            // Subscribe voice system to ship status events
+            this._voiceAudio.subscribeToEvents(this._scoreboard.shipStatus);
         }
 
         // Initialize weapon system
@@ -259,6 +267,11 @@ export class Ship {
             if (this._frameCount >= 10) {
                 this._frameCount = 0;
                 this.updatePhysics();
+            }
+
+            // Update voice audio system (checks for completed sounds and plays next in queue)
+            if (this._voiceAudio) {
+                this._voiceAudio.update();
             }
 
             // Check game end conditions every frame (but only acts once)
