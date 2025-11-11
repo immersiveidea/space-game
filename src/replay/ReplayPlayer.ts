@@ -5,8 +5,8 @@ import {
     Scene,
     Vector3
 } from "@babylonjs/core";
-import { PhysicsRecording, PhysicsSnapshot } from "../physicsRecorder";
-import debugLog from "../debug";
+import { PhysicsRecording, PhysicsSnapshot } from "./recording/physicsRecorder";
+import debugLog from "../core/debug";
 
 /**
  * Handles frame-by-frame playback of physics recordings

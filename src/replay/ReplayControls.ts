@@ -9,7 +9,7 @@ import {
 } from "@babylonjs/gui";
 import { ReplayPlayer } from "./ReplayPlayer";
 import { CameraMode, ReplayCamera } from "./ReplayCamera";
-import debugLog from "../debug";
+import debugLog from "../core/debug";
 
 /**
  * UI controls for replay playback

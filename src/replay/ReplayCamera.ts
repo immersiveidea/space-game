@@ -4,7 +4,7 @@ import {
     Scene,
     Vector3
 } from "@babylonjs/core";
-import debugLog from "../debug";
+import debugLog from "../core/debug";
 
 /**
  * Camera modes for replay viewing

@@ -1,6 +1,6 @@
-import {DefaultScene} from "../defaultScene";
+import {DefaultScene} from "../core/defaultScene";
 import {AbstractMesh, AssetContainer, LoadAssetContainerAsync} from "@babylonjs/core";
-import debugLog from "../debug";
+import debugLog from "../core/debug";
 
 export type  LoadedAsset = {
     container: AssetContainer,

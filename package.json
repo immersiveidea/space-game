@@ -25,7 +25,7 @@
     "@babylonjs/procedural-textures": "8.36.1",
     "@babylonjs/serializers": "8.36.1",
     "openai": "4.52.3"
-  },
+},
   "devDependencies": {
     "@types/node": "^20.0.0",
     "tsx": "^4.7.1",

@@ -7,8 +7,8 @@ import {
     StackPanel,
     TextBlock
 } from "@babylonjs/gui";
-import { PhysicsStorage } from "../physicsStorage";
-import debugLog from "../debug";
+import { PhysicsStorage } from "./recording/physicsStorage";
+import debugLog from "../core/debug";
 
 /**
  * Recording info for display

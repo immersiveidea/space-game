@@ -14,25 +14,25 @@ import {
 import '@babylonjs/loaders';
 import HavokPhysics from "@babylonjs/havok";
 
-import {DefaultScene} from "./defaultScene";
-import {Level1} from "./level1";
-import {TestLevel} from "./testLevel";
-import Demo from "./demo";
-import Level from "./level";
-import setLoadingMessage from "./setLoadingMessage";
-import {RockFactory} from "./rockFactory";
-import {ControllerDebug} from "./controllerDebug";
-import {router, showView} from "./router";
-import {populateLevelSelector} from "./levelSelector";
-import {LevelConfig} from "./levelConfig";
-import {generateDefaultLevels} from "./levelEditor";
-import debugLog from './debug';
+import {DefaultScene} from "./core/defaultScene";
+import {Level1} from "./levels/level1";
+import {TestLevel} from "./levels/testLevel";
+import Demo from "./game/demo";
+import Level from "./levels/level";
+import setLoadingMessage from "./utils/setLoadingMessage";
+import {RockFactory} from "./environment/asteroids/rockFactory";
+import {ControllerDebug} from "./utils/controllerDebug";
+import {router, showView} from "./core/router";
+import {populateLevelSelector} from "./levels/ui/levelSelector";
+import {LevelConfig} from "./levels/config/levelConfig";
+import {generateDefaultLevels} from "./levels/generation/levelEditor";
+import debugLog from './core/debug';
 import {ReplaySelectionScreen} from "./replay/ReplaySelectionScreen";
 import {ReplayManager} from "./replay/ReplayManager";
-import {AuthService} from "./authService";
-import {updateUserProfile} from "./loginScreen";
-import {Preloader} from "./preloader";
-import {DiscordWidget} from "./discordWidget";
+import {AuthService} from "./services/authService";
+import {updateUserProfile} from "./ui/screens/loginScreen";
+import {Preloader} from "./ui/screens/preloader";
+import {DiscordWidget} from "./ui/widgets/discordWidget";
 
 // Set to true to run minimal controller debug test
 const DEBUG_CONTROLLERS = false;
@@ -654,7 +654,7 @@ router.on('/editor', () => {
     showView('editor');
     // Dynamically import and initialize editor
     if (!(window as any).__editorInitialized) {
-        import('./levelEditor').then(() => {
+        import('./levels/generation/levelEditor').then(() => {
             (window as any).__editorInitialized = true;
         });
     }
@@ -664,7 +664,7 @@ router.on('/settings', () => {
     showView('settings');
     // Dynamically import and initialize settings
     if (!(window as any).__settingsInitialized) {
-        import('./settingsScreen').then((module) => {
+        import('./ui/screens/settingsScreen').then((module) => {
             module.initializeSettingsScreen();
             (window as any).__settingsInitialized = true;
         });

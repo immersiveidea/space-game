@@ -8,13 +8,13 @@ import {
 } from "@babylonjs/core";
 import "@babylonjs/inspector";
 import HavokPhysics from "@babylonjs/havok";
-import { PhysicsStorage } from "../physicsStorage";
+import { PhysicsStorage } from "./recording/physicsStorage";
 import { ReplayPlayer } from "./ReplayPlayer";
 import { CameraMode, ReplayCamera } from "./ReplayCamera";
 import { ReplayControls } from "./ReplayControls";
-import debugLog from "../debug";
-import { DefaultScene } from "../defaultScene";
-import { Level1 } from "../level1";
+import debugLog from "../core/debug";
+import { DefaultScene } from "../core/defaultScene";
+import { Level1 } from "../levels/level1";
 
 /**
  * Manages the replay scene, loading recordings, and coordinating replay components
