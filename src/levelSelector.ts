@@ -2,15 +2,26 @@ import { getSavedLevels } from "./levelEditor";
 import { LevelConfig } from "./levelConfig";
 import { ProgressionManager } from "./progression";
 import { GameConfig } from "./gameConfig";
+import { AuthService } from "./authService";
 import debugLog from './debug';
 
 const SELECTED_LEVEL_KEY = 'space-game-selected-level';
 
+// Default level order for the carousel
+const DEFAULT_LEVEL_ORDER = [
+    'Rookie Training',
+    'Rescue Mission',
+    'Deep Space Patrol',
+    'Enemy Territory',
+    'The Gauntlet',
+    'Final Challenge'
+];
+
 /**
  * Populate the level selection screen with saved levels
- * Shows default levels and custom levels with progression tracking
+ * Shows all 6 default levels in a 3x2 carousel with locked/unlocked states
  */
-export function populateLevelSelector(): boolean {
+export async function populateLevelSelector(): Promise<boolean> {
     const container = document.getElementById('levelCardsContainer');
     if (!container) {
         console.warn('Level cards container not found');
@@ -24,24 +35,10 @@ export function populateLevelSelector(): boolean {
 
     if (savedLevels.size === 0) {
         container.innerHTML = `
-            <div style="
-                grid-column: 1 / -1;
-                text-align: center;
-                padding: 40px 20px;
-                color: #ccc;
-            ">
-                <h2 style="margin-bottom: 20px;">No Levels Found</h2>
-                <p style="margin-bottom: 30px;">Something went wrong - default levels should be auto-generated!</p>
-                <a href="#/editor" style="
-                    display: inline-block;
-                    padding: 15px 30px;
-                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                    color: white;
-                    text-decoration: none;
-                    border-radius: 5px;
-                    font-weight: bold;
-                    font-size: 1.1em;
-                ">Go to Level Editor</a>
+            <div class="no-levels-message">
+                <h2>No Levels Found</h2>
+                <p>Something went wrong - default levels should be auto-generated!</p>
+                <a href="#/editor" class="btn-primary">Go to Level Editor</a>
             </div>
         `;
         return false;
@@ -69,269 +66,162 @@ export function populateLevelSelector(): boolean {
         const nextLevel = progression.getNextLevel();
 
         html += `
-            <div style="
-                grid-column: 1 / -1;
-                background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
-                border-radius: 10px;
-                padding: 20px;
-                margin-bottom: 20px;
-                border: 1px solid rgba(102, 126, 234, 0.3);
-            ">
-                <h3 style="margin: 0 0 10px 0; color: #fff;">Progress</h3>
-                <div style="color: #ccc; margin-bottom: 10px;">
+            <div class="progress-bar-container" style="grid-column: 1 / -1;">
+                <h3 class="progress-bar-title">Progress</h3>
+                <div class="level-description">
                     ${completedCount} of ${totalCount} default levels completed (${completionPercent.toFixed(0)}%)
                 </div>
-                <div style="
-                    width: 100%;
-                    height: 10px;
-                    background: rgba(255, 255, 255, 0.1);
-                    border-radius: 5px;
-                    overflow: hidden;
-                ">
-                    <div style="
-                        width: ${completionPercent}%;
-                        height: 100%;
-                        background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
-                        transition: width 0.3s ease;
-                    "></div>
+                <div class="progress-bar-track">
+                    <div class="progress-fill" style="width: ${completionPercent}%;"></div>
                 </div>
-                ${nextLevel ? `<div style="color: #888; margin-top: 10px; font-size: 0.9em;">Next: ${nextLevel}</div>` : ''}
+                ${nextLevel ? `<div class="progress-percentage">Next: ${nextLevel}</div>` : ''}
             </div>
         `;
     }
 
-    // Default levels section - show all levels if progression disabled, or current/next if enabled
+    // Check if user is authenticated (ASYNC!)
+    const authService = AuthService.getInstance();
+    const isAuthenticated = await authService.isAuthenticated();
+    const isTutorial = (levelName: string) => levelName === DEFAULT_LEVEL_ORDER[0];
+
+    debugLog('[LevelSelector] Authenticated:', isAuthenticated);
+    debugLog('[LevelSelector] Progression enabled:', progressionEnabled);
+    debugLog('[LevelSelector] Tutorial level name:', DEFAULT_LEVEL_ORDER[0]);
+    debugLog('[LevelSelector] Default levels count:', defaultLevels.size);
+    debugLog('[LevelSelector] Default level names:', Array.from(defaultLevels.keys()));
+
+    // Show all 6 default levels in order (3x2 grid)
     if (defaultLevels.size > 0) {
-        html += `
-            <div style="grid-column: 1 / -1; margin: 20px 0 10px 0;">
-                <h3 style="color: #fff; margin: 0;">Available Levels</h3>
-            </div>
-        `;
+        for (const levelName of DEFAULT_LEVEL_ORDER) {
+            const config = defaultLevels.get(levelName);
 
-        // If progression is disabled, just show all default levels
-        if (!progressionEnabled) {
-            for (const [name, config] of defaultLevels.entries()) {
-                const description = config.metadata?.description || `${config.asteroids.length} asteroids • ${config.planets.length} planets`;
-                const estimatedTime = config.metadata?.estimatedTime || '';
-
+            if (!config) {
+                // Level doesn't exist - show empty slot
                 html += `
-                    <div class="level-card">
-                        <h2 style="margin: 0;">${name}</h2>
-                        <div style="font-size: 0.9em; color: #aaa; margin: 10px 0;">
-                            Difficulty: ${config.difficulty}${estimatedTime ? ` • ${estimatedTime}` : ''}
+                    <div class="level-card level-card-locked">
+                        <div class="level-card-header">
+                            <h2 class="level-card-title">${levelName}</h2>
+                            <div class="level-card-status level-card-status-locked">🔒</div>
                         </div>
-                        <p style="margin: 10px 0;">${description}</p>
-                        <button class="level-button" data-level="${name}">Play Level</button>
+                        <div class="level-meta">Level not found</div>
+                        <p class="level-card-description">This level has not been created yet.</p>
+                        <button class="level-button" disabled>Locked</button>
                     </div>
                 `;
+                continue;
             }
-        } else {
-            // Progression enabled - show current and next level only
-            // Get the default level names in order
-            const defaultLevelNames = [
-                'Tutorial: Asteroid Field',
-                'Rescue Mission',
-                'Deep Space Patrol',
-                'Enemy Territory',
-                'The Gauntlet',
-                'Final Challenge'
-            ];
 
-            // Find current level (last completed or first if none completed)
-            let currentLevelName: string | null = null;
-            let nextLevelName: string | null = null;
+            const description = config.metadata?.description || `${config.asteroids.length} asteroids • ${config.planets.length} planets`;
+            const estimatedTime = config.metadata?.estimatedTime || '';
+            const isCompleted = progressionEnabled && progression.isLevelComplete(levelName);
 
-            // Find the first incomplete level (this is the "next" level)
-            for (let i = 0; i < defaultLevelNames.length; i++) {
-                const levelName = defaultLevelNames[i];
-                if (!progression.isLevelComplete(levelName)) {
-                    nextLevelName = levelName;
-                    // Current level is the one before (if it exists)
-                    if (i > 0) {
-                        currentLevelName = defaultLevelNames[i - 1];
+            // Check if level is unlocked:
+            // - Tutorial is always unlocked
+            // - If authenticated: check progression unlock status
+            // - If not authenticated: only Tutorial is unlocked
+            let isUnlocked = false;
+            const isTut = isTutorial(levelName);
+
+            if (isTut) {
+                isUnlocked = true; // Tutorial always unlocked
+                debugLog(`[LevelSelector] ${levelName}: Tutorial - always unlocked`);
+            } else if (!isAuthenticated) {
+                isUnlocked = false; // Non-tutorial levels require authentication
+                debugLog(`[LevelSelector] ${levelName}: Not authenticated - locked`);
+            } else {
+                isUnlocked = !progressionEnabled || progression.isLevelUnlocked(levelName);
+                debugLog(`[LevelSelector] ${levelName}: Authenticated - unlocked:`, isUnlocked);
+            }
+
+            const isCurrentNext = progressionEnabled && progression.getNextLevel() === levelName;
+
+            // Determine card state
+            let cardClasses = 'level-card';
+            let statusIcon = '';
+            let buttonText = 'Play Level';
+            let buttonDisabled = '';
+            let lockReason = '';
+
+            if (isCompleted) {
+                cardClasses += ' level-card-completed';
+                statusIcon = '<div class="level-card-status level-card-status-complete">✓</div>';
+                buttonText = 'Replay';
+            } else if (isCurrentNext && isUnlocked) {
+                cardClasses += ' level-card-current';
+                statusIcon = '<div class="level-card-badge">START HERE</div>';
+            } else if (!isUnlocked) {
+                cardClasses += ' level-card-locked';
+                statusIcon = '<div class="level-card-status level-card-status-locked">🔒</div>';
+
+                // Determine why it's locked
+                if (!isAuthenticated && !isTutorial(levelName)) {
+                    buttonText = 'Sign In Required';
+                    lockReason = '<div class="level-lock-reason">Sign in to unlock</div>';
+                } else if (progressionEnabled) {
+                    const levelIndex = DEFAULT_LEVEL_ORDER.indexOf(levelName);
+                    if (levelIndex > 0) {
+                        const previousLevel = DEFAULT_LEVEL_ORDER[levelIndex - 1];
+                        lockReason = `<div class="level-lock-reason">Complete "${previousLevel}" to unlock</div>`;
                     }
-                    break;
+                    buttonText = 'Locked';
+                } else {
+                    buttonText = 'Locked';
                 }
+                buttonDisabled = ' disabled';
             }
 
-            // If all levels complete, show the last level as current
-            if (!nextLevelName) {
-                currentLevelName = defaultLevelNames[defaultLevelNames.length - 1];
-            }
-
-        // If no levels completed yet, show first as next (no current)
-        if (!currentLevelName && nextLevelName) {
-            // First time player - just show the first level
-            const config = defaultLevels.get(nextLevelName);
-            if (config) {
-                const description = config.metadata?.description || `${config.asteroids.length} asteroids • ${config.planets.length} planets`;
-                const estimatedTime = config.metadata?.estimatedTime || '';
-
-                html += `
-                    <div class="level-card" style="border: 2px solid #667eea; box-shadow: 0 0 20px rgba(102, 126, 234, 0.3);">
-                        <div style="display: flex; justify-content: space-between; align-items: start;">
-                            <h2 style="margin: 0;">${nextLevelName}</h2>
-                            <div style="font-size: 0.8em; background: #667eea; padding: 4px 8px; border-radius: 4px; color: white; font-weight: bold;">START HERE</div>
-                        </div>
-                        <div style="font-size: 0.9em; color: #aaa; margin: 10px 0;">
-                            Difficulty: ${config.difficulty}${estimatedTime ? ` • ${estimatedTime}` : ''}
-                        </div>
-                        <p style="margin: 10px 0;">${description}</p>
-                        <button class="level-button" data-level="${nextLevelName}">Play Level</button>
+            html += `
+                <div class="${cardClasses}">
+                    <div class="level-card-header">
+                        <h2 class="level-card-title">${levelName}</h2>
+                        ${statusIcon}
                     </div>
-                `;
-            }
-        } else {
-            // Show current (completed) level
-            if (currentLevelName) {
-                const config = defaultLevels.get(currentLevelName);
-                if (config) {
-                    const levelProgress = progression.getLevelProgress(currentLevelName);
-                    const description = config.metadata?.description || `${config.asteroids.length} asteroids • ${config.planets.length} planets`;
-                    const estimatedTime = config.metadata?.estimatedTime || '';
-
-                    html += `
-                        <div class="level-card">
-                            <div style="display: flex; justify-content: space-between; align-items: start;">
-                                <h2 style="margin: 0;">${currentLevelName}</h2>
-                                <div style="font-size: 1.5em; color: #4ade80;">✓</div>
-                            </div>
-                            <div style="font-size: 0.9em; color: #aaa; margin: 10px 0;">
-                                Difficulty: ${config.difficulty}${estimatedTime ? ` • ${estimatedTime}` : ''}
-                            </div>
-                            <p style="margin: 10px 0;">${description}</p>
-                            ${levelProgress?.playCount ? `<div style="font-size: 0.8em; color: #888; margin-bottom: 10px;">Played ${levelProgress.playCount} time${levelProgress.playCount > 1 ? 's' : ''}</div>` : ''}
-                            <button class="level-button" data-level="${currentLevelName}">Play Again</button>
-                        </div>
-                    `;
-                }
-            }
-
-            // Show next level if it exists
-            if (nextLevelName) {
-                const config = defaultLevels.get(nextLevelName);
-                if (config) {
-                    const description = config.metadata?.description || `${config.asteroids.length} asteroids • ${config.planets.length} planets`;
-                    const estimatedTime = config.metadata?.estimatedTime || '';
-
-                    html += `
-                        <div class="level-card" style="border: 2px solid #667eea; box-shadow: 0 0 20px rgba(102, 126, 234, 0.3);">
-                            <div style="display: flex; justify-content: space-between; align-items: start;">
-                                <h2 style="margin: 0;">${nextLevelName}</h2>
-                                <div style="font-size: 0.8em; background: #667eea; padding: 4px 8px; border-radius: 4px; color: white; font-weight: bold;">NEXT</div>
-                            </div>
-                            <div style="font-size: 0.9em; color: #aaa; margin: 10px 0;">
-                                Difficulty: ${config.difficulty}${estimatedTime ? ` • ${estimatedTime}` : ''}
-                            </div>
-                            <p style="margin: 10px 0;">${description}</p>
-                            <button class="level-button" data-level="${nextLevelName}">Play Level</button>
-                        </div>
-                    `;
-                }
-            }
+                    <div class="level-meta">
+                        Difficulty: ${config.difficulty}${estimatedTime ? ` • ${estimatedTime}` : ''}
+                    </div>
+                    <p class="level-card-description">${description}</p>
+                    ${lockReason}
+                    <button class="level-button" data-level="${levelName}"${buttonDisabled}>${buttonText}</button>
+                </div>
+            `;
         }
-
-            // Show "more levels beyond" indicator if there are additional levels after next
-            const nextLevelIndex = defaultLevelNames.indexOf(nextLevelName || '');
-            const hasMoreLevels = nextLevelIndex >= 0 && nextLevelIndex < defaultLevelNames.length - 1;
-
-            if (hasMoreLevels) {
-                const remainingCount = defaultLevelNames.length - nextLevelIndex - 1;
-                html += `
-                    <div style="
-                        grid-column: 1 / -1;
-                        text-align: center;
-                        padding: 30px;
-                        color: #888;
-                        font-size: 1.1em;
-                        background: linear-gradient(135deg, rgba(102, 126, 234, 0.05) 0%, rgba(118, 75, 162, 0.05) 100%);
-                        border-radius: 10px;
-                        border: 1px dashed rgba(102, 126, 234, 0.3);
-                        margin-top: 10px;
-                    ">
-                        <div style="font-size: 2em; margin-bottom: 10px; opacity: 0.5;">✦ ✦ ✦</div>
-                        <div style="font-weight: bold; color: #aaa;">
-                            ${remainingCount} more level${remainingCount > 1 ? 's' : ''} beyond...
-                        </div>
-                        <div style="font-size: 0.9em; margin-top: 5px; color: #777;">
-                            Complete challenges to unlock new missions
-                        </div>
-                    </div>
-                `;
-            }
-        } // End of progressionEnabled else block
     }
 
-    // Custom levels section
+    // Show custom levels section if any exist
     if (customLevels.size > 0) {
         html += `
-            <div style="grid-column: 1 / -1; margin: 30px 0 10px 0;">
-                <h3 style="color: #fff; margin: 0;">Custom Levels</h3>
+            <div style="grid-column: 1 / -1; margin-top: var(--space-2xl);">
+                <h3 class="level-header">Custom Levels</h3>
             </div>
         `;
 
         for (const [name, config] of customLevels.entries()) {
-            const timestamp = config.timestamp ? new Date(config.timestamp).toLocaleDateString() : '';
             const description = config.metadata?.description || `${config.asteroids.length} asteroids • ${config.planets.length} planets`;
-            const author = config.metadata?.author || 'Unknown';
+            const author = config.metadata?.author ? ` by ${config.metadata.author}` : '';
 
             html += `
                 <div class="level-card">
-                    <h2>${name}</h2>
-                    <div style="font-size: 0.9em; color: #aaa; margin: 10px 0;">
-                        Difficulty: ${config.difficulty} • By ${author}
+                    <div class="level-card-header">
+                        <h2 class="level-card-title">${name}</h2>
                     </div>
-                    <p>${description}</p>
-                    ${timestamp ? `<div style="font-size: 0.8em; color: #888; margin-bottom: 10px;">Created ${timestamp}</div>` : ''}
+                    <div class="level-meta">
+                        Custom${author} • ${config.difficulty}
+                    </div>
+                    <p class="level-card-description">${description}</p>
                     <button class="level-button" data-level="${name}">Play Level</button>
                 </div>
             `;
         }
     }
 
-    // Editor unlock button (always unlocked if progression disabled)
-    const isEditorUnlocked = !progressionEnabled || progression.isEditorUnlocked();
-    const completedCount = progression.getCompletedCount();
-
-    html += `
-        <div style="grid-column: 1 / -1; margin-top: 20px; text-align: center;">
-            ${isEditorUnlocked ? `
-                <a href="#/editor" style="
-                    display: inline-block;
-                    padding: 15px 40px;
-                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                    color: white;
-                    text-decoration: none;
-                    border-radius: 8px;
-                    font-weight: bold;
-                    font-size: 1.1em;
-                    transition: transform 0.2s;
-                " onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
-                    🎨 Create Custom Level
-                </a>
-            ` : `
-                <div style="
-                    padding: 15px 40px;
-                    background: rgba(100, 100, 100, 0.3);
-                    color: #888;
-                    border-radius: 8px;
-                    font-weight: bold;
-                    font-size: 1.1em;
-                    display: inline-block;
-                    cursor: not-allowed;
-                " title="Complete ${progression.getTotalDefaultLevels() - progression.getCompletedCount()} more default level(s) to unlock">
-                    🔒 Level Editor (Complete ${3 - completedCount} more level${(3 - completedCount) !== 1 ? 's' : ''})
-                </div>
-            `}
-        </div>
-    `;
-
     container.innerHTML = html;
 
-    // Add event listeners to level buttons
-    container.querySelectorAll('.level-button').forEach(button => {
+    // Attach event listeners to all level buttons
+    const buttons = container.querySelectorAll('.level-button:not([disabled])');
+    buttons.forEach(button => {
         button.addEventListener('click', (e) => {
-            const levelName = (e.target as HTMLButtonElement).dataset.level;
+            const target = e.target as HTMLButtonElement;
+            const levelName = target.getAttribute('data-level');
             if (levelName) {
                 selectLevel(levelName);
             }
@@ -342,71 +232,32 @@ export function populateLevelSelector(): boolean {
 }
 
 /**
- * Initialize level button listeners (for any dynamically created buttons)
- */
-export function initializeLevelButtons(): void {
-    document.querySelectorAll('.level-button').forEach(button => {
-        if (!button.hasAttribute('data-listener-attached')) {
-            button.setAttribute('data-listener-attached', 'true');
-            button.addEventListener('click', (e) => {
-                const levelName = (e.target as HTMLButtonElement).dataset.level;
-                if (levelName) {
-                    selectLevel(levelName);
-                }
-            });
-        }
-    });
-}
-
-/**
- * Select a level and store it for Level1 to use
+ * Select a level and dispatch event to start it
  */
 export function selectLevel(levelName: string): void {
+    debugLog(`[LevelSelector] Level selected: ${levelName}`);
+
     const savedLevels = getSavedLevels();
     const config = savedLevels.get(levelName);
 
     if (!config) {
-        console.error(`Level "${levelName}" not found`);
-        alert(`Level "${levelName}" not found!`);
+        console.error(`Level not found: ${levelName}`);
         return;
     }
 
-    // Store selected level name
-    sessionStorage.setItem(SELECTED_LEVEL_KEY, levelName);
+    // Save selected level
+    localStorage.setItem(SELECTED_LEVEL_KEY, levelName);
 
-    debugLog(`Selected level: ${levelName}`);
-
-    // Trigger level start (the existing code will pick this up)
-    const event = new CustomEvent('levelSelected', { detail: { levelName, config } });
+    // Dispatch custom event that Main class will listen for
+    const event = new CustomEvent('levelSelected', {
+        detail: { levelName, config }
+    });
     window.dispatchEvent(event);
 }
 
 /**
- * Get the currently selected level configuration
+ * Get the last selected level name
  */
-export function getSelectedLevel(): { name: string, config: LevelConfig } | null {
-    const levelName = sessionStorage.getItem(SELECTED_LEVEL_KEY);
-    if (!levelName) return null;
-
-    const savedLevels = getSavedLevels();
-    const config = savedLevels.get(levelName);
-
-    if (!config) return null;
-
-    return { name: levelName, config };
-}
-
-/**
- * Clear the selected level
- */
-export function clearSelectedLevel(): void {
-    sessionStorage.removeItem(SELECTED_LEVEL_KEY);
-}
-
-/**
- * Check if there are any saved levels
- */
-export function hasSavedLevels(): boolean {
-    const savedLevels = getSavedLevels();
-    return savedLevels.size > 0;
+export function getSelectedLevel(): string | null {
+    return localStorage.getItem(SELECTED_LEVEL_KEY);
 }

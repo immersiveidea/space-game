@@ -23,7 +23,7 @@ import setLoadingMessage from "./setLoadingMessage";
 import {RockFactory} from "./rockFactory";
 import {ControllerDebug} from "./controllerDebug";
 import {router, showView} from "./router";
-import {hasSavedLevels, populateLevelSelector} from "./levelSelector";
+import {populateLevelSelector} from "./levelSelector";
 import {LevelConfig} from "./levelConfig";
 import {generateDefaultLevels} from "./levelEditor";
 import debugLog from './debug';
@@ -64,17 +64,20 @@ export class Main {
             // Hide all UI elements
             const mainDiv = document.querySelector('#mainDiv');
             const levelSelect = document.querySelector('#levelSelect') as HTMLElement;
-            const editorLink = document.querySelector('.editor-link') as HTMLElement;
-            const settingsLink = document.querySelector('.settings-link') as HTMLElement;
+            const appHeader = document.querySelector('#appHeader') as HTMLElement;
 
             if (levelSelect) {
                 levelSelect.style.display = 'none';
             }
-            if (editorLink) {
-                editorLink.style.display = 'none';
+            if (appHeader) {
+                appHeader.style.display = 'none';
             }
-            if (settingsLink) {
-                settingsLink.style.display = 'none';
+
+            // Hide Discord widget during gameplay
+            const discord = (window as any).__discordWidget as DiscordWidget;
+            if (discord) {
+                debugLog('[Main] Hiding Discord widget for gameplay');
+                discord.hide();
             }
 
             // Show preloader for initialization
@@ -227,8 +230,7 @@ export class Main {
                     // Hide all UI elements
                     const mainDiv = document.querySelector('#mainDiv');
                     const levelSelect = document.querySelector('#levelSelect') as HTMLElement;
-                    const editorLink = document.querySelector('.editor-link') as HTMLElement;
-                    const settingsLink = document.querySelector('.settings-link') as HTMLElement;
+                    const appHeader = document.querySelector('#appHeader') as HTMLElement;
 
                     debugLog('[Main] mainDiv exists:', !!mainDiv);
                     debugLog('[Main] levelSelect exists:', !!levelSelect);
@@ -237,11 +239,8 @@ export class Main {
                         levelSelect.style.display = 'none';
                         debugLog('[Main] levelSelect hidden');
                     }
-                    if (editorLink) {
-                        editorLink.style.display = 'none';
-                    }
-                    if (settingsLink) {
-                        settingsLink.style.display = 'none';
+                    if (appHeader) {
+                        appHeader.style.display = 'none';
                     }
                     setLoadingMessage("Initializing Test Scene...");
 
@@ -312,17 +311,13 @@ export class Main {
 
                     // Hide main menu
                     const levelSelect = document.querySelector('#levelSelect') as HTMLElement;
-                    const editorLink = document.querySelector('.editor-link') as HTMLElement;
-                    const settingsLink = document.querySelector('.settings-link') as HTMLElement;
+                    const appHeader = document.querySelector('#appHeader') as HTMLElement;
 
                     if (levelSelect) {
                         levelSelect.style.display = 'none';
                     }
-                    if (editorLink) {
-                        editorLink.style.display = 'none';
-                    }
-                    if (settingsLink) {
-                        settingsLink.style.display = 'none';
+                    if (appHeader) {
+                        appHeader.style.display = 'none';
                     }
 
                     // Show replay selection screen
@@ -342,11 +337,9 @@ export class Main {
                                         if (levelSelect) {
                                             levelSelect.style.display = 'block';
                                         }
-                                        if (editorLink) {
-                                            editorLink.style.display = 'block';
-                                        }
-                                        if (settingsLink) {
-                                            settingsLink.style.display = 'block';
+                                        const appHeader = document.querySelector('#appHeader') as HTMLElement;
+                                        if (appHeader) {
+                                            appHeader.style.display = 'block';
                                         }
                                     }
                                 );
@@ -364,11 +357,9 @@ export class Main {
                             if (levelSelect) {
                                 levelSelect.style.display = 'block';
                             }
-                            if (editorLink) {
-                                editorLink.style.display = 'block';
-                            }
-                            if (settingsLink) {
-                                settingsLink.style.display = 'block';
+                            const appHeader = document.querySelector('#appHeader') as HTMLElement;
+                            if (appHeader) {
+                                appHeader.style.display = 'block';
                             }
                         }
                     );
@@ -610,10 +601,16 @@ router.on('/', async () => {
         updateUserProfile(null);
     }
 
+    // Show the app header
+    const appHeader = document.getElementById('appHeader');
+    if (appHeader) {
+        appHeader.style.display = 'block';
+    }
+
     // Just show the level selector - don't initialize anything yet!
     if (!DEBUG_CONTROLLERS) {
         debugLog('[Router] Populating level selector (no engine initialization yet)');
-        populateLevelSelector();
+        await populateLevelSelector();
 
         // Create Main instance lazily only if it doesn't exist
         // But don't initialize it yet - that will happen on level selection
@@ -626,7 +623,9 @@ router.on('/', async () => {
             const demo = new Demo(main);
         }
 
-        // Initialize Discord widget (if not already initialized)
+        // Discord widget initialization - DISABLED FOR NOW
+        // Uncomment to enable Discord chat widget
+        /*
         if (!(window as any).__discordWidget) {
             debugLog('[Router] Initializing Discord widget');
             const discord = new DiscordWidget();
@@ -645,6 +644,7 @@ router.on('/', async () => {
                 console.error('[Router] Failed to initialize Discord widget:', error);
             });
         }
+        */
     }
 
     debugLog('[Router] Home route handler complete');
@@ -673,6 +673,23 @@ router.on('/settings', () => {
 
 // Generate default levels if localStorage is empty
 generateDefaultLevels();
+
+// Suppress non-critical BabylonJS shader loading errors during development
+// Note: After Vite config fix to pre-bundle shaders, these errors should no longer occur
+// Keeping this handler for backwards compatibility with older cached builds
+window.addEventListener('unhandledrejection', (event) => {
+    const error = event.reason;
+    if (error && error.message) {
+        // Only suppress specific shader-related errors, not asset loading errors
+        if (error.message.includes('rgbdDecode.fragment') ||
+            error.message.includes('procedural.vertex') ||
+            (error.message.includes('Failed to fetch dynamically imported module') &&
+             (error.message.includes('rgbdDecode') || error.message.includes('procedural')))) {
+            debugLog('[Main] Suppressed shader loading error (should be fixed by Vite pre-bundling):', error.message);
+            event.preventDefault(); // Prevent error from appearing in console
+        }
+    }
+});
 
 // Start the router after all routes are registered
 router.start();

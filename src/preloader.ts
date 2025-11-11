@@ -19,88 +19,27 @@ export class Preloader {
 
         // Create preloader container
         this.container = document.createElement('div');
-        this.container.id = 'preloader';
-        this.container.style.cssText = `
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            background: rgba(0, 0, 0, 0.95);
-            z-index: 10000;
-            padding: 20px;
-        `;
+        this.container.className = 'preloader';
 
         this.container.innerHTML = `
-            <div style="
-                text-align: center;
-                max-width: 600px;
-                width: 100%;
-            ">
-                <h1 style="
-                    font-size: 3em;
-                    margin-bottom: 20px;
-                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                    -webkit-background-clip: text;
-                    -webkit-text-fill-color: transparent;
-                    background-clip: text;
-                ">
+            <div class="preloader-content">
+                <h1 class="preloader-title">
                     🚀 Space Combat VR
                 </h1>
 
-                <div id="preloaderStatus" style="
-                    font-size: 1.2em;
-                    color: #aaa;
-                    margin: 30px 0 20px 0;
-                    min-height: 30px;
-                ">
+                <div id="preloaderStatus" class="preloader-status">
                     Initializing...
                 </div>
 
-                <div style="
-                    width: 100%;
-                    height: 12px;
-                    background: rgba(255, 255, 255, 0.1);
-                    border-radius: 6px;
-                    overflow: hidden;
-                    margin-bottom: 40px;
-                ">
-                    <div id="preloaderProgress" style="
-                        width: 0%;
-                        height: 100%;
-                        background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
-                        transition: width 0.3s ease;
-                        box-shadow: 0 0 10px rgba(102, 126, 234, 0.5);
-                    "></div>
+                <div class="preloader-progress-container">
+                    <div id="preloaderProgress" class="preloader-progress"></div>
                 </div>
 
-                <button id="preloaderStartBtn" style="
-                    display: none;
-                    padding: 20px 60px;
-                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                    color: white;
-                    border: none;
-                    border-radius: 10px;
-                    font-size: 1.5em;
-                    font-weight: bold;
-                    cursor: pointer;
-                    transition: transform 0.2s, box-shadow 0.2s;
-                    box-shadow: 0 6px 25px rgba(102, 126, 234, 0.5);
-                "
-                onmouseover="this.style.transform='translateY(-3px) scale(1.05)'; this.style.boxShadow='0 8px 30px rgba(102, 126, 234, 0.7)';"
-                onmouseout="this.style.transform='translateY(0) scale(1)'; this.style.boxShadow='0 6px 25px rgba(102, 126, 234, 0.5)';">
+                <button id="preloaderStartBtn" class="preloader-button">
                     Start Game
                 </button>
 
-                <div style="
-                    margin-top: 30px;
-                    font-size: 0.9em;
-                    color: #666;
-                ">
+                <div class="preloader-info">
                     <p>Initializing game engine... Assets will load when you select a level.</p>
                 </div>
             </div>

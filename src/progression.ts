@@ -186,7 +186,7 @@ export class ProgressionManager {
      */
     private getDefaultLevelNames(): string[] {
         return [
-            'Tutorial: Asteroid Field',
+            'Rookie Training',
             'Rescue Mission',
             'Deep Space Patrol',
             'Enemy Territory',
@@ -234,6 +234,29 @@ export class ProgressionManager {
         const total = this.getTotalDefaultLevels();
         const completed = this.getCompletedCount();
         return total > 0 ? (completed / total) * 100 : 0;
+    }
+
+    /**
+     * Check if a level is unlocked and can be played
+     * Tutorial is always unlocked, other levels require previous level completion
+     */
+    public isLevelUnlocked(levelName: string): boolean {
+        const defaultLevels = this.getDefaultLevelNames();
+        const levelIndex = defaultLevels.indexOf(levelName);
+
+        // If not a default level (custom level), it's always unlocked
+        if (levelIndex === -1) {
+            return true;
+        }
+
+        // First level (Tutorial) is always unlocked
+        if (levelIndex === 0) {
+            return true;
+        }
+
+        // Other levels require previous level to be completed
+        const previousLevel = defaultLevels[levelIndex - 1];
+        return this.isLevelComplete(previousLevel);
     }
 
     /**

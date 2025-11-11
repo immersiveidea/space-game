@@ -12,65 +12,19 @@ export function showLoginScreen(): void {
     }
 
     container.innerHTML = `
-        <div style="
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            min-height: 60vh;
-            padding: 40px 20px;
-            text-align: center;
-        ">
-            <div style="
-                background: rgba(0, 0, 0, 0.7);
-                border: 2px solid rgba(102, 126, 234, 0.5);
-                border-radius: 12px;
-                padding: 60px 40px;
-                max-width: 500px;
-                box-shadow: 0 8px 32px rgba(102, 126, 234, 0.3);
-            ">
-                <h1 style="
-                    font-size: 2.5em;
-                    margin: 0 0 20px 0;
-                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                    -webkit-background-clip: text;
-                    -webkit-text-fill-color: transparent;
-                    background-clip: text;
-                ">
-                    Space Combat VR
-                </h1>
+        <div class="login-screen" style="position: relative; z-index: 1;">
+            <div class="login-container">
+                <h1 class="login-title">Space Combat VR</h1>
 
-                <p style="
-                    margin: 30px 0;
-                    color: #aaa;
-                    font-size: 1.1em;
-                    line-height: 1.6;
-                ">
+                <p class="login-subtitle">
                     Welcome, pilot! Authentication required to access your mission data and track your progress across the galaxy.
                 </p>
 
-                <button id="loginBtn" style="
-                    padding: 18px 50px;
-                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                    color: white;
-                    border: none;
-                    border-radius: 8px;
-                    font-size: 1.3em;
-                    cursor: pointer;
-                    font-weight: bold;
-                    transition: transform 0.2s, box-shadow 0.2s;
-                    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
-                "
-                onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 20px rgba(102, 126, 234, 0.6)';"
-                onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 15px rgba(102, 126, 234, 0.4)';">
+                <button id="loginBtn" class="login-button">
                     Log In / Sign Up
                 </button>
 
-                <p style="
-                    margin-top: 30px;
-                    color: #666;
-                    font-size: 0.9em;
-                ">
+                <p class="login-skip" style="color: #666; font-size: 0.9em; margin-top: 30px;">
                     Secured by Auth0
                 </p>
             </div>
@@ -100,22 +54,12 @@ export function updateUserProfile(username: string | null): void {
 
     if (username) {
         // User is authenticated - show profile and logout
+        profileContainer.className = 'user-profile';
         profileContainer.innerHTML = `
-            <span style="margin-right: 15px; color: #aaa;">
+            <span class="user-profile-name">
                 Welcome, ${username}
             </span>
-            <button id="logoutBtn" style="
-                padding: 8px 20px;
-                background: rgba(255, 255, 255, 0.1);
-                color: white;
-                border: 1px solid rgba(255, 255, 255, 0.3);
-                border-radius: 4px;
-                cursor: pointer;
-                font-size: 0.9em;
-                transition: background 0.2s;
-            "
-            onmouseover="this.style.background='rgba(255, 255, 255, 0.2)';"
-            onmouseout="this.style.background='rgba(255, 255, 255, 0.1)';">
+            <button id="logoutBtn" class="user-profile-button">
                 Log Out
             </button>
         `;
@@ -129,21 +73,9 @@ export function updateUserProfile(username: string | null): void {
         }
     } else {
         // User not authenticated - show login/signup button
+        profileContainer.className = '';
         profileContainer.innerHTML = `
-            <button id="loginBtn" style="
-                padding: 10px 24px;
-                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                color: white;
-                border: none;
-                border-radius: 6px;
-                cursor: pointer;
-                font-size: 0.95em;
-                font-weight: 600;
-                transition: transform 0.2s, box-shadow 0.2s;
-                box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
-            "
-            onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 20px rgba(102, 126, 234, 0.6)';"
-            onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 15px rgba(102, 126, 234, 0.4)';">
+            <button id="loginBtn" class="user-profile-button">
                 Sign Up / Log In
             </button>
         `;
