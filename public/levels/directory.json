@@ -1,0 +1,30 @@
+{"missions": [
+  {
+    "id": 1,
+    "name": "Recruit",
+    "Description": "Simple level to get the hang of things",
+    "missionbrief": [
+      "Destroy the asteroids",
+      "return to base after they're destroyed to complete the mission",
+      "return to base if you need more fuel, ammo, or hull repairs",
+      "don't get too far from base, if you run out of fuel, you'll be stranded",
+      "don't run into things, it damages your hull"
+    ],
+    "leveldata": "/levels/1.json",
+    "defaultlocked": false
+  } ,
+  {
+    "id": 2,
+    "name": "Fuel Management",
+    "Description": "Don't run out of fuel",
+    "missionbrief": [
+      "Astroids are further away and there a more of them",
+      "you'll need to keep an eye on your fuel levels",
+      "return to base after you've destroyed them all"
+    ],
+    "leveldata": null,
+    "defaultlocked": true
+  }
+]
+
+}

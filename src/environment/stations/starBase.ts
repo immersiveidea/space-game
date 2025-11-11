@@ -1,9 +1,8 @@
 import {
     AbstractMesh,
-    HavokPlugin, Mesh,
     PhysicsAggregate,
     PhysicsMotionType,
-    PhysicsShapeType,
+    PhysicsShapeType, TransformNode,
     Vector3
 } from "@babylonjs/core";
 import {DefaultScene} from "../../core/defaultScene";
@@ -39,9 +38,8 @@ export default class StarBase {
         }
 
         // Apply position to both meshes (defaults to [0, 0, 0])
-        const pos = position ? new Vector3(position[0], position[1], position[2]) : new Vector3(0, 0, 0);
-        baseMesh.position = pos.clone();
-        landingMesh.position = pos.clone();
+        (importMeshes.container.rootNodes[0] as TransformNode).position
+            =  position ? new Vector3(position[0], position[1], position[2]) : new Vector3(0, 0, 0);
 
         let landingAgg: PhysicsAggregate | null = null;
 
@@ -57,14 +55,7 @@ export default class StarBase {
 
             landingAgg = new PhysicsAggregate(landingMesh, PhysicsShapeType.MESH);
             landingAgg.body.setMotionType(PhysicsMotionType.ANIMATED);
-            /*landingAgg.body.getCollisionObservable().add((collidedCollidedBody) => {
-
-            });*/
             landingAgg.shape.isTrigger = true;
-            /*(DefaultScene.MainScene.getPhysicsEngine().getPhysicsPlugin() as HavokPlugin).onTriggerCollisionObservable.add((eventdata, eventState) => {
-                console.log(eventState);
-                console.log(eventdata);
-            })*/
             landingAgg.body.setCollisionCallbackEnabled(true);
         }
         //importMesh.rootNodes[0].dispose();
@@ -73,14 +64,4 @@ export default class StarBase {
             landingAggregate: landingAgg
         };
     }
-}
-function clearParent (meshes: Map<string, AbstractMesh>, position?: Vector3) {
-    meshes.forEach((mesh) => {
-        mesh.setParent(null);
-        if (position) {
-            mesh.position = position;
-        }
-
-        DefaultScene.MainScene.addMesh(mesh);
-    })
 }

@@ -215,11 +215,3 @@ export const PLANET_TEXTURES_BY_TYPE = {
         "/assets/materials/planetTextures/Tundra/Tundral-EQUIRECTANGULAR-5-512x512.png",
     ],
 };
-
-/**
- * Get a random texture from a specific planet type
- */
-export function getRandomTextureByType(type: keyof typeof PLANET_TEXTURES_BY_TYPE): string {
-    const textures = PLANET_TEXTURES_BY_TYPE[type];
-    return textures[Math.floor(Math.random() * textures.length)];
-}
