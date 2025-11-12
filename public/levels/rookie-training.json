@@ -1,0 +1,157 @@
+{
+  "version": "1.0",
+  "difficulty": "recruit",
+  "timestamp": "2025-11-11T23:44:24.807Z",
+  "metadata": {
+    "author": "System",
+    "description": "Learn the basics of ship control and asteroid destruction in a calm sector of space.",
+    "estimatedTime": "3-5 minutes",
+    "type": "default"
+  },
+  "ship": {
+    "position": [
+      0,
+      1,
+      0
+    ],
+    "rotation": [
+      0,
+      0,
+      0
+    ],
+    "linearVelocity": [
+      0,
+      0,
+      0
+    ],
+    "angularVelocity": [
+      0,
+      0,
+      0
+    ]
+  },
+  "startBase": {
+    "position": [
+      0,
+      0,
+      0
+    ],
+    "baseGlbPath": "base.glb"
+  },
+  "sun": {
+    "position": [
+      0,
+      0,
+      400
+    ],
+    "diameter": 50,
+    "intensity": 1000000
+  },
+  "planets": [],
+  "asteroids": [
+    {
+      "id": "asteroid-0",
+      "position": [
+        -58.36428561508043,
+        -34.06637347343719,
+        -338.05090628315398
+      ],
+      "scale": 10.625768191199857,
+      "linearVelocity": [
+        40.109444660495561,
+        20.469032555006988,
+        50.76122675780117
+      ],
+      "angularVelocity": [
+        -0.9227568265038757,
+        0.8864368307279991,
+        0.2263811569998082
+      ]
+    },
+    {
+      "id": "asteroid-1",
+      "position": [
+        -190.9219320499405,
+        -113.5286869174331,
+        109.66679494883233
+      ],
+      "scale": 13.813320127774826,
+      "linearVelocity": [
+        50.192029331119596,
+        6.113911187593468,
+        -5.854367692424185
+      ],
+      "angularVelocity": [
+        -0.13959509905525813,
+        -0.43731874553360095,
+        -0.7521225869488948
+      ]
+    },
+    {
+      "id": "asteroid-2",
+      "position": [
+        -83.56705788144077,
+        64.21712690769468,
+        308.30902558008037
+      ],
+      "scale": 11.275762178690638,
+      "linearVelocity": [
+        5.1248287379998665,
+        -3.8768500043399237,
+        -52.774747702523037
+      ],
+      "angularVelocity": [
+        0.2651717231493369,
+        -0.7099071240513899,
+        0.1663263008032705
+      ]
+    },
+    {
+      "id": "asteroid-3",
+      "position": [
+        217.1757715338133,
+        -61.659461955067925,
+        -44.39701192104106
+      ],
+      "scale": 10.559754454640935,
+      "linearVelocity": [
+        -13.51279993073768,
+        3.8987073336340097,
+        2.7624073135533793
+      ],
+      "angularVelocity": [
+        -0.11401525507789279,
+        -0.8495070152885558,
+        -0.14027260599293268
+      ]
+    },
+    {
+      "id": "asteroid-4",
+      "position": [
+        -146.69138484095544,
+        -213.7144044815136,
+        -152.58815494515483
+      ],
+      "scale": 14.914115364458254,
+      "linearVelocity": [
+        30.82941775132167,
+        -90.089462061108069,
+        12.30494231618762
+      ],
+      "angularVelocity": [
+        -0.5051583421856027,
+        -0.2763521676136351,
+        -0.9366828390177142
+      ]
+    }
+  ],
+  "difficultyConfig": {
+    "rockCount": 5,
+    "forceMultiplier": 0.8,
+    "rockSizeMin": 10,
+    "rockSizeMax": 15,
+    "distanceMin": 220,
+    "distanceMax": 250
+  },
+  "useOrbitConstraints": true
+}

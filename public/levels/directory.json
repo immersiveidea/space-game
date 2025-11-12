@@ -1,30 +1,120 @@
-{"missions": [
-  {
-    "id": 1,
-    "name": "Recruit",
-    "Description": "Simple level to get the hang of things",
-    "missionbrief": [
-      "Destroy the asteroids",
-      "return to base after they're destroyed to complete the mission",
-      "return to base if you need more fuel, ammo, or hull repairs",
-      "don't get too far from base, if you run out of fuel, you'll be stranded",
-      "don't run into things, it damages your hull"
-    ],
-    "leveldata": "/levels/1.json",
-    "defaultlocked": false
-  } ,
-  {
-    "id": 2,
-    "name": "Fuel Management",
-    "Description": "Don't run out of fuel",
-    "missionbrief": [
-      "Astroids are further away and there a more of them",
-      "you'll need to keep an eye on your fuel levels",
-      "return to base after you've destroyed them all"
-    ],
-    "leveldata": null,
-    "defaultlocked": true
-  }
-]
-
+{
+  "version": "1.0.5",
+  "levels": [
+    {
+      "id": "rookie-training",
+      "name": "Rookie Training",
+      "description": "Simple level to get the hang of things",
+      "version": "1.0",
+      "levelPath": "rookie-training.json",
+      "difficulty": "recruit",
+      "estimatedTime": "3-5 minutes",
+      "missionBrief": [
+        "Destroy the asteroids",
+        "Return to base after they're destroyed to complete the mission",
+        "Return to base if you need more fuel, ammo, or hull repairs",
+        "Don't get too far from base, if you run out of fuel, you'll be stranded",
+        "Don't run into things, it damages your hull"
+      ],
+      "unlockRequirements": [],
+      "tags": ["tutorial", "easy"],
+      "defaultLocked": false
+    },
+    {
+      "id": "rescue-mission",
+      "name": "Rescue Mission",
+      "description": "Rescue operation in moderate asteroid field",
+      "version": "1.0",
+      "levelPath": "rescue-mission.json",
+      "difficulty": "pilot",
+      "estimatedTime": "5-8 minutes",
+      "missionBrief": [
+        "More asteroids and increased difficulty",
+        "Manage your fuel and ammunition carefully",
+        "Complete the mission and return to base",
+        "Use your radar to track asteroids",
+        "Watch your shield strength"
+      ],
+      "unlockRequirements": ["rookie-training"],
+      "tags": ["medium"],
+      "defaultLocked": true
+    },
+    {
+      "id": "deep-space-patrol",
+      "name": "Deep Space Patrol",
+      "description": "Extended patrol mission in dangerous territory",
+      "version": "1.0",
+      "levelPath": "deep-space-patrol.json",
+      "difficulty": "captain",
+      "estimatedTime": "8-12 minutes",
+      "missionBrief": [
+        "Large asteroid field requiring careful navigation",
+        "Fuel management is critical at this distance",
+        "Return to base for resupply as needed",
+        "Asteroids are faster and more dangerous",
+        "Plan your route carefully"
+      ],
+      "unlockRequirements": ["rescue-mission"],
+      "tags": ["hard"],
+      "defaultLocked": true
+    },
+    {
+      "id": "enemy-territory",
+      "name": "Enemy Territory",
+      "description": "Hazardous mission in hostile space",
+      "version": "1.0",
+      "levelPath": "enemy-territory.json",
+      "difficulty": "commander",
+      "estimatedTime": "10-15 minutes",
+      "missionBrief": [
+        "Heavily defended asteroid field",
+        "Maximum asteroid count and speed",
+        "Expert fuel and ammunition management required",
+        "Multiple base trips may be necessary",
+        "Test your skills to the limit"
+      ],
+      "unlockRequirements": ["deep-space-patrol"],
+      "tags": ["very-hard", "combat"],
+      "defaultLocked": true
+    },
+    {
+      "id": "the-gauntlet",
+      "name": "The Gauntlet",
+      "description": "Survive the ultimate asteroid gauntlet",
+      "version": "1.0",
+      "levelPath": "the-gauntlet.json",
+      "difficulty": "commander",
+      "estimatedTime": "12-18 minutes",
+      "missionBrief": [
+        "Dense asteroid field with extreme hazards",
+        "High-speed rocks from all directions",
+        "This is a test of endurance and skill",
+        "Only the best pilots succeed",
+        "May the stars guide you"
+      ],
+      "unlockRequirements": ["enemy-territory"],
+      "tags": ["very-hard", "endurance"],
+      "defaultLocked": true
+    },
+    {
+      "id": "final-challenge",
+      "name": "Final Challenge",
+      "description": "The ultimate test for master pilots",
+      "version": "1.0",
+      "levelPath": "final-challenge.json",
+      "difficulty": "commander",
+      "estimatedTime": "15-20 minutes",
+      "missionBrief": [
+        "The pinnacle of difficulty",
+        "Everything you've learned will be tested",
+        "Maximum asteroid count and velocity",
+        "Precision flying and resource management essential",
+        "Complete this to prove your mastery",
+        "Good luck, Commander"
+      ],
+      "unlockRequirements": ["the-gauntlet"],
+      "tags": ["extreme", "final-boss"],
+      "defaultLocked": true
+    }
+  ]
 }

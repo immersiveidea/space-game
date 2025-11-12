@@ -77,15 +77,20 @@ export const router = new Router();
  * Helper to show/hide views
  */
 export function showView(viewId: string): void {
+    console.log('[Router] showView() called with viewId:', viewId);
+
     // Hide all views
     const views = document.querySelectorAll('[data-view]');
+    console.log('[Router] Found views:', views.length);
     views.forEach(view => {
         (view as HTMLElement).style.display = 'none';
     });
 
     // Show requested view
     const targetView = document.querySelector(`[data-view="${viewId}"]`);
+    console.log('[Router] Target view found:', !!targetView);
     if (targetView) {
         (targetView as HTMLElement).style.display = 'block';
+        console.log('[Router] View display set to block');
     }
 }

@@ -160,6 +160,7 @@ body {
 }
 
 .editor-link {
+    display: none;
     background: rgba(76, 175, 80, 0.8);
 }
 
@@ -169,6 +170,7 @@ body {
 }
 
 .settings-link {
+    display: none;
     background: rgba(33, 150, 243, 0.8);
 }
 
@@ -510,6 +512,11 @@ body {
 .level-button:focus-visible {
     outline: 2px solid var(--color-secondary);
     outline-offset: 2px;
+}
+
+/* TODO: Re-enable copy button functionality for copying default levels to custom levels */
+.level-button-secondary {
+    display: none !important;
 }
 
 /* Test Level Button */

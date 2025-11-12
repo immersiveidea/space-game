@@ -147,6 +147,9 @@ export interface LevelConfig {
     // Optional: include original difficulty config for reference
     difficultyConfig?: DifficultyConfig;
 
+    // Physics configuration
+    useOrbitConstraints?: boolean; // Default: true - constrains asteroids to orbit at fixed distance
+
     // New fields for full scene serialization
     materials?: MaterialConfig[];
     sceneHierarchy?: SceneNodeConfig[];

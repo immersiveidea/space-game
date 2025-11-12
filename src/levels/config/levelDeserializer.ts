@@ -21,6 +21,7 @@ import { FireProceduralTexture } from "@babylonjs/procedural-textures";
 import { createSphereLightmap } from "../../environment/celestial/sphereLightmap";
 import debugLog from '../../core/debug';
 import StarBase from "../../environment/stations/starBase";
+import {LevelRegistry} from "../storage/levelRegistry";
 
 /**
  * Deserializes a LevelConfig JSON object and creates all entities in the scene
@@ -172,6 +173,16 @@ export class LevelDeserializer {
         for (let i = 0; i < this.config.asteroids.length; i++) {
             const asteroidConfig = this.config.asteroids[i];
 
+            debugLog(`[LevelDeserializer] Creating asteroid ${i} (${asteroidConfig.id}):`);
+            debugLog(`[LevelDeserializer]   Position: [${asteroidConfig.position.join(', ')}]`);
+            debugLog(`[LevelDeserializer]   Scale: ${asteroidConfig.scale}`);
+            debugLog(`[LevelDeserializer]   Linear velocity: [${asteroidConfig.linearVelocity.join(', ')}]`);
+            debugLog(`[LevelDeserializer]   Angular velocity: [${asteroidConfig.angularVelocity.join(', ')}]`);
+
+            // Use orbit constraints by default (true if not specified)
+            const useOrbitConstraints = this.config.useOrbitConstraints !== false;
+            debugLog(`[LevelDeserializer]   Use orbit constraints: ${useOrbitConstraints}`);
+
             // Use RockFactory to create the asteroid
             const rock = await RockFactory.createRock(
                 i,
@@ -179,7 +190,8 @@ export class LevelDeserializer {
                 asteroidConfig.scale,
                 this.arrayToVector3(asteroidConfig.linearVelocity),
                 this.arrayToVector3(asteroidConfig.angularVelocity),
-                scoreObservable
+                scoreObservable,
+                useOrbitConstraints
             );
 
             // Get the actual mesh from the Rock object
@@ -245,5 +257,27 @@ export class LevelDeserializer {
             reader.onerror = () => reject(new Error('Failed to read file'));
             reader.readAsText(file);
         });
+    }
+
+    /**
+     * Static helper to load from Level Registry by ID
+     * This is the preferred method for loading both default and custom levels
+     */
+    public static async fromRegistry(levelId: string): Promise<LevelDeserializer> {
+        const registry = LevelRegistry.getInstance();
+
+        // Ensure registry is initialized
+        if (!registry.isInitialized()) {
+            await registry.initialize();
+        }
+
+        // Get level config from registry (loads if not already loaded)
+        const config = await registry.getLevel(levelId);
+
+        if (!config) {
+            throw new Error(`Level not found in registry: ${levelId}`);
+        }
+
+        return new LevelDeserializer(config);
     }
 }

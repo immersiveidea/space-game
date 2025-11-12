@@ -165,7 +165,7 @@ export class StatusScreen {
         buttonBar.addControl(this._resumeButton);
 
         // Create Next Level button (only shown when game has ended and there's a next level)
-        this._nextLevelButton = Button.CreateSimpleButton("nextLevelButton", "NEXT LEVEL");
+        /*this._nextLevelButton = Button.CreateSimpleButton("nextLevelButton", "NEXT LEVEL");
         this._nextLevelButton.width = "300px";
         this._nextLevelButton.height = "60px";
         this._nextLevelButton.color = "white";
@@ -196,10 +196,10 @@ export class StatusScreen {
                 this._onReplayCallback();
             }
         });
-        buttonBar.addControl(this._replayButton);
+        buttonBar.addControl(this._replayButton);*/
 
         // Create Exit VR button
-        this._exitButton = Button.CreateSimpleButton("exitButton", "EXIT VR");
+        this._exitButton = Button.CreateSimpleButton("exitButton", "EXIT");
         this._exitButton.width = "300px";
         this._exitButton.height = "60px";
         this._exitButton.color = "white";

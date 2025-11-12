@@ -25,7 +25,8 @@ import {ControllerDebug} from "./utils/controllerDebug";
 import {router, showView} from "./core/router";
 import {populateLevelSelector} from "./levels/ui/levelSelector";
 import {LevelConfig} from "./levels/config/levelConfig";
-import {generateDefaultLevels} from "./levels/generation/levelEditor";
+import {LegacyMigration} from "./levels/migration/legacyMigration";
+import {LevelRegistry} from "./levels/storage/levelRegistry";
 import debugLog from './core/debug';
 import {ReplaySelectionScreen} from "./replay/ReplaySelectionScreen";
 import {ReplayManager} from "./replay/ReplayManager";
@@ -674,8 +675,43 @@ router.on('/settings', () => {
     }
 });
 
-// Generate default levels if localStorage is empty
-generateDefaultLevels();
+// Initialize registry and start router
+// This must happen BEFORE router.start() so levels are available
+async function initializeApp() {
+    // Check for legacy data migration
+    if (LegacyMigration.needsMigration()) {
+        debugLog('[Main] Legacy data detected - showing migration modal');
+        return new Promise<void>((resolve) => {
+            LegacyMigration.showMigrationModal(async (result) => {
+                debugLog('[Main] Migration completed:', result);
+                // Initialize the new registry system
+                try {
+                    await LevelRegistry.getInstance().initialize();
+                    debugLog('[Main] LevelRegistry initialized after migration');
+                    router.start();
+                    resolve();
+                } catch (error) {
+                    console.error('[Main] Failed to initialize LevelRegistry after migration:', error);
+                    router.start(); // Start anyway to show error state
+                    resolve();
+                }
+            });
+        });
+    } else {
+        // Initialize the new registry system
+        try {
+            await LevelRegistry.getInstance().initialize();
+            debugLog('[Main] LevelRegistry initialized');
+            router.start();
+        } catch (error) {
+            console.error('[Main] Failed to initialize LevelRegistry:', error);
+            router.start(); // Start anyway to show error state
+        }
+    }
+}
+
+// Start the app
+initializeApp();
 
 // Suppress non-critical BabylonJS shader loading errors during development
 // Note: After Vite config fix to pre-bundle shaders, these errors should no longer occur
@@ -694,8 +730,7 @@ window.addEventListener('unhandledrejection', (event) => {
     }
 });
 
-// Start the router after all routes are registered
-router.start();
+// DO NOT start router here - it will be started after registry initialization below
 
 if (DEBUG_CONTROLLERS) {
     debugLog('🔍 DEBUG MODE: Running minimal controller test');
