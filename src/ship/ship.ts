@@ -28,6 +28,7 @@ import { VoiceAudioSystem } from "./voiceAudioSystem";
 import { WeaponSystem } from "./weaponSystem";
 import { StatusScreen } from "../ui/hud/statusScreen";
 import { GameStats } from "../game/gameStats";
+import { getAnalytics } from "../analytics";
 
 export class Ship {
     private _ship: TransformNode;
@@ -311,13 +312,41 @@ export class Ship {
         this._scoreboard.onScoreObservable.add(() => {
             // Each score event represents an asteroid destroyed
             this._gameStats.recordAsteroidDestroyed();
+
+            // Track asteroid destruction in analytics
+            try {
+                const analytics = getAnalytics();
+                analytics.track('asteroid_destroyed', {
+                    weaponType: 'laser', // TODO: Get actual weapon type from event
+                    distance: 0, // TODO: Calculate distance if available
+                    asteroidSize: 0, // TODO: Get actual size if available
+                    remainingCount: this._scoreboard.remaining
+                }, { sampleRate: 0.2 }); // Sample 20% of asteroid events to reduce data
+            } catch (error) {
+                // Analytics not initialized or failed - don't break gameplay
+                debugLog('Analytics tracking failed:', error);
+            }
         });
 
         // Subscribe to ship status changes to track hull damage
         this._scoreboard.shipStatus.onStatusChanged.add((event) => {
             if (event.statusType === "hull" && event.delta < 0) {
                 // Hull damage (delta is negative)
-                this._gameStats.recordHullDamage(Math.abs(event.delta));
+                const damageAmount = Math.abs(event.delta);
+                this._gameStats.recordHullDamage(damageAmount);
+
+                // Track hull damage in analytics
+                try {
+                    const analytics = getAnalytics();
+                    analytics.track('hull_damage', {
+                        damageAmount: damageAmount,
+                        remainingHull: this._scoreboard.shipStatus.hull,
+                        damagePercent: damageAmount,
+                        source: 'asteroid_collision' // Default assumption
+                    });
+                } catch (error) {
+                    debugLog('Analytics tracking failed:', error);
+                }
             }
         });
 

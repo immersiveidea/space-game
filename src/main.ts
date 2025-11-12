@@ -37,7 +37,8 @@ import {DiscordWidget} from "./ui/widgets/discordWidget";
 
 
 import { BrowserAgent } from '@newrelic/browser-agent/loaders/browser-agent'
-// Remaining import statements
+import { AnalyticsService } from './analytics/analyticsService';
+import { NewRelicAdapter } from './analytics/adapters/newRelicAdapter';
 
 // Populate using values from NerdGraph
 const options = {
@@ -47,6 +48,29 @@ const options = {
     }
 const nrba = new BrowserAgent(options)
 
+// Initialize analytics service with New Relic adapter
+const analytics = AnalyticsService.initialize({
+    enabled: true,
+    includeSessionMetadata: true,
+    debug: true // Set to true for development debugging
+});
+
+// Configure New Relic adapter with batching
+const newRelicAdapter = new NewRelicAdapter(nrba, {
+    batchSize: 10, // Flush after 10 events
+    flushInterval: 30000, // Flush every 30 seconds
+    debug: true // Set to true to see batching in action
+});
+
+analytics.addAdapter(newRelicAdapter);
+
+// Track initial session start
+analytics.track('session_start', {
+    platform: navigator.xr ? 'vr' : (/mobile|android|iphone|ipad/i.test(navigator.userAgent) ? 'mobile' : 'desktop'),
+    userAgent: navigator.userAgent,
+    screenWidth: window.screen.width,
+    screenHeight: window.screen.height
+});
 
 // Remaining code
 

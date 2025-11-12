@@ -15,6 +15,7 @@ import {LevelDeserializer} from "./config/levelDeserializer";
 import {BackgroundStars} from "../environment/background/backgroundStars";
 import debugLog from '../core/debug';
 import {PhysicsRecorder} from "../replay/recording/physicsRecorder";
+import {getAnalytics} from "../analytics";
 
 export class Level1 implements Level {
     private _ship: Ship;
@@ -51,6 +52,17 @@ export class Level1 implements Level {
                 const currPose =  xr.baseExperience.camera.globalPosition.y;
                 xr.baseExperience.camera.position = new Vector3(0, 1.5, 0);
 
+                // Track WebXR session start
+                try {
+                    const analytics = getAnalytics();
+                    analytics.track('webxr_session_start', {
+                        deviceName: navigator.userAgent,
+                        isImmersive: true
+                    });
+                } catch (error) {
+                    debugLog('Analytics tracking failed:', error);
+                }
+
                 // Start game timer when XR pose is set
                 this._ship.gameStats.startTimer();
                 debugLog('Game timer started');
@@ -77,6 +89,18 @@ export class Level1 implements Level {
     public async play() {
         if (this._isReplayMode) {
             throw new Error("Cannot call play() in replay mode");
+        }
+
+        // Track level start
+        try {
+            const analytics = getAnalytics();
+            analytics.track('level_start', {
+                levelName: this._levelConfig.metadata?.description || 'level_1',
+                difficulty: this._levelConfig.difficulty as any || 'captain',
+                playCount: 1 // TODO: Get actual play count from progression system
+            });
+        } catch (error) {
+            debugLog('Analytics tracking failed:', error);
         }
 
         // Play background music (already loaded during initialization)

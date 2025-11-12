@@ -1,3 +1,6 @@
+import { getAnalytics } from "../analytics";
+import debugLog from "../core/debug";
+
 /**
  * Tracks game statistics for display on status screen
  */
@@ -8,12 +11,60 @@ export class GameStats {
     private _shotsFired: number = 0;
     private _shotsHit: number = 0;
     private _fuelConsumed: number = 0;
+    private _performanceTimer: number | null = null;
 
     /**
-     * Start the game timer
+     * Start the game timer and performance tracking
      */
     public startTimer(): void {
         this._gameStartTime = Date.now();
+        this.startPerformanceTracking();
+    }
+
+    /**
+     * Start periodic performance snapshots (every 60 seconds)
+     */
+    private startPerformanceTracking(): void {
+        // Clear any existing timer
+        if (this._performanceTimer !== null) {
+            clearInterval(this._performanceTimer);
+        }
+
+        // Send performance snapshot every 60 seconds
+        this._performanceTimer = window.setInterval(() => {
+            this.sendPerformanceSnapshot();
+        }, 60000); // 60 seconds
+    }
+
+    /**
+     * Stop performance tracking
+     */
+    private stopPerformanceTracking(): void {
+        if (this._performanceTimer !== null) {
+            clearInterval(this._performanceTimer);
+            this._performanceTimer = null;
+        }
+    }
+
+    /**
+     * Send a performance snapshot to analytics
+     */
+    private sendPerformanceSnapshot(): void {
+        try {
+            const analytics = getAnalytics();
+
+            // Get engine performance if available (would need to be passed in)
+            // For now, just send gameplay stats as a snapshot
+            analytics.trackCustom('gameplay_snapshot', {
+                gameTime: this.getGameTime(),
+                asteroidsDestroyed: this._asteroidsDestroyed,
+                shotsFired: this._shotsFired,
+                accuracy: this.getAccuracy(),
+                hullDamage: this._hullDamageTaken
+            }, { sampleRate: 0.5 }); // 50% sampling for performance snapshots
+        } catch (error) {
+            debugLog('Performance snapshot failed:', error);
+        }
     }
 
     /**
@@ -96,14 +147,48 @@ export class GameStats {
     }
 
     /**
+     * Send session end analytics
+     */
+    public sendSessionEnd(): void {
+        try {
+            const analytics = getAnalytics();
+            analytics.track('session_end', {
+                duration: this.getGameTime(),
+                totalLevelsPlayed: 1, // TODO: Track across multiple levels
+                totalAsteroidsDestroyed: this._asteroidsDestroyed
+            }, { immediate: true }); // Send immediately
+        } catch (error) {
+            debugLog('Session end tracking failed:', error);
+        }
+
+        // Stop performance tracking
+        this.stopPerformanceTracking();
+    }
+
+    /**
      * Reset all statistics
      */
     public reset(): void {
+        // Send session end before resetting
+        if (this._gameStartTime > 0) {
+            this.sendSessionEnd();
+        }
+
         this._gameStartTime = Date.now();
         this._asteroidsDestroyed = 0;
         this._hullDamageTaken = 0;
         this._shotsFired = 0;
         this._shotsHit = 0;
         this._fuelConsumed = 0;
+
+        // Restart performance tracking
+        this.startPerformanceTracking();
+    }
+
+    /**
+     * Cleanup when game ends
+     */
+    public dispose(): void {
+        this.stopPerformanceTracking();
     }
 }
