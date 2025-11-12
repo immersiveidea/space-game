@@ -35,6 +35,21 @@ import {updateUserProfile} from "./ui/screens/loginScreen";
 import {Preloader} from "./ui/screens/preloader";
 import {DiscordWidget} from "./ui/widgets/discordWidget";
 
+
+import { BrowserAgent } from '@newrelic/browser-agent/loaders/browser-agent'
+// Remaining import statements
+
+// Populate using values from NerdGraph
+const options = {
+    init: {distributed_tracing:{enabled:true},performance:{capture_measures:true},browser_consent_mode:{enabled:false},privacy:{cookies_enabled:true},ajax:{deny_list:["bam.nr-data.net"]}},
+    loader_config: {accountID:"7354964",trustKey:"7354964",agentID:"601599788",licenseKey:"NRJS-5673c7fa13b17021446",applicationID:"601599788"},
+    info: {beacon:"bam.nr-data.net",errorBeacon:"bam.nr-data.net",licenseKey:"NRJS-5673c7fa13b17021446",applicationID:"601599788",sa:1}
+    }
+const nrba = new BrowserAgent(options)
+
+
+// Remaining code
+
 // Set to true to run minimal controller debug test
 const DEBUG_CONTROLLERS = false;
 const webGpu = false;
