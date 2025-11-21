@@ -6,6 +6,7 @@ import {
     WebXRInputSource,
 } from "@babylonjs/core";
 import debugLog from "../../core/debug";
+import { ControllerMappingConfig, StickAction } from "./controllerMapping";
 
 const controllerComponents = [
     "a-button",
@@ -38,8 +39,16 @@ interface CameraAdjustment {
  * Maps controller thumbsticks and buttons to ship controls
  */
 export class ControllerInput {
+    // Raw stick values (before mapping)
+    private _rawLeftStickX: number = 0;
+    private _rawLeftStickY: number = 0;
+    private _rawRightStickX: number = 0;
+    private _rawRightStickY: number = 0;
+
+    // Legacy stick vectors (for compatibility)
     private _leftStick: Vector2 = Vector2.Zero();
     private _rightStick: Vector2 = Vector2.Zero();
+
     private _shooting: boolean = false;
     private _leftInputSource: WebXRInputSource;
     private _rightInputSource: WebXRInputSource;
@@ -50,9 +59,11 @@ export class ControllerInput {
         new Observable<CameraAdjustment>();
     private _onStatusScreenToggleObservable: Observable<void> = new Observable<void>();
     private _enabled: boolean = true;
+    private _mappingConfig: ControllerMappingConfig;
 
     constructor() {
         this._controllerObservable.add(this.handleControllerEvent.bind(this));
+        this._mappingConfig = ControllerMappingConfig.getInstance();
     }
 
     /**
@@ -78,6 +89,7 @@ export class ControllerInput {
 
     /**
      * Get current input state (stick positions)
+     * Applies controller mapping configuration to translate raw input to actions
      */
     public getInputState() {
         if (!this._enabled) {
@@ -86,9 +98,41 @@ export class ControllerInput {
                 rightStick: Vector2.Zero(),
             };
         }
+
+        const mapping = this._mappingConfig.getMapping();
+
+        // Create action values map
+        const actions = new Map<StickAction, number>();
+        actions.set('yaw', 0);
+        actions.set('pitch', 0);
+        actions.set('roll', 0);
+        actions.set('forward', 0);
+
+        // Apply raw stick values to configured actions (with inversion)
+        const leftX = mapping.invertLeftStickX ? -this._rawLeftStickX : this._rawLeftStickX;
+        const leftY = mapping.invertLeftStickY ? -this._rawLeftStickY : this._rawLeftStickY;
+        const rightX = mapping.invertRightStickX ? -this._rawRightStickX : this._rawRightStickX;
+        const rightY = mapping.invertRightStickY ? -this._rawRightStickY : this._rawRightStickY;
+
+        if (mapping.leftStickX !== 'none') {
+            actions.set(mapping.leftStickX, leftX);
+        }
+        if (mapping.leftStickY !== 'none') {
+            actions.set(mapping.leftStickY, leftY);
+        }
+        if (mapping.rightStickX !== 'none') {
+            actions.set(mapping.rightStickX, rightX);
+        }
+        if (mapping.rightStickY !== 'none') {
+            actions.set(mapping.rightStickY, rightY);
+        }
+
+        // Map actions back to virtual stick positions for ShipPhysics
+        // leftStick.x = yaw, leftStick.y = forward
+        // rightStick.x = roll, rightStick.y = pitch
         return {
-            leftStick: this._leftStick.clone(),
-            rightStick: this._rightStick.clone(),
+            leftStick: new Vector2(actions.get('yaw') || 0, actions.get('forward') || 0),
+            rightStick: new Vector2(actions.get('roll') || 0, actions.get('pitch') || 0),
         };
     }
 
@@ -98,7 +142,12 @@ export class ControllerInput {
     public setEnabled(enabled: boolean): void {
         this._enabled = enabled;
         if (!enabled) {
-            // Reset stick values when disabled
+            // Reset raw stick values when disabled
+            this._rawLeftStickX = 0;
+            this._rawLeftStickY = 0;
+            this._rawRightStickX = 0;
+            this._rawRightStickY = 0;
+            // Also reset legacy values
             this._leftStick.x = 0;
             this._leftStick.y = 0;
             this._rightStick.x = 0;
@@ -232,14 +281,15 @@ export class ControllerInput {
         }
 
         if (controllerEvent.type === "thumbstick") {
+            // Store raw stick values (mapping will be applied in getInputState())
             if (controllerEvent.hand === "left") {
-                this._leftStick.x = controllerEvent.axisData.x;
-                this._leftStick.y = controllerEvent.axisData.y;
+                this._rawLeftStickX = controllerEvent.axisData.x;
+                this._rawLeftStickY = controllerEvent.axisData.y;
             }
 
             if (controllerEvent.hand === "right") {
-                this._rightStick.x = controllerEvent.axisData.x;
-                this._rightStick.y = controllerEvent.axisData.y;
+                this._rawRightStickX = controllerEvent.axisData.x;
+                this._rawRightStickY = controllerEvent.axisData.y;
             }
         }
 

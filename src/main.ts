@@ -713,6 +713,18 @@ router.on('/settings', () => {
     }
 });
 
+router.on('/controls', () => {
+    showView('controls');
+    // Dynamically import and initialize controls screen
+    if (!(window as any).__controlsInitialized) {
+        import('./ui/screens/controlsScreen').then((module) => {
+            const controlsScreen = new module.ControlsScreen();
+            controlsScreen.initialize();
+            (window as any).__controlsInitialized = true;
+        });
+    }
+});
+
 // Initialize registry and start router
 // This must happen BEFORE router.start() so levels are available
 async function initializeApp() {

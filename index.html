@@ -27,6 +27,7 @@
           <nav class="header-nav">
             <div id="userProfile"></div>
             <a href="#/editor" class="nav-link editor-link">📝 Level Editor</a>
+            <a href="#/controls" class="nav-link controls-link">🎮 Controls</a>
             <a href="#/settings" class="nav-link settings-link">⚙️ Settings</a>
           </nav>
         </div>
@@ -305,6 +306,139 @@
           </div>
           <div id="jsonValidationMessage" class="json-validation-message"></div>
         </div>
+      </div>
+    </div>
+
+    <!-- Controller Mapping View -->
+    <div data-view="controls" style="display: none;">
+      <div class="editor-container">
+        <a href="#/" class="back-link">← Back to Game</a>
+
+        <h1>🎮 Controller Mapping</h1>
+        <p class="subtitle">Customize VR controller button and stick mappings</p>
+
+        <div class="settings-grid">
+          <!-- Left Stick Section -->
+          <div class="section">
+            <h2>🕹️ Left Stick</h2>
+            <p class="settings-description">
+              Configure what actions the left thumbstick controls.
+            </p>
+
+            <div class="form-group">
+              <label for="leftStickX">Left Stick X-Axis (Left/Right)</label>
+              <select id="leftStickX" class="settings-select"></select>
+              <label class="checkbox-label" style="margin-top: 8px;">
+                <input type="checkbox" id="invertLeftStickX" class="settings-checkbox">
+                <span>Invert this axis</span>
+              </label>
+            </div>
+
+            <div class="form-group">
+              <label for="leftStickY">Left Stick Y-Axis (Up/Down)</label>
+              <select id="leftStickY" class="settings-select"></select>
+              <label class="checkbox-label" style="margin-top: 8px;">
+                <input type="checkbox" id="invertLeftStickY" class="settings-checkbox">
+                <span>Invert this axis</span>
+              </label>
+            </div>
+          </div>
+
+          <!-- Right Stick Section -->
+          <div class="section">
+            <h2>🕹️ Right Stick</h2>
+            <p class="settings-description">
+              Configure what actions the right thumbstick controls.
+            </p>
+
+            <div class="form-group">
+              <label for="rightStickX">Right Stick X-Axis (Left/Right)</label>
+              <select id="rightStickX" class="settings-select"></select>
+              <label class="checkbox-label" style="margin-top: 8px;">
+                <input type="checkbox" id="invertRightStickX" class="settings-checkbox">
+                <span>Invert this axis</span>
+              </label>
+            </div>
+
+            <div class="form-group">
+              <label for="rightStickY">Right Stick Y-Axis (Up/Down)</label>
+              <select id="rightStickY" class="settings-select"></select>
+              <label class="checkbox-label" style="margin-top: 8px;">
+                <input type="checkbox" id="invertRightStickY" class="settings-checkbox">
+                <span>Invert this axis</span>
+              </label>
+            </div>
+          </div>
+
+          <!-- Button Mappings Section -->
+          <div class="section">
+            <h2>🔘 Button Mappings</h2>
+            <p class="settings-description">
+              Configure what actions each controller button performs.
+            </p>
+
+            <div class="form-group">
+              <label for="trigger">Trigger (Index Finger)</label>
+              <select id="trigger" class="settings-select"></select>
+            </div>
+
+            <div class="form-group">
+              <label for="aButton">A Button (Right Controller)</label>
+              <select id="aButton" class="settings-select"></select>
+            </div>
+
+            <div class="form-group">
+              <label for="bButton">B Button (Right Controller)</label>
+              <select id="bButton" class="settings-select"></select>
+            </div>
+
+            <div class="form-group">
+              <label for="xButton">X Button (Left Controller)</label>
+              <select id="xButton" class="settings-select"></select>
+            </div>
+
+            <div class="form-group">
+              <label for="yButton">Y Button (Left Controller)</label>
+              <select id="yButton" class="settings-select"></select>
+            </div>
+
+            <div class="form-group">
+              <label for="squeeze">Squeeze/Grip Button</label>
+              <select id="squeeze" class="settings-select"></select>
+            </div>
+          </div>
+
+          <!-- Info Section -->
+          <div class="section">
+            <h2>ℹ️ Action Guide</h2>
+            <div class="settings-info-content">
+              <p><strong class="settings-label">Yaw:</strong> Turn left/right (rotate around vertical axis)</p>
+              <p><strong class="settings-label">Pitch:</strong> Nose up/down (rotate around horizontal axis)</p>
+              <p><strong class="settings-label">Roll:</strong> Barrel roll (rotate around forward axis)</p>
+              <p><strong class="settings-label">Forward:</strong> Forward and backward thrust</p>
+              <p><strong class="settings-label">None:</strong> No action assigned</p>
+            </div>
+          </div>
+
+          <!-- Storage Info -->
+          <div class="section">
+            <h2>💾 Storage Info</h2>
+            <div class="settings-info-content">
+              <p>Controller mappings are automatically saved to your browser's local storage and will persist between sessions.</p>
+              <p class="settings-warning">
+                ⚠️ Note: Changes will take effect when you start a new level. Restart the current level to see changes.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div class="button-group">
+          <button class="btn-primary" id="saveControlsBtn">💾 Save Mapping</button>
+          <button class="btn-secondary" id="resetControlsBtn">🔄 Reset to Default</button>
+          <button class="btn-secondary" id="testControlsBtn">👁️ Preview Mapping</button>
+        </div>
+
+        <div id="controlsMessage" class="settings-message"></div>
       </div>
     </div>
 
