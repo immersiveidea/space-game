@@ -24,11 +24,15 @@
     "@babylonjs/materials": "8.36.1",
     "@babylonjs/procedural-textures": "8.36.1",
     "@babylonjs/serializers": "8.36.1",
+    "@newrelic/browser-agent": "^1.302.0",
     "openai": "4.52.3",
-    "@newrelic/browser-agent": "^1.302.0"
-},
+    "svelte-spa-router": "^4.0.1"
+  },
   "devDependencies": {
+    "@sveltejs/vite-plugin-svelte": "^6.2.1",
     "@types/node": "^20.0.0",
+    "svelte": "^5.43.14",
+    "svelte-preprocess": "^6.0.3",
     "tsx": "^4.7.1",
     "typescript": "^5.5.3",
     "vite": "^7.2.2"

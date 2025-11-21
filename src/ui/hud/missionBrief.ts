@@ -26,35 +26,60 @@ export class MissionBrief {
      * Initialize the mission brief as a fullscreen overlay
      */
     public initialize(): void {
+        console.log('[MissionBrief] ========== INITIALIZE CALLED ==========');
         const scene = DefaultScene.MainScene;
+        console.log('[MissionBrief] Scene exists:', !!scene);
 
-        console.log('[MissionBrief] Initializing as fullscreen overlay');
-        const mesh = MeshBuilder.CreatePlane('brief', {size: 2});
-        const ship = scene.getNodeById('Ship');
-        mesh.parent = ship;
-        mesh.position = new Vector3(0,1,2.8);
-        // Create fullscreen advanced texture (not attached to mesh)
-        this._advancedTexture = AdvancedDynamicTexture.CreateForMesh(mesh);
+        try {
+            console.log('[MissionBrief] Initializing as fullscreen overlay');
+            const mesh = MeshBuilder.CreatePlane('brief', {size: 2});
+            console.log('[MissionBrief] Mesh created:', mesh.name, 'ID:', mesh.id);
 
+            const ship = scene.getNodeById('Ship');
+            console.log('[MissionBrief] Ship node found:', !!ship);
 
-        console.log('[MissionBrief] Fullscreen UI created');
+            if (!ship) {
+                console.error('[MissionBrief] ERROR: Ship node not found! Cannot parent mission brief mesh.');
+                return;
+            }
 
-        // Create main container - centered overlay
-        this._container = new Rectangle("missionBriefContainer");
-        this._container.width = "800px";
-        this._container.height = "600px";
-        this._container.thickness = 4;
-        this._container.color = "#00ff00";
-        this._container.background = "rgba(0, 0, 0, 0.95)";
-        this._container.cornerRadius = 20;
-        this._container.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
-        this._container.verticalAlignment = Control.VERTICAL_ALIGNMENT_CENTER;
-        this._advancedTexture.addControl(this._container);
+            mesh.parent = ship;
+            mesh.position = new Vector3(0,1,2.8);
+            console.log('[MissionBrief] Mesh parented to ship at position:', mesh.position);
+            console.log('[MissionBrief] Mesh absolute position:', mesh.getAbsolutePosition());
+            console.log('[MissionBrief] Mesh scaling:', mesh.scaling);
+            console.log('[MissionBrief] Mesh isEnabled:', mesh.isEnabled());
+            console.log('[MissionBrief] Mesh isVisible:', mesh.isVisible);
 
-        // Initially hidden
-        this._container.isVisible = false;
+            // Create fullscreen advanced texture (not attached to mesh)
+            this._advancedTexture = AdvancedDynamicTexture.CreateForMesh(mesh);
+            console.log('[MissionBrief] AdvancedDynamicTexture created for mesh');
+            console.log('[MissionBrief] Texture dimensions:', this._advancedTexture.getSize());
 
-        console.log('[MissionBrief] Fullscreen overlay initialized');
+            console.log('[MissionBrief] Fullscreen UI created');
+
+            // Create main container - centered overlay
+            this._container = new Rectangle("missionBriefContainer");
+            this._container.width = "800px";
+            this._container.height = "600px";
+            this._container.thickness = 4;
+            this._container.color = "#00ff00";
+            this._container.background = "rgba(0, 0, 0, 0.95)";
+            this._container.cornerRadius = 20;
+            this._container.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
+            this._container.verticalAlignment = Control.VERTICAL_ALIGNMENT_CENTER;
+            this._advancedTexture.addControl(this._container);
+            console.log('[MissionBrief] Container created and added to texture');
+
+            // Initially hidden
+            this._container.isVisible = false;
+            console.log('[MissionBrief] Container initially hidden');
+
+            console.log('[MissionBrief] ========== INITIALIZATION COMPLETE ==========');
+        } catch (error) {
+            console.error('[MissionBrief] !!!!! INITIALIZATION FAILED !!!!!', error);
+            console.error('[MissionBrief] Error stack:', error?.stack);
+        }
     }
 
     /**
@@ -65,12 +90,18 @@ export class MissionBrief {
      * @param onStart - Callback when start button is pressed
      */
     public show(levelConfig: LevelConfig, directoryEntry: LevelDirectoryEntry | null, triggerObservable: Observable<void>, onStart: () => void): void {
+        console.log('[MissionBrief] ========== SHOW() CALLED ==========');
+        console.log('[MissionBrief] Container exists:', !!this._container);
+        console.log('[MissionBrief] AdvancedTexture exists:', !!this._advancedTexture);
+
         if (!this._container || !this._advancedTexture) {
-            debugLog('[MissionBrief] Cannot show - not initialized');
+            console.error('[MissionBrief] !!!!! CANNOT SHOW - NOT INITIALIZED !!!!!');
+            console.error('[MissionBrief] Container:', this._container);
+            console.error('[MissionBrief] AdvancedTexture:', this._advancedTexture);
             return;
         }
 
-        debugLog('[MissionBrief] Showing with config:', {
+        console.log('[MissionBrief] Showing with config:', {
             difficulty: levelConfig.difficulty,
             description: levelConfig.metadata?.description,
             asteroidCount: levelConfig.asteroids?.length,
@@ -183,7 +214,12 @@ export class MissionBrief {
         this._container.isVisible = true;
         this._isVisible = true;
 
-        debugLog('[MissionBrief] Mission brief displayed');
+        console.log('[MissionBrief] ========== CONTAINER NOW VISIBLE ==========');
+        console.log('[MissionBrief] Container.isVisible:', this._container.isVisible);
+        console.log('[MissionBrief] _isVisible flag:', this._isVisible);
+        console.log('[MissionBrief] Container children count:', this._container.children.length);
+        console.log('[MissionBrief] AdvancedTexture control count:', this._advancedTexture.rootContainer.children.length);
+        console.log('[MissionBrief] ========== MISSION BRIEF DISPLAY COMPLETE ==========');
     }
 
     /**

@@ -1,6 +1,6 @@
 {
   "compilerOptions": {
-    "target": "es6",
+    "target": "es2023",
     "outDir": "./dist",
     // choose our ECMA/JavaScript version (all modern browsers support ES6 so it's your best bet)
     "allowSyntheticDefaultImports": true,
@@ -8,7 +8,7 @@
       // choose our default ECMA/libraries to import
       "dom",
       // mandatory for all browser-based apps
-      "es6"
+      "es2023"
       // mandatory for targeting ES6
     ],
     "useDefineForClassFields": true,
@@ -33,12 +33,17 @@
     // raises an error for unused parameters
     "noImplicitReturns": true,
     // raises an error for functions that return nothing
-    "skipLibCheck": true
+    "skipLibCheck": true,
     // skip type-checking of .d.ts files (it speeds up transpiling)
+    "types": ["svelte"]
+    // add Svelte type definitions
   },
   "include": [
     "src",
     "server"
   ],
   // specify location(s) of .ts files
+  "exclude": [
+    "node_modules"
+  ]
 }

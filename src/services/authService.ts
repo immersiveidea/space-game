@@ -26,14 +26,22 @@ export class AuthService {
      * Call this early in the application lifecycle
      */
     public async initialize(): Promise<void> {
+        console.log('[AuthService] ========== INITIALIZE CALLED ==========');
         const domain = import.meta.env.VITE_AUTH0_DOMAIN;
         const clientId = import.meta.env.VITE_AUTH0_CLIENT_ID;
 
+        console.log('[AuthService] Config:', {
+            domain,
+            clientId: clientId ? clientId.substring(0, 10) + '...' : 'missing',
+            redirectUri: window.location.origin
+        });
+
         if (!domain || !clientId || domain.trim() === '') {
-            console.warn('Auth0 not configured - authentication features will be disabled');
+            console.warn('[AuthService] Auth0 not configured - authentication features will be disabled');
             return;
         }
-        console.log(window.location.origin);
+
+        console.log('[AuthService] Creating Auth0 client...');
         this._client = await createAuth0Client({
             domain,
             clientId,
@@ -43,33 +51,58 @@ export class AuthService {
             cacheLocation: 'localstorage', // Persist tokens across page reloads
             useRefreshTokens: true // Enable silent token refresh
         });
+        console.log('[AuthService] Auth0 client created successfully');
 
         // Handle redirect callback after login
-        if (window.location.search.includes('code=') ||
-            window.location.search.includes('state=')) {
+        const hasCallback = window.location.search.includes('code=') ||
+                           window.location.search.includes('state=');
+        console.log('[AuthService] Checking for Auth0 callback:', hasCallback);
+        console.log('[AuthService] Current URL:', window.location.href);
+
+        if (hasCallback) {
+            console.log('[AuthService] ========== PROCESSING AUTH0 CALLBACK ==========');
             try {
-                await this._client.handleRedirectCallback();
+                const result = await this._client.handleRedirectCallback();
+                console.log('[AuthService] Callback handled successfully:', result);
                 // Clean up the URL after handling callback
                 window.history.replaceState({}, document.title, '/');
+                console.log('[AuthService] URL cleaned, redirected to home');
             } catch (error) {
-                console.error('Error handling redirect callback:', error);
+                console.error('[AuthService] !!!!! CALLBACK ERROR !!!!!', error);
+                console.error('[AuthService] Error details:', error?.message, error?.stack);
             }
         }
 
         // Check if user is authenticated and load user info
+        console.log('[AuthService] Checking authentication status...');
         const isAuth = await this._client.isAuthenticated();
+        console.log('[AuthService] Is authenticated:', isAuth);
+
         if (isAuth) {
+            console.log('[AuthService] Loading user info...');
             this._user = await this._client.getUser() ?? null;
+            console.log('[AuthService] User loaded:', {
+                name: this._user?.name,
+                email: this._user?.email,
+                sub: this._user?.sub
+            });
+        } else {
+            console.log('[AuthService] User not authenticated');
         }
+
+        console.log('[AuthService] ========== INITIALIZATION COMPLETE ==========');
     }
 
     /**
      * Redirect to Auth0 login page
      */
     public async login(): Promise<void> {
+        console.log('[AuthService] ========== LOGIN CALLED ==========');
         if (!this._client) {
+            console.error('[AuthService] !!!!! CLIENT NOT INITIALIZED !!!!!');
             throw new Error('Auth client not initialized. Call initialize() first.');
         }
+        console.log('[AuthService] Redirecting to Auth0 login...');
         await this._client.loginWithRedirect();
     }
 
@@ -77,10 +110,13 @@ export class AuthService {
      * Log out the current user and redirect to home
      */
     public async logout(): Promise<void> {
+        console.log('[AuthService] ========== LOGOUT CALLED ==========');
         if (!this._client) {
+            console.error('[AuthService] !!!!! CLIENT NOT INITIALIZED !!!!!');
             throw new Error('Auth client not initialized. Call initialize() first.');
         }
         this._user = null;
+        console.log('[AuthService] Logging out and redirecting to:', window.location.origin);
         await this._client.logout({
             logoutParams: {
                 returnTo: window.location.origin

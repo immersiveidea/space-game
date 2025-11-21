@@ -35,6 +35,9 @@ import {updateUserProfile} from "./ui/screens/loginScreen";
 import {Preloader} from "./ui/screens/preloader";
 import {DiscordWidget} from "./ui/widgets/discordWidget";
 
+// Svelte App
+import { mount } from 'svelte';
+import App from './components/layouts/App.svelte';
 
 import { BrowserAgent } from '@newrelic/browser-agent/loaders/browser-agent'
 import { AnalyticsService } from './analytics/analyticsService';
@@ -213,23 +216,43 @@ export class Main {
 
                     // If we entered XR before level creation, manually setup camera parenting
                     // (This is needed because onInitialXRPoseSetObservable won't fire if we're already in XR)
+                    console.log('[Main] ========== CHECKING XR STATE ==========');
+                    console.log('[Main] DefaultScene.XR exists:', !!DefaultScene.XR);
+                    console.log('[Main] xrSession exists:', !!xrSession);
+                    if (DefaultScene.XR) {
+                        console.log('[Main] XR base experience state:', DefaultScene.XR.baseExperience.state);
+                    }
+
                     if (DefaultScene.XR && xrSession && DefaultScene.XR.baseExperience.state === 2) { // WebXRState.IN_XR = 2
+                        console.log('[Main] ========== XR ALREADY ACTIVE - MANUAL SETUP ==========');
 
                         if (ship && ship.transformNode) {
+                            console.log('[Main] Ship and transformNode exist - parenting camera');
                             debugLog('Manually parenting XR camera to ship transformNode');
                             DefaultScene.XR.baseExperience.camera.parent = ship.transformNode;
                             DefaultScene.XR.baseExperience.camera.position = new Vector3(0, 1.5, 0);
+                            console.log('[Main] Camera parented successfully');
 
-                            console.log('[Main] XR already active - showing mission brief');
+                            console.log('[Main] ========== ABOUT TO SHOW MISSION BRIEF ==========');
+                            console.log('[Main] level1 object:', level1);
+                            console.log('[Main] level1._missionBrief:', (level1 as any)._missionBrief);
+
                             // Show mission brief (since onInitialXRPoseSetObservable won't fire)
                             await level1.showMissionBrief();
-                            console.log('[Main] Mission brief shown, mission brief will call startGameplay() on button click');
+
+                            console.log('[Main] ========== MISSION BRIEF SHOW() RETURNED ==========');
+                            console.log('[Main] Mission brief will call startGameplay() when trigger is pulled');
 
                             // NOTE: Don't start timer/recording here anymore - mission brief will do it
                             // when the user clicks the START button
                         } else {
+                            console.error('[Main] !!!!! SHIP OR TRANSFORM NODE NOT FOUND !!!!!');
+                            console.log('[Main] ship exists:', !!ship);
+                            console.log('[Main] ship.transformNode exists:', ship ? !!ship.transformNode : 'N/A');
                             debugLog('WARNING: Could not parent XR camera - ship or transformNode not found');
                         }
+                    } else {
+                        console.log('[Main] XR not active yet - will use onInitialXRPoseSetObservable instead');
                     }
 
                     // Hide preloader
@@ -239,10 +262,18 @@ export class Main {
                     }, 500);
 
                     // Remove UI
-                    mainDiv.remove();
+                    console.log('[Main] ========== ABOUT TO REMOVE MAIN DIV ==========');
+                    console.log('[Main] mainDiv exists:', !!mainDiv);
+                    console.log('[Main] Timestamp:', Date.now());
+                    if (mainDiv) {
+                        mainDiv.remove();
+                        console.log('[Main] mainDiv removed from DOM');
+                    }
 
                     // Start the game (XR session already active, or flat mode)
+                    console.log('[Main] About to call this.play()');
                     await this.play();
+                    console.log('[Main] this.play() completed');
                 });
 
                 // Now initialize the level (after observable is registered)
@@ -747,11 +778,36 @@ async function initializeApp() {
                     await LevelRegistry.getInstance().initialize();
                     console.log('[Main] LevelRegistry.initialize() completed successfully [AFTER MIGRATION]');
                     debugLog('[Main] LevelRegistry initialized after migration');
-                    router.start();
+                    // NOTE: Old router disabled - now using svelte-spa-router
+                    // router.start();
+
+                    // Mount Svelte app
+                    console.log('[Main] Mounting Svelte app [AFTER MIGRATION]');
+                    const appElement = document.getElementById('app');
+                    if (appElement) {
+                        mount(App, {
+                            target: appElement
+                        });
+                        console.log('[Main] Svelte app mounted successfully [AFTER MIGRATION]');
+
+                        // Create Main instance lazily only if it doesn't exist
+                        if (!DEBUG_CONTROLLERS && !(window as any).__mainInstance) {
+                            debugLog('[Main] Creating Main instance (not initialized) [AFTER MIGRATION]');
+                            const main = new Main();
+                            (window as any).__mainInstance = main;
+
+                            // Initialize demo mode without engine (just for UI purposes)
+                            const demo = new Demo(main);
+                        }
+                    } else {
+                        console.error('[Main] Failed to mount Svelte app - #app element not found [AFTER MIGRATION]');
+                    }
+
                     resolve();
                 } catch (error) {
                     console.error('[Main] Failed to initialize LevelRegistry after migration:', error);
-                    router.start(); // Start anyway to show error state
+                    // NOTE: Old router disabled - now using svelte-spa-router
+                    // router.start(); // Start anyway to show error state
                     resolve();
                 }
             });
@@ -777,15 +833,39 @@ async function initializeApp() {
                 console.log('[Main] To clear caches: window.__levelRegistry.clearAllCaches().then(() => location.reload())');
             }
 
-            console.log('[Main] About to call router.start()');
-            router.start();
-            console.log('[Main] router.start() completed');
+            // NOTE: Old router disabled - now using svelte-spa-router
+            // console.log('[Main] About to call router.start()');
+            // router.start();
+            // console.log('[Main] router.start() completed');
         } catch (error) {
             console.error('[Main] !!!!! EXCEPTION in LevelRegistry initialization !!!!!');
             console.error('[Main] Failed to initialize LevelRegistry:', error);
             console.error('[Main] Error stack:', error?.stack);
-            router.start(); // Start anyway to show error state
+            // NOTE: Old router disabled - now using svelte-spa-router
+            // router.start(); // Start anyway to show error state
         }
+    }
+
+    // Mount Svelte app
+    console.log('[Main] Mounting Svelte app');
+    const appElement = document.getElementById('app');
+    if (appElement) {
+        mount(App, {
+            target: appElement
+        });
+        console.log('[Main] Svelte app mounted successfully');
+
+        // Create Main instance lazily only if it doesn't exist
+        if (!DEBUG_CONTROLLERS && !(window as any).__mainInstance) {
+            debugLog('[Main] Creating Main instance (not initialized)');
+            const main = new Main();
+            (window as any).__mainInstance = main;
+
+            // Initialize demo mode without engine (just for UI purposes)
+            const demo = new Demo(main);
+        }
+    } else {
+        console.error('[Main] Failed to mount Svelte app - #app element not found');
     }
 
     console.log('[Main] initializeApp() FINISHED at', new Date().toISOString());

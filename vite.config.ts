@@ -1,7 +1,9 @@
 import {defineConfig} from "vite";
+import { svelte } from '@sveltejs/vite-plugin-svelte';
 
 /** @type {import('vite').UserConfig} */
 export default defineConfig({
+    plugins: [svelte()],
     test: {},
     define: {},
     build: {
@@ -10,7 +12,8 @@ export default defineConfig({
             output: {
                 manualChunks: {
                     'babylon': ['@babylonjs/core'],
-                    'babylon-procedural': ['@babylonjs/procedural-textures']
+                    'babylon-procedural': ['@babylonjs/procedural-textures'],
+                    'babylon-inspector': ['@babylonjs/inspector'],
                 }
             }
         }

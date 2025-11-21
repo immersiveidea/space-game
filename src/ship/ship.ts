@@ -446,7 +446,7 @@ export class Ship {
         }
 
         // Check condition 2: Stranded (outside landing zone, no fuel, low velocity)
-        if (!this._isInLandingZone && fuel < 0.01 && totalVelocity < 1) {
+        if (!this._isInLandingZone && fuel < 0.01 && totalVelocity < 5) {
             debugLog('Game end condition met: Stranded (no fuel, low velocity)');
             this._statusScreen.show(true, false); // Game ended, not victory
             this._keyboardInput?.setEnabled(false);

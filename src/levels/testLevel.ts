@@ -18,7 +18,7 @@ export class TestLevel implements Level {
     private _onReadyObservable: Observable<Level> = new Observable<Level>();
     private _initialized: boolean = false;
     private _audioEngine: AudioEngineV2;
-    private _boxCreationInterval: NodeJS.Timeout | null = null;
+    private _boxCreationInterval: number | null = null;
     private _totalBoxesCreated: number = 0;
     private _boxesPerIteration: number = 1;
 

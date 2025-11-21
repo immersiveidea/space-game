@@ -352,7 +352,12 @@ export class Level1 implements Level {
 
         // Initialize mission brief (will be shown when entering XR)
         setLoadingMessage("Initializing mission brief...");
+        console.log('[Level1] ========== ABOUT TO INITIALIZE MISSION BRIEF ==========');
+        console.log('[Level1] _missionBrief object:', this._missionBrief);
+        console.log('[Level1] Ship exists:', !!this._ship);
+        console.log('[Level1] Ship ID in scene:', DefaultScene.MainScene.getNodeById('Ship') !== null);
         this._missionBrief.initialize();
+        console.log('[Level1] ========== MISSION BRIEF INITIALIZATION COMPLETE ==========');
         debugLog('Mission brief initialized');
 
         this._initialized = true;
