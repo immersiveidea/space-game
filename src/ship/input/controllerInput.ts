@@ -226,7 +226,8 @@ export class ControllerInput {
         }
 
         if (!this._enabled && controllerEvent.type === "button" &&
-            !(controllerEvent.component.id === "x-button" && controllerEvent.hand === "left")) {
+            !(controllerEvent.component.id === "x-button" && controllerEvent.hand === "left") &&
+            controllerEvent.component.type !== "trigger") {
             return;
         }
 

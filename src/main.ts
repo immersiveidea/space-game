@@ -187,7 +187,7 @@ export class Main {
                 preloader.updateProgress(90, 'Creating level...');
 
                 // Create and initialize level from config
-                this._currentLevel = new Level1(config, this._audioEngine);
+                this._currentLevel = new Level1(config, this._audioEngine, false, levelName);
 
                 // Wait for level to be ready
                 this._currentLevel.getReadyObservable().add(async () => {
@@ -220,14 +220,13 @@ export class Main {
                             DefaultScene.XR.baseExperience.camera.parent = ship.transformNode;
                             DefaultScene.XR.baseExperience.camera.position = new Vector3(0, 1.5, 0);
 
-                            // Also start timer and recording here (since onInitialXRPoseSetObservable won't fire)
-                            ship.gameStats.startTimer();
-                            debugLog('Game timer started (manual)');
+                            console.log('[Main] XR already active - showing mission brief');
+                            // Show mission brief (since onInitialXRPoseSetObservable won't fire)
+                            await level1.showMissionBrief();
+                            console.log('[Main] Mission brief shown, mission brief will call startGameplay() on button click');
 
-                            if ((level1 as any)._physicsRecorder) {
-                                (level1 as any)._physicsRecorder.startRingBuffer();
-                                debugLog('Physics recorder started (manual)');
-                            }
+                            // NOTE: Don't start timer/recording here anymore - mission brief will do it
+                            // when the user clicks the START button
                         } else {
                             debugLog('WARNING: Could not parent XR camera - ship or transformNode not found');
                         }
@@ -664,7 +663,7 @@ router.on('/', async () => {
         }
 
         // Discord widget initialization with enhanced error logging
-        if (!(window as any).__discordWidget) {
+        /*if (!(window as any).__discordWidget) {
             debugLog('[Router] Initializing Discord widget');
             const discord = new DiscordWidget();
 
@@ -687,7 +686,7 @@ router.on('/', async () => {
                     console.error('[Router] GraphQL response error:', error.response);
                 }
             });
-        }
+        }*/
     }
 
     debugLog('[Router] Home route handler complete');
@@ -717,15 +716,24 @@ router.on('/settings', () => {
 // Initialize registry and start router
 // This must happen BEFORE router.start() so levels are available
 async function initializeApp() {
+    console.log('[Main] ========================================');
+    console.log('[Main] initializeApp() STARTED at', new Date().toISOString());
+    console.log('[Main] ========================================');
+
     // Check for legacy data migration
-    if (LegacyMigration.needsMigration()) {
+    const needsMigration = LegacyMigration.needsMigration();
+    console.log('[Main] Needs migration check:', needsMigration);
+
+    if (needsMigration) {
         debugLog('[Main] Legacy data detected - showing migration modal');
         return new Promise<void>((resolve) => {
             LegacyMigration.showMigrationModal(async (result) => {
                 debugLog('[Main] Migration completed:', result);
                 // Initialize the new registry system
                 try {
+                    console.log('[Main] About to call LevelRegistry.getInstance().initialize() [AFTER MIGRATION]');
                     await LevelRegistry.getInstance().initialize();
+                    console.log('[Main] LevelRegistry.initialize() completed successfully [AFTER MIGRATION]');
                     debugLog('[Main] LevelRegistry initialized after migration');
                     router.start();
                     resolve();
@@ -737,19 +745,45 @@ async function initializeApp() {
             });
         });
     } else {
+        console.log('[Main] No migration needed - proceeding to initialize registry');
         // Initialize the new registry system
         try {
+            console.log('[Main] About to call LevelRegistry.getInstance().initialize()');
+            console.log('[Main] Timestamp before initialize:', Date.now());
             await LevelRegistry.getInstance().initialize();
+            console.log('[Main] Timestamp after initialize:', Date.now());
+            console.log('[Main] LevelRegistry.initialize() completed successfully');
             debugLog('[Main] LevelRegistry initialized');
+
+            // Expose registry to window for debugging (dev mode)
+            const isDev = window.location.hostname === 'localhost' ||
+                          window.location.hostname.includes('dev.') ||
+                          window.location.port !== '';
+            if (isDev) {
+                (window as any).__levelRegistry = LevelRegistry.getInstance();
+                console.log('[Main] LevelRegistry exposed to window.__levelRegistry for debugging');
+                console.log('[Main] To clear caches: window.__levelRegistry.clearAllCaches().then(() => location.reload())');
+            }
+
+            console.log('[Main] About to call router.start()');
             router.start();
+            console.log('[Main] router.start() completed');
         } catch (error) {
+            console.error('[Main] !!!!! EXCEPTION in LevelRegistry initialization !!!!!');
             console.error('[Main] Failed to initialize LevelRegistry:', error);
+            console.error('[Main] Error stack:', error?.stack);
             router.start(); // Start anyway to show error state
         }
     }
+
+    console.log('[Main] initializeApp() FINISHED at', new Date().toISOString());
 }
 
 // Start the app
+console.log('[Main] ========================================');
+console.log('[Main] main.ts MODULE LOADED at', new Date().toISOString());
+console.log('[Main] About to call initializeApp()');
+console.log('[Main] ========================================');
 initializeApp();
 
 // Suppress non-critical BabylonJS shader loading errors during development

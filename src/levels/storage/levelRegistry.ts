@@ -93,13 +93,37 @@ export class LevelRegistry {
      * Load the directory.json manifest
      */
     private async loadDirectory(): Promise<void> {
+        console.log('[LevelRegistry] ======================================');
+        console.log('[LevelRegistry] loadDirectory() ENTERED at', Date.now());
+        console.log('[LevelRegistry] ======================================');
+
         try {
             console.log('[LevelRegistry] Attempting to fetch /levels/directory.json');
+            console.log('[LevelRegistry] window.location.origin:', window.location.origin);
+            console.log('[LevelRegistry] Full URL will be:', window.location.origin + '/levels/directory.json');
 
             // First, fetch from network to get the latest version
+            console.log('[LevelRegistry] About to call fetch() - Timestamp:', Date.now());
             console.log('[LevelRegistry] Fetching from network to check version...');
-            const response = await fetch('/levels/directory.json');
+
+            // Add cache-busting for development or when debugging
+            const isDev = window.location.hostname === 'localhost' ||
+                          window.location.hostname.includes('dev.') ||
+                          window.location.port !== '';
+            const cacheBuster = isDev ? `?v=${Date.now()}` : '';
+            console.log('[LevelRegistry] Cache busting:', isDev ? 'ENABLED (dev mode)' : 'DISABLED (production)');
+
+            const fetchStartTime = Date.now();
+            const response = await fetch(`/levels/directory.json${cacheBuster}`);
+            const fetchEndTime = Date.now();
+
+            console.log('[LevelRegistry] fetch() returned! Time taken:', fetchEndTime - fetchStartTime, 'ms');
             console.log('[LevelRegistry] Fetch response status:', response.status, response.ok);
+            console.log('[LevelRegistry] Fetch response type:', response.type);
+            console.log('[LevelRegistry] Fetch response headers:', {
+                contentType: response.headers.get('content-type'),
+                contentLength: response.headers.get('content-length')
+            });
 
             if (!response.ok) {
                 // If network fails, try to use cached version as fallback
@@ -114,8 +138,13 @@ export class LevelRegistry {
                 throw new Error(`Failed to fetch directory: ${response.status}`);
             }
 
+            console.log('[LevelRegistry] About to parse response.json()');
+            const parseStartTime = Date.now();
             const networkManifest = await response.json();
+            const parseEndTime = Date.now();
+            console.log('[LevelRegistry] JSON parsed successfully! Time taken:', parseEndTime - parseStartTime, 'ms');
             console.log('[LevelRegistry] Directory JSON parsed:', networkManifest);
+            console.log('[LevelRegistry] Number of levels in manifest:', networkManifest?.levels?.length || 0);
 
             // Check if version changed
             const cachedVersion = localStorage.getItem(CACHED_VERSION_KEY);
@@ -137,9 +166,18 @@ export class LevelRegistry {
             // Cache the directory
             await this.cacheResource('/levels/directory.json', this.directoryManifest);
 
+            console.log('[LevelRegistry] About to populate default level entries');
             this.populateDefaultLevelEntries();
+            console.log('[LevelRegistry] Default level entries populated successfully');
+            console.log('[LevelRegistry] ======================================');
+            console.log('[LevelRegistry] loadDirectory() COMPLETED at', Date.now());
+            console.log('[LevelRegistry] ======================================');
         } catch (error) {
+            console.error('[LevelRegistry] !!!!! EXCEPTION in loadDirectory() !!!!!');
             console.error('[LevelRegistry] Failed to load directory:', error);
+            console.error('[LevelRegistry] Error type:', error?.constructor?.name);
+            console.error('[LevelRegistry] Error message:', error?.message);
+            console.error('[LevelRegistry] Error stack:', error?.stack);
             throw new Error('Unable to load level directory. Please check your connection.');
         }
     }
@@ -149,18 +187,37 @@ export class LevelRegistry {
      */
     private populateDefaultLevelEntries(): void {
         if (!this.directoryManifest) {
+            console.error('[LevelRegistry] ❌ Cannot populate - directoryManifest is null');
             return;
         }
+
+        console.log('[LevelRegistry] ======================================');
+        console.log('[LevelRegistry] Populating default level entries...');
+        console.log('[LevelRegistry] Directory manifest levels:', this.directoryManifest.levels.length);
 
         this.defaultLevels.clear();
 
         for (const entry of this.directoryManifest.levels) {
+            console.log(`[LevelRegistry] Storing level: ${entry.id}`, {
+                name: entry.name,
+                levelPath: entry.levelPath,
+                hasMissionBrief: !!entry.missionBrief,
+                missionBriefItems: entry.missionBrief?.length || 0,
+                hasLevelPath: !!entry.levelPath,
+                estimatedTime: entry.estimatedTime,
+                difficulty: entry.difficulty
+            });
+
             this.defaultLevels.set(entry.id, {
                 directoryEntry: entry,
                 config: null,  // Lazy load
                 isDefault: true
             });
         }
+
+        console.log('[LevelRegistry] Populated entries. Total count:', this.defaultLevels.size);
+        console.log('[LevelRegistry] Level IDs:', Array.from(this.defaultLevels.keys()));
+        console.log('[LevelRegistry] ======================================');
     }
 
     /**
@@ -221,37 +278,88 @@ export class LevelRegistry {
      * Load a default level's config from JSON
      */
     private async loadDefaultLevel(levelId: string): Promise<void> {
+        console.log('[LevelRegistry] ======================================');
+        console.log('[LevelRegistry] loadDefaultLevel() called for:', levelId);
+        console.log('[LevelRegistry] Timestamp:', Date.now());
+        console.log('[LevelRegistry] ======================================');
+
         const entry = this.defaultLevels.get(levelId);
         if (!entry || entry.config) {
+            console.log('[LevelRegistry] Early return - entry:', !!entry, ', config loaded:', !!entry?.config);
             return; // Already loaded or doesn't exist
         }
 
         try {
             const levelPath = `/levels/${entry.directoryEntry.levelPath}`;
+            console.log('[LevelRegistry] Constructed levelPath:', levelPath);
+            console.log('[LevelRegistry] Full URL will be:', window.location.origin + levelPath);
 
-            // Try cache first
-            const cached = await this.getCachedResource(levelPath);
+            // Check if cache busting is enabled (dev mode)
+            const isDev = window.location.hostname === 'localhost' ||
+                          window.location.hostname.includes('dev.') ||
+                          window.location.port !== '';
+
+            // In dev mode, skip cache and always fetch fresh
+            let cached = null;
+            if (!isDev) {
+                console.log('[LevelRegistry] Checking cache for:', levelPath);
+                cached = await this.getCachedResource(levelPath);
+            } else {
+                console.log('[LevelRegistry] Skipping cache check (dev mode)');
+            }
+
             if (cached) {
+                console.log('[LevelRegistry] Found in cache! Using cached config');
                 entry.config = cached;
                 entry.loadedAt = new Date();
                 return;
             }
+            console.log('[LevelRegistry] Not in cache, fetching from network');
 
-            // Fetch from network
-            const response = await fetch(levelPath);
+            // Fetch from network with cache-busting in dev mode
+            const cacheBuster = isDev ? `?v=${Date.now()}` : '';
+            console.log('[LevelRegistry] About to fetch level JSON - Timestamp:', Date.now());
+            console.log('[LevelRegistry] Cache busting:', isDev ? 'ENABLED' : 'DISABLED');
+            const fetchStartTime = Date.now();
+            const response = await fetch(`${levelPath}${cacheBuster}`);
+            const fetchEndTime = Date.now();
+
+            console.log('[LevelRegistry] Level fetch() returned! Time taken:', fetchEndTime - fetchStartTime, 'ms');
+            console.log('[LevelRegistry] Response status:', response.status, response.ok);
+
             if (!response.ok) {
+                console.error('[LevelRegistry] Fetch failed with status:', response.status);
                 throw new Error(`Failed to fetch level: ${response.status}`);
             }
 
+            console.log('[LevelRegistry] Parsing level JSON...');
+            const parseStartTime = Date.now();
             const config: LevelConfig = await response.json();
+            const parseEndTime = Date.now();
+            console.log('[LevelRegistry] Level JSON parsed! Time taken:', parseEndTime - parseStartTime, 'ms');
+            console.log('[LevelRegistry] Level config loaded:', {
+                version: config.version,
+                difficulty: config.difficulty,
+                asteroidCount: config.asteroids?.length || 0
+            });
 
             // Cache the level
+            console.log('[LevelRegistry] Caching level config...');
             await this.cacheResource(levelPath, config);
+            console.log('[LevelRegistry] Level cached successfully');
 
             entry.config = config;
             entry.loadedAt = new Date();
+
+            console.log('[LevelRegistry] ======================================');
+            console.log('[LevelRegistry] loadDefaultLevel() COMPLETED for:', levelId);
+            console.log('[LevelRegistry] ======================================');
         } catch (error) {
-            console.error(`Failed to load default level ${levelId}:`, error);
+            console.error('[LevelRegistry] !!!!! EXCEPTION in loadDefaultLevel() !!!!!');
+            console.error(`[LevelRegistry] Failed to load default level ${levelId}:`, error);
+            console.error('[LevelRegistry] Error type:', error?.constructor?.name);
+            console.error('[LevelRegistry] Error message:', error?.message);
+            console.error('[LevelRegistry] Error stack:', error?.stack);
             throw error;
         }
     }
@@ -497,5 +605,39 @@ export class LevelRegistry {
      */
     public isInitialized(): boolean {
         return this.initialized;
+    }
+
+    /**
+     * Clear all caches and force reload from network
+     * Useful for development or when data needs to be refreshed
+     */
+    public async clearAllCaches(): Promise<void> {
+        console.log('[LevelRegistry] Clearing all caches...');
+
+        // Clear Cache API
+        if ('caches' in window) {
+            const cacheKeys = await caches.keys();
+            for (const key of cacheKeys) {
+                await caches.delete(key);
+                console.log('[LevelRegistry] Deleted cache:', key);
+            }
+        }
+
+        // Clear localStorage cache version
+        localStorage.removeItem(CACHED_VERSION_KEY);
+        console.log('[LevelRegistry] Cleared localStorage cache version');
+
+        // Clear loaded configs
+        for (const entry of this.defaultLevels.values()) {
+            entry.config = null;
+            entry.loadedAt = undefined;
+        }
+        console.log('[LevelRegistry] Cleared loaded configs');
+
+        // Reset initialization flag to force reload
+        this.initialized = false;
+        this.directoryManifest = null;
+
+        console.log('[LevelRegistry] All caches cleared. Call initialize() to reload.');
     }
 }

@@ -403,7 +403,7 @@ export async function selectLevel(levelId: string): Promise<void> {
 
     // Dispatch custom event that Main class will listen for
     const event = new CustomEvent('levelSelected', {
-        detail: {levelId, config}
+        detail: {levelName: levelId, config}
     });
     window.dispatchEvent(event);
 }

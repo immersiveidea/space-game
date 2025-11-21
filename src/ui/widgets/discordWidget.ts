@@ -25,6 +25,9 @@ export class DiscordWidget {
    */
   async initialize(options: DiscordWidgetOptions): Promise<void> {
     try {
+      // Suppress WidgetBot console errors (CSP and CORS issues from their side)
+      this.suppressWidgetBotErrors();
+
       // Load the Crate script if not already loaded
       if (!this.scriptLoaded) {
         console.log('[DiscordWidget] Loading Crate script...');
@@ -83,6 +86,7 @@ export class DiscordWidget {
       script.src = 'https://cdn.jsdelivr.net/npm/@widgetbot/crate@3';
       script.async = true;
       script.defer = true;
+      script.crossOrigin = 'anonymous';
 
       script.onload = () => {
         console.log('[DiscordWidget] Script loaded successfully');
@@ -116,6 +120,46 @@ export class DiscordWidget {
   }
 
   /**
+   * Suppress WidgetBot console errors (CSP/CORS issues from their infrastructure)
+   */
+  private suppressWidgetBotErrors(): void {
+    // Filter console.error to suppress known WidgetBot issues
+    const originalError = console.error;
+    console.error = (...args: any[]) => {
+      const message = args.join(' ');
+
+      // Skip known WidgetBot infrastructure errors
+      if (
+        message.includes('widgetbot') ||
+        message.includes('stonks.widgetbot.io') ||
+        message.includes('e.widgetbot.io') ||
+        message.includes('Content Security Policy') ||
+        message.includes('[embed-api]') ||
+        message.includes('[mobx]') ||
+        message.includes('GraphQL') && message.includes('widgetbot')
+      ) {
+        return; // Suppress these errors
+      }
+
+      // Pass through all other errors
+      originalError.apply(console, args);
+    };
+
+    // Filter console.log for WidgetBot verbose logging
+    const originalLog = console.log;
+    console.log = (...args: any[]) => {
+      const message = args.join(' ');
+
+      // Skip WidgetBot internal logging
+      if (message.includes('[embed-api]')) {
+        return; // Suppress verbose embed-api logs
+      }
+
+      originalLog.apply(console, args);
+    };
+  }
+
+  /**
    * Setup event listeners for widget events
    */
   private setupEventListeners(): void {
@@ -132,29 +176,10 @@ export class DiscordWidget {
       console.log('[DiscordWidget] Chat visibility:', visible);
     });
 
-    // Listen for any errors from the widget
-    this.crate.on('error', (error: any) => {
-      console.error('[DiscordWidget] Widget error event:', error);
+    // Suppress widget internal errors - they're from WidgetBot's infrastructure
+    this.crate.on('error', () => {
+      // Silently ignore - these are CSP/CORS issues on WidgetBot's side
     });
-
-    // Monitor window errors that might be related to Discord widget
-    const originalErrorHandler = window.onerror;
-    window.onerror = (message, source, lineno, colno, error) => {
-      if (source?.includes('widgetbot') || message?.toString().includes('GraphQL')) {
-        console.error('[DiscordWidget] Window error (possibly related):', {
-          message,
-          source,
-          lineno,
-          colno,
-          error
-        });
-      }
-      // Call original handler if it existed
-      if (originalErrorHandler) {
-        return originalErrorHandler(message, source, lineno, colno, error);
-      }
-      return false;
-    };
   }
 
   /**

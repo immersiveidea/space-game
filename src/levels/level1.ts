@@ -16,6 +16,8 @@ import {BackgroundStars} from "../environment/background/backgroundStars";
 import debugLog from '../core/debug';
 import {PhysicsRecorder} from "../replay/recording/physicsRecorder";
 import {getAnalytics} from "../analytics";
+import {MissionBrief} from "../ui/hud/missionBrief";
+import {LevelRegistry, LevelDirectoryEntry} from "./storage/levelRegistry";
 
 export class Level1 implements Level {
     private _ship: Ship;
@@ -25,19 +27,25 @@ export class Level1 implements Level {
     private _landingAggregate: PhysicsAggregate | null;
     private _endBase: AbstractMesh;
     private _levelConfig: LevelConfig;
+    private _levelId: string | null = null;
     private _audioEngine: AudioEngineV2;
     private _deserializer: LevelDeserializer;
     private _backgroundStars: BackgroundStars;
     private _physicsRecorder: PhysicsRecorder;
     private _isReplayMode: boolean;
     private _backgroundMusic: StaticSound;
+    private _missionBrief: MissionBrief;
+    private _gameStarted: boolean = false;
+    private _missionBriefShown: boolean = false;
 
-    constructor(levelConfig: LevelConfig, audioEngine: AudioEngineV2, isReplayMode: boolean = false) {
+    constructor(levelConfig: LevelConfig, audioEngine: AudioEngineV2, isReplayMode: boolean = false, levelId?: string) {
         this._levelConfig = levelConfig;
+        this._levelId = levelId || null;
         this._audioEngine = audioEngine;
         this._isReplayMode = isReplayMode;
         this._deserializer = new LevelDeserializer(levelConfig);
         this._ship = new Ship(audioEngine, isReplayMode);
+        this._missionBrief = new MissionBrief();
 
         // Only set up XR observables in game mode (not replay mode)
         if (!isReplayMode && DefaultScene.XR) {
@@ -63,20 +71,15 @@ export class Level1 implements Level {
                     debugLog('Analytics tracking failed:', error);
                 }
 
-                // Start game timer when XR pose is set
-                this._ship.gameStats.startTimer();
-                debugLog('Game timer started');
-
-                // Start physics recording when gameplay begins
-                if (this._physicsRecorder) {
-                    this._physicsRecorder.startRingBuffer();
-                    debugLog('Physics recorder started');
-                }
-
+                // Add controllers
                 const observer = xr.input.onControllerAddedObservable.add((controller) => {
                     debugLog('🎮 onControllerAddedObservable FIRED for:', controller.inputSource.handedness);
                     this._ship.addController(controller);
                 });
+
+                // Show mission brief instead of starting immediately
+                debugLog('[Level1] Showing mission brief on XR entry');
+                this.showMissionBrief();
             });
         }
         // Don't call initialize here - let Main call it after registering the observable
@@ -84,6 +87,113 @@ export class Level1 implements Level {
 
     getReadyObservable(): Observable<Level> {
         return this._onReadyObservable;
+    }
+
+    /**
+     * Show mission brief with directory entry data
+     * Public so it can be called from main.ts when XR is already active
+     */
+    public async showMissionBrief(): Promise<void> {
+        // Prevent showing twice
+        if (this._missionBriefShown) {
+            console.log('[Level1] Mission brief already shown, skipping');
+            return;
+        }
+
+        this._missionBriefShown = true;
+        console.log('[Level1] showMissionBrief() called');
+
+        let directoryEntry: LevelDirectoryEntry | null = null;
+
+        // Try to get directory entry if we have a level ID
+        if (this._levelId) {
+            try {
+                const registry = LevelRegistry.getInstance();
+                console.log('[Level1] ======================================');
+                console.log('[Level1] Getting all levels from registry...');
+                const allLevels = registry.getAllLevels();
+                console.log('[Level1] Total levels in registry:', allLevels.size);
+                console.log('[Level1] Looking for level ID:', this._levelId);
+
+                const registryEntry = allLevels.get(this._levelId);
+                console.log('[Level1] Registry entry found:', !!registryEntry);
+
+                if (registryEntry) {
+                    directoryEntry = registryEntry.directoryEntry;
+                    console.log('[Level1] Directory entry data:', {
+                        id: directoryEntry?.id,
+                        name: directoryEntry?.name,
+                        description: directoryEntry?.description,
+                        levelPath: directoryEntry?.levelPath,
+                        missionBriefCount: directoryEntry?.missionBrief?.length || 0,
+                        estimatedTime: directoryEntry?.estimatedTime,
+                        difficulty: directoryEntry?.difficulty
+                    });
+
+                    if (directoryEntry?.missionBrief) {
+                        console.log('[Level1] Mission brief objectives:');
+                        directoryEntry.missionBrief.forEach((item, i) => {
+                            console.log(`  ${i + 1}. ${item}`);
+                        });
+                    } else {
+                        console.warn('[Level1] ⚠️  No missionBrief found in directory entry!');
+                    }
+
+                    if (!directoryEntry?.levelPath) {
+                        console.warn('[Level1] ⚠️  No levelPath found in directory entry!');
+                    }
+                } else {
+                    console.error('[Level1] ❌ No registry entry found for level ID:', this._levelId);
+                    console.log('[Level1] Available level IDs:', Array.from(allLevels.keys()));
+                }
+                console.log('[Level1] ======================================');
+
+                debugLog('[Level1] Retrieved directory entry for level:', this._levelId, directoryEntry);
+            } catch (error) {
+                console.error('[Level1] ❌ Exception while getting directory entry:', error);
+                debugLog('[Level1] Failed to get directory entry:', error);
+            }
+        } else {
+            console.warn('[Level1] ⚠️  No level ID available, using config-only mission brief');
+            debugLog('[Level1] No level ID available, using config-only mission brief');
+        }
+
+        console.log('[Level1] About to show mission brief. Has directoryEntry:', !!directoryEntry);
+
+        // Disable ship controls while mission brief is showing
+        debugLog('[Level1] Disabling ship controls for mission brief');
+        this._ship.disableControls();
+
+        // Show mission brief with trigger observable
+        this._missionBrief.show(this._levelConfig, directoryEntry, this._ship.onMissionBriefTriggerObservable, () => {
+            debugLog('[Level1] Mission brief dismissed - enabling controls and starting game');
+            this._ship.enableControls();
+            this.startGameplay();
+        });
+    }
+
+    /**
+     * Start gameplay - called when mission brief start button is clicked
+     * or immediately if not in XR mode
+     */
+    private startGameplay(): void {
+        if (this._gameStarted) {
+            debugLog('[Level1] startGameplay called but game already started');
+            return;
+        }
+
+        this._gameStarted = true;
+        debugLog('[Level1] Starting gameplay');
+
+        // Start game timer
+        this._ship.gameStats.startTimer();
+        debugLog('Game timer started');
+
+        // Start physics recording
+        if (this._physicsRecorder) {
+            this._physicsRecorder.startRingBuffer();
+            debugLog('Physics recorder started');
+        }
     }
 
     public async play() {
@@ -109,9 +219,9 @@ export class Level1 implements Level {
             debugLog('Started playing background music');
         }
 
-        // If XR is available and session is active, check for controllers
+        // If XR is available and session is active, mission brief will handle starting gameplay
         if (DefaultScene.XR && DefaultScene.XR.baseExperience.state === WebXRState.IN_XR) {
-            // XR session already active, just check for controllers
+            // XR session already active, mission brief is showing or has been dismissed
             debugLog('XR session already active, checking for controllers. Count:', DefaultScene.XR.input.controllers.length);
             DefaultScene.XR.input.controllers.forEach((controller, index) => {
                 debugLog(`Controller ${index} - handedness: ${controller.inputSource.handedness}`);
@@ -126,6 +236,9 @@ export class Level1 implements Level {
                     debugLog(`  Late controller ${index} - handedness: ${controller.inputSource.handedness}`);
                 });
             }, 2000);
+
+            // Note: Mission brief will call startGameplay() when start button is clicked
+            debugLog('XR mode: Mission brief will control game start');
         } else if (DefaultScene.XR) {
             // XR available but not entered yet, try to enter
             try {
@@ -136,27 +249,17 @@ export class Level1 implements Level {
                     debugLog(`Controller ${index} - handedness: ${controller.inputSource.handedness}`);
                     this._ship.addController(controller);
                 });
+                // Mission brief will show and handle starting gameplay
+                debugLog('XR mode entered: Mission brief will control game start');
             } catch (error) {
                 debugLog('Failed to enter XR from play(), falling back to flat mode:', error);
-                // Start flat mode
-                this._ship.gameStats.startTimer();
-                debugLog('Game timer started (flat mode)');
-
-                if (this._physicsRecorder) {
-                    this._physicsRecorder.startRingBuffer();
-                    debugLog('Physics recorder started (flat mode)');
-                }
+                // Start flat mode immediately
+                this.startGameplay();
             }
         } else {
             // Flat camera mode - start game timer and physics recording immediately
             debugLog('Playing in flat camera mode (no XR)');
-            this._ship.gameStats.startTimer();
-            debugLog('Game timer started');
-
-            if (this._physicsRecorder) {
-                this._physicsRecorder.startRingBuffer();
-                debugLog('Physics recorder started');
-            }
+            this.startGameplay();
         }
     }
 
@@ -170,6 +273,9 @@ export class Level1 implements Level {
         }
         if (this._physicsRecorder) {
             this._physicsRecorder.dispose();
+        }
+        if (this._missionBrief) {
+            this._missionBrief.dispose();
         }
     }
 
@@ -243,6 +349,11 @@ export class Level1 implements Level {
             });*/
             debugLog('Background music loaded successfully');
         }
+
+        // Initialize mission brief (will be shown when entering XR)
+        setLoadingMessage("Initializing mission brief...");
+        this._missionBrief.initialize();
+        debugLog('Mission brief initialized');
 
         this._initialized = true;
 

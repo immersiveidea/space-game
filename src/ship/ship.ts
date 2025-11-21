@@ -59,8 +59,14 @@ export class Ship {
     // Observable for replay requests
     public onReplayRequestObservable: Observable<void> = new Observable<void>();
 
+    // Observable for mission brief trigger dismissal
+    private _onMissionBriefTriggerObservable: Observable<void> = new Observable<void>();
+
     // Auto-show status screen flag
     private _statusScreenAutoShown: boolean = false;
+
+    // Controls enabled state
+    private _controlsEnabled: boolean = true;
 
     constructor(audioEngine?: AudioEngineV2, isReplayMode: boolean = false) {
         this._audioEngine = audioEngine;
@@ -81,6 +87,10 @@ export class Ship {
 
     public get isInLandingZone(): boolean {
         return this._isInLandingZone;
+    }
+
+    public get onMissionBriefTriggerObservable(): Observable<void> {
+        return this._onMissionBriefTriggerObservable;
     }
 
     public get velocity(): Vector3 {
@@ -564,6 +574,13 @@ export class Ship {
      * Handle shooting from any input source
      */
     private handleShoot(): void {
+        // If controls are disabled, fire mission brief trigger observable instead of shooting
+        if (!this._controlsEnabled) {
+            debugLog('[Ship] Controls disabled - firing mission brief trigger observable');
+            this._onMissionBriefTriggerObservable.notifyObservers();
+            return;
+        }
+
         if (this._audio) {
             this._audio.playWeaponSound();
         }
@@ -608,6 +625,34 @@ export class Ship {
         );
         if (this._controllerInput) {
             this._controllerInput.addController(controller);
+        }
+    }
+
+    /**
+     * Disable ship controls (for mission brief, etc.)
+     */
+    public disableControls(): void {
+        debugLog('[Ship] Disabling controls');
+        this._controlsEnabled = false;
+        if (this._controllerInput) {
+            this._controllerInput.setEnabled(false);
+        }
+        if (this._keyboardInput) {
+            this._keyboardInput.setEnabled(false);
+        }
+    }
+
+    /**
+     * Enable ship controls
+     */
+    public enableControls(): void {
+        debugLog('[Ship] Enabling controls');
+        this._controlsEnabled = true;
+        if (this._controllerInput) {
+            this._controllerInput.setEnabled(true);
+        }
+        if (this._keyboardInput) {
+            this._keyboardInput.setEnabled(true);
         }
     }
 
