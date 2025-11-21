@@ -274,10 +274,14 @@ export class ControllerInput {
             return;
         }
 
-        if (!this._enabled && controllerEvent.type === "button" &&
-            !(controllerEvent.component.id === "x-button" && controllerEvent.hand === "left") &&
-            controllerEvent.component.type !== "trigger") {
-            return;
+        if (!this._enabled && controllerEvent.type === "button") {
+            // Only allow X-button on left controller (for status screen toggle)
+            if (controllerEvent.component.id === "x-button" && controllerEvent.hand === "left") {
+                // Allow this through
+            } else {
+                // Block all other buttons including triggers
+                return;
+            }
         }
 
         if (controllerEvent.type === "thumbstick") {
@@ -295,6 +299,9 @@ export class ControllerInput {
 
         if (controllerEvent.type === "button") {
             if (controllerEvent.component.type === "trigger") {
+                if (!this._enabled) {
+                    return;
+                }
                 if (controllerEvent.value > 0.9 && !this._shooting) {
                     this._shooting = true;
                     this._onShootObservable.notifyObservers();

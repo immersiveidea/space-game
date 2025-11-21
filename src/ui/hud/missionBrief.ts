@@ -1,5 +1,6 @@
 import {
     AdvancedDynamicTexture,
+    Button,
     Control,
     Rectangle,
     StackPanel,
@@ -199,16 +200,30 @@ export class MissionBrief {
         spacer3.thickness = 0;
         contentPanel.addControl(spacer3);
 
-        const startText = new TextBlock("startTExt");
-        startText.text = 'Pull trigger to start';
-        startText.color = "#00aa00";
-        startText.fontSize = 48;
-        startText.textWrapping = true;
-        startText.height = "80px";
-        startText.textHorizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
-        startText.textVerticalAlignment = Control.VERTICAL_ALIGNMENT_TOP;
-        startText.paddingLeft = "20px";
-        contentPanel.addControl(startText);
+        // START button
+        const startButton = Button.CreateSimpleButton("startButton", "START MISSION");
+        startButton.width = "400px";
+        startButton.height = "60px";
+        startButton.color = "white";
+        startButton.background = "#00ff88";
+        startButton.cornerRadius = 10;
+        startButton.thickness = 0;
+        startButton.fontSize = "36px";
+        startButton.fontWeight = "bold";
+        startButton.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
+        startButton.onPointerClickObservable.add(() => {
+            debugLog('[MissionBrief] START button clicked - dismissing mission brief');
+            this.hide();
+            if (this._onStartCallback) {
+                this._onStartCallback();
+            }
+            // Remove trigger observer when button is clicked
+            if (this._triggerObserver) {
+                triggerObservable.remove(this._triggerObserver);
+                this._triggerObserver = null;
+            }
+        });
+        contentPanel.addControl(startButton);
         
         // Show the container
         this._container.isVisible = true;

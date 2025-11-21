@@ -19,6 +19,7 @@ import { DefaultScene } from "../../core/defaultScene";
 import { ProgressionManager } from "../../game/progression";
 import { AuthService } from "../../services/authService";
 import { FacebookShare, ShareData } from "../../services/facebookShare";
+import { InputControlManager } from "../../ship/input/inputControlManager";
 
 /**
  * Status screen that displays game statistics
@@ -300,37 +301,6 @@ export class StatusScreen {
         }
     }
 
-    /**
-     * Enable VR controller picking for button interaction
-     */
-    private enablePointerSelection(): void {
-        // Get the stored pointer selection feature
-        const pointerFeature = (DefaultScene.XR as any)?.pointerSelectionFeature;
-        if (pointerFeature && DefaultScene.XR?.baseExperience?.state === 2) { // WebXRState.IN_XR = 2
-            try {
-                // Attach the feature to enable pointer interaction
-                pointerFeature.attach();
-            } catch (error) {
-                console.warn('Failed to attach pointer selection:', error);
-            }
-        }
-    }
-
-    /**
-     * Disable VR controller picking
-     */
-    private disablePointerSelection(): void {
-        // Get the stored pointer selection feature
-        const pointerFeature = (DefaultScene.XR as any)?.pointerSelectionFeature;
-        if (pointerFeature) {
-            try {
-                // Detach the feature to disable pointer interaction
-                pointerFeature.detach();
-            } catch (error) {
-                console.warn('Failed to detach pointer selection:', error);
-            }
-        }
-    }
 
     /**
      * Set the current level name for progression tracking
@@ -394,8 +364,9 @@ export class StatusScreen {
             }
         }
 
-        // Enable pointer selection for button interaction
-        this.enablePointerSelection();
+        // Disable ship controls and enable pointer selection via InputControlManager
+        const inputManager = InputControlManager.getInstance();
+        inputManager.disableShipControls("StatusScreen");
 
         // Update statistics before showing
         this.updateStatistics();
@@ -426,8 +397,9 @@ export class StatusScreen {
             return;
         }
 
-        // Disable pointer selection when hiding
-        this.disablePointerSelection();
+        // Re-enable ship controls and disable pointer selection via InputControlManager
+        const inputManager = InputControlManager.getInstance();
+        inputManager.enableShipControls("StatusScreen");
 
         this._screenMesh.setEnabled(false);
         this._isVisible = false;

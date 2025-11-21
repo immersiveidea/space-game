@@ -26,6 +26,7 @@
     "@babylonjs/serializers": "8.36.1",
     "@newrelic/browser-agent": "^1.302.0",
     "openai": "4.52.3",
+    "loglevel": "^1.9.2",
     "svelte-spa-router": "^4.0.1"
   },
   "devDependencies": {

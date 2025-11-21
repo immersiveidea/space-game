@@ -42,6 +42,7 @@ import App from './components/layouts/App.svelte';
 import { BrowserAgent } from '@newrelic/browser-agent/loaders/browser-agent'
 import { AnalyticsService } from './analytics/analyticsService';
 import { NewRelicAdapter } from './analytics/adapters/newRelicAdapter';
+import { InputControlManager } from './ship/input/inputControlManager';
 
 // Populate using values from NerdGraph
 const options = {
@@ -524,16 +525,19 @@ export class Main {
                 debugLog(WebXRFeaturesManager.GetAvailableFeatures());
                 debugLog("WebXR initialized successfully");
 
-                // Store pointer selection feature reference and detach it initially
+                // Register pointer selection feature with InputControlManager
                 if (DefaultScene.XR) {
                     const pointerFeature = DefaultScene.XR.baseExperience.featuresManager.getEnabledFeature(
                         "xr-controller-pointer-selection"
                     );
                     if (pointerFeature) {
+                        // Store for backward compatibility (can be removed later if not needed)
                         (DefaultScene.XR as any).pointerSelectionFeature = pointerFeature;
-                        // Detach immediately to prevent interaction during gameplay
-                        pointerFeature.detach();
-                        debugLog("Pointer selection feature stored and detached");
+
+                        // Register with InputControlManager
+                        const inputManager = InputControlManager.getInstance();
+                        inputManager.registerPointerFeature(pointerFeature);
+                        debugLog("Pointer selection feature registered with InputControlManager");
                     }
 
                     // Hide Discord widget when entering VR, show when exiting

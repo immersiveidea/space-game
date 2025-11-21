@@ -29,6 +29,7 @@ import { WeaponSystem } from "./weaponSystem";
 import { StatusScreen } from "../ui/hud/statusScreen";
 import { GameStats } from "../game/gameStats";
 import { getAnalytics } from "../analytics";
+import { InputControlManager } from "./input/inputControlManager";
 
 export class Ship {
     private _ship: TransformNode;
@@ -124,6 +125,7 @@ export class Ship {
         this._ship = new TransformNode("shipBase", DefaultScene.MainScene);
         const data = await loadAsset("ship.glb");
         this._ship = data.container.transformNodes[0];
+       // this._ship.id = "Ship"; // Set ID so mission brief can find it
         this._ship.position.y = 5;
 
         // Create physics if enabled
@@ -221,6 +223,10 @@ export class Ship {
 
             this._controllerInput = new ControllerInput();
 
+            // Register input systems with InputControlManager
+            const inputManager = InputControlManager.getInstance();
+            inputManager.registerInputSystems(this._keyboardInput, this._controllerInput);
+
             // Wire up shooting events
             this._keyboardInput.onShootObservable.add(() => {
                 this.handleShoot();
@@ -234,15 +240,12 @@ export class Ship {
             this._controllerInput.onStatusScreenToggleObservable.add(() => {
                 if (this._statusScreen) {
                     if (this._statusScreen.isVisible) {
-                        // Hide status screen and re-enable controls
+                        // Hide status screen - InputControlManager will handle control re-enabling
                         this._statusScreen.hide();
-                        this._keyboardInput?.setEnabled(true);
-                        this._controllerInput?.setEnabled(true);
                     } else {
-                        // Show status screen (manual pause, not game end) and disable controls
+                        // Show status screen (manual pause, not game end)
+                        // InputControlManager will handle control disabling
                         this._statusScreen.show(false);
-                        this._keyboardInput?.setEnabled(false);
-                        this._controllerInput?.setEnabled(false);
                     }
                 }
             });
@@ -392,10 +395,9 @@ export class Ship {
      * Handle resume button click from status screen
      */
     private handleResume(): void {
-        debugLog('Resume button clicked - hiding status screen and re-enabling controls');
+        debugLog('Resume button clicked - hiding status screen');
+        // InputControlManager will handle re-enabling controls when status screen hides
         this._statusScreen.hide();
-        this._keyboardInput?.setEnabled(true);
-        this._controllerInput?.setEnabled(true);
     }
 
     /**
@@ -439,8 +441,7 @@ export class Ship {
         if (!this._isInLandingZone && hull < 0.01) {
             debugLog('Game end condition met: Hull critical outside landing zone');
             this._statusScreen.show(true, false); // Game ended, not victory
-            this._keyboardInput?.setEnabled(false);
-            this._controllerInput?.setEnabled(false);
+            // InputControlManager will handle disabling controls when status screen shows
             this._statusScreenAutoShown = true;
             return;
         }
@@ -449,8 +450,7 @@ export class Ship {
         if (!this._isInLandingZone && fuel < 0.01 && totalVelocity < 5) {
             debugLog('Game end condition met: Stranded (no fuel, low velocity)');
             this._statusScreen.show(true, false); // Game ended, not victory
-            this._keyboardInput?.setEnabled(false);
-            this._controllerInput?.setEnabled(false);
+            // InputControlManager will handle disabling controls when status screen shows
             this._statusScreenAutoShown = true;
             return;
         }
@@ -459,8 +459,7 @@ export class Ship {
         if (asteroidsRemaining <= 0 && this._isInLandingZone) {
             debugLog('Game end condition met: Victory (all asteroids destroyed)');
             this._statusScreen.show(true, true); // Game ended, VICTORY!
-            this._keyboardInput?.setEnabled(false);
-            this._controllerInput?.setEnabled(false);
+            // InputControlManager will handle disabling controls when status screen shows
             this._statusScreenAutoShown = true;
             return;
         }
@@ -628,33 +627,6 @@ export class Ship {
         }
     }
 
-    /**
-     * Disable ship controls (for mission brief, etc.)
-     */
-    public disableControls(): void {
-        debugLog('[Ship] Disabling controls');
-        this._controlsEnabled = false;
-        if (this._controllerInput) {
-            this._controllerInput.setEnabled(false);
-        }
-        if (this._keyboardInput) {
-            this._keyboardInput.setEnabled(false);
-        }
-    }
-
-    /**
-     * Enable ship controls
-     */
-    public enableControls(): void {
-        debugLog('[Ship] Enabling controls');
-        this._controlsEnabled = true;
-        if (this._controllerInput) {
-            this._controllerInput.setEnabled(true);
-        }
-        if (this._keyboardInput) {
-            this._keyboardInput.setEnabled(true);
-        }
-    }
 
     /**
      * Dispose of ship resources

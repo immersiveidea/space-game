@@ -18,6 +18,7 @@ import {PhysicsRecorder} from "../replay/recording/physicsRecorder";
 import {getAnalytics} from "../analytics";
 import {MissionBrief} from "../ui/hud/missionBrief";
 import {LevelRegistry, LevelDirectoryEntry} from "./storage/levelRegistry";
+import { InputControlManager } from "../ship/input/inputControlManager";
 
 export class Level1 implements Level {
     private _ship: Ship;
@@ -162,12 +163,13 @@ export class Level1 implements Level {
 
         // Disable ship controls while mission brief is showing
         debugLog('[Level1] Disabling ship controls for mission brief');
-        this._ship.disableControls();
+        const inputManager = InputControlManager.getInstance();
+        inputManager.disableShipControls("MissionBrief");
 
         // Show mission brief with trigger observable
         this._missionBrief.show(this._levelConfig, directoryEntry, this._ship.onMissionBriefTriggerObservable, () => {
             debugLog('[Level1] Mission brief dismissed - enabling controls and starting game');
-            this._ship.enableControls();
+            inputManager.enableShipControls("MissionBrief");
             this.startGameplay();
         });
     }
@@ -343,10 +345,10 @@ export class Level1 implements Level {
         // Load background music before marking as ready
         if (this._audioEngine) {
             setLoadingMessage("Loading background music...");
-            /*this._backgroundMusic = await this._audioEngine.createSoundAsync("background", "/song1.mp3", {
+            this._backgroundMusic = await this._audioEngine.createSoundAsync("background", "/song1.mp3", {
                 loop: true,
                 volume: 0.5
-            });*/
+            });
             debugLog('Background music loaded successfully');
         }
 
