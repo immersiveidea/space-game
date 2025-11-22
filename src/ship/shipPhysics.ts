@@ -20,7 +20,7 @@ export interface ForceApplicationResult {
 export class ShipPhysics {
     private _shipStatus: ShipStatus | null = null;
     private _gameStats: GameStats | null = null;
-
+    private _config = GameConfig.getInstance().shipPhysics;
     /**
      * Set the ship status instance for fuel consumption tracking
      */
@@ -49,11 +49,10 @@ export class ShipPhysics {
         if (!physicsBody) {
             return { linearMagnitude: 0, angularMagnitude: 0 };
         }
-
         const { leftStick, rightStick } = inputState;
 
         // Get physics config
-        const config = GameConfig.getInstance().shipPhysics;
+
 
         // Get current velocities for velocity cap checks
         const currentLinearVelocity = physicsBody.getLinearVelocity();
@@ -70,7 +69,7 @@ export class ShipPhysics {
             // Check if we have fuel before applying force
             if (this._shipStatus && this._shipStatus.fuel > 0) {
                 // Only apply force if we haven't reached max velocity
-                if (currentSpeed < config.maxLinearVelocity) {
+                if (currentSpeed < this._config.maxLinearVelocity) {
                     // Get local direction (Z-axis for forward/backward thrust)
                     const localDirection = new Vector3(0, 0, -leftStick.y);
                     // Transform to world space
@@ -78,7 +77,7 @@ export class ShipPhysics {
                         localDirection,
                         transformNode.getWorldMatrix()
                     );
-                    const force = worldDirection.scale(config.linearForceMultiplier);
+                    const force = worldDirection.scale(this._config.linearForceMultiplier);
 
                     // Calculate thrust point: center of mass + offset (0, 1, 0) in world space
                     const thrustPoint = Vector3.TransformCoordinates(
@@ -113,14 +112,14 @@ export class ShipPhysics {
                 const currentAngularSpeed = currentAngularVelocity.length();
 
                 // Only apply torque if we haven't reached max angular velocity
-                if (currentAngularSpeed < config.maxAngularVelocity) {
+                if (currentAngularSpeed < this._config.maxAngularVelocity) {
                     const yaw = -leftStick.x;
                     const pitch = rightStick.y;
                     const roll = rightStick.x;
 
                     // Create torque in local space, then transform to world space
                     const localTorque = new Vector3(pitch, yaw, roll).scale(
-                        config.angularForceMultiplier
+                        this._config.angularForceMultiplier
                     );
                     const worldTorque = Vector3.TransformNormal(
                         localTorque,

@@ -20,6 +20,7 @@ import { ProgressionManager } from "../../game/progression";
 import { AuthService } from "../../services/authService";
 import { FacebookShare, ShareData } from "../../services/facebookShare";
 import { InputControlManager } from "../../ship/input/inputControlManager";
+import { formatStars, getStarColor } from "../../game/scoreCalculator";
 
 /**
  * Status screen that displays game statistics
@@ -32,6 +33,7 @@ export class StatusScreen {
     private _texture: AdvancedDynamicTexture | null = null;
     private _isVisible: boolean = false;
     private _camera: Camera | null = null;
+    private _parTime: number = 120; // Default par time in seconds
 
     // Text blocks for statistics
     private _gameTimeText: TextBlock;
@@ -40,6 +42,11 @@ export class StatusScreen {
     private _shotsFiredText: TextBlock;
     private _accuracyText: TextBlock;
     private _fuelConsumedText: TextBlock;
+
+    // Text blocks for score display
+    private _finalScoreText: TextBlock;
+    private _scoreBreakdownText: TextBlock;
+    private _starRatingText: TextBlock;
 
     // Buttons
     private _replayButton: Button;
@@ -78,7 +85,7 @@ export class StatusScreen {
         // Create a plane mesh for the status screen
         this._screenMesh = MeshBuilder.CreatePlane(
             "statusScreen",
-            { width: 1.5, height: 1.0 },
+            { width: 1.5, height: 2.25 },
             this._scene
         );
 
@@ -96,7 +103,7 @@ export class StatusScreen {
         this._texture = AdvancedDynamicTexture.CreateForMesh(
             this._screenMesh,
             1024,
-            768
+            1536
         );
         this._texture.background = "#1a1a2e";
 
@@ -137,9 +144,62 @@ export class StatusScreen {
         this._fuelConsumedText = this.createStatText("Fuel Consumed: 0%");
         mainPanel.addControl(this._fuelConsumedText);
 
-        // Add spacing before buttons
-        const spacer2 = this.createSpacer(50);
+        // Add spacing before score section
+        const spacer2 = this.createSpacer(40);
         mainPanel.addControl(spacer2);
+
+        // Score section divider
+        const scoreDivider = new Rectangle("scoreDivider");
+        scoreDivider.height = "2px";
+        scoreDivider.width = "700px";
+        scoreDivider.background = "#00ff88";
+        scoreDivider.thickness = 0;
+        mainPanel.addControl(scoreDivider);
+
+        const spacer2b = this.createSpacer(30);
+        mainPanel.addControl(spacer2b);
+
+        // Final score display
+        const scoreTitle = this.createTitleText("FINAL SCORE");
+        scoreTitle.fontSize = "50px";
+        scoreTitle.height = "70px";
+        mainPanel.addControl(scoreTitle);
+
+        this._finalScoreText = new TextBlock();
+        this._finalScoreText.text = "0";
+        this._finalScoreText.color = "#FFD700"; // Gold color
+        this._finalScoreText.fontSize = "80px";
+        this._finalScoreText.height = "100px";
+        this._finalScoreText.fontWeight = "bold";
+        this._finalScoreText.textHorizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
+        mainPanel.addControl(this._finalScoreText);
+
+        // Score breakdown
+        this._scoreBreakdownText = new TextBlock();
+        this._scoreBreakdownText.text = "";
+        this._scoreBreakdownText.color = "#aaaaaa";
+        this._scoreBreakdownText.fontSize = "20px";
+        this._scoreBreakdownText.height = "120px";
+        this._scoreBreakdownText.textHorizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
+        this._scoreBreakdownText.textVerticalAlignment = Control.VERTICAL_ALIGNMENT_TOP;
+        this._scoreBreakdownText.textWrapping = true;
+        mainPanel.addControl(this._scoreBreakdownText);
+
+        // Star ratings
+        this._starRatingText = new TextBlock();
+        this._starRatingText.text = "";
+        this._starRatingText.color = "#FFD700";
+        this._starRatingText.fontSize = "40px";
+        this._starRatingText.height = "100px";
+        this._starRatingText.fontWeight = "bold";
+        this._starRatingText.textHorizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
+        this._starRatingText.textVerticalAlignment = Control.VERTICAL_ALIGNMENT_TOP;
+        this._starRatingText.textWrapping = true;
+        mainPanel.addControl(this._starRatingText);
+
+        // Add spacing before buttons
+        const spacer3 = this.createSpacer(40);
+        mainPanel.addControl(spacer3);
 
         // Create button bar
         const buttonBar = new StackPanel("buttonBar");
@@ -310,6 +370,14 @@ export class StatusScreen {
     }
 
     /**
+     * Set the par time for score calculation
+     * @param parTime - Expected completion time in seconds
+     */
+    public setParTime(parTime: number): void {
+        this._parTime = parTime;
+    }
+
+    /**
      * Show the status screen
      * @param isGameEnded - true if game has ended (death/stranded/victory), false if manually paused
      * @param victory - true if the level was completed successfully
@@ -417,6 +485,30 @@ export class StatusScreen {
         this._shotsFiredText.text = `Shots Fired: ${stats.shotsFired}`;
         this._accuracyText.text = `Accuracy: ${stats.accuracy}%`;
         this._fuelConsumedText.text = `Fuel Consumed: ${stats.fuelConsumed}%`;
+
+        // Calculate and display score
+        const scoreCalc = this._gameStats.calculateFinalScore(this._parTime);
+
+        // Update final score
+        this._finalScoreText.text = scoreCalc.finalScore.toLocaleString();
+
+        // Update score breakdown
+        this._scoreBreakdownText.text =
+            `Time: ${scoreCalc.timeMultiplier.toFixed(2)}x  |  ` +
+            `Accuracy: ${scoreCalc.accuracyMultiplier.toFixed(2)}x\n` +
+            `Fuel: ${scoreCalc.fuelMultiplier.toFixed(2)}x  |  ` +
+            `Hull: ${scoreCalc.hullMultiplier.toFixed(2)}x`;
+
+        // Update star ratings with Unicode stars and colors
+        const timeStars = formatStars(scoreCalc.stars.time);
+        const accStars = formatStars(scoreCalc.stars.accuracy);
+        const fuelStars = formatStars(scoreCalc.stars.fuel);
+        const hullStars = formatStars(scoreCalc.stars.hull);
+
+        this._starRatingText.text =
+            `${timeStars}  ${accStars}  ${fuelStars}  ${hullStars}\n` +
+            `Time    Acc    Fuel   Hull\n` +
+            `${scoreCalc.stars.total}/12 Stars`;
     }
 
     /**

@@ -54,7 +54,7 @@ export class ShipAudio {
             "/assets/themes/default/audio/collision.mp3",
             {
                 loop: false,
-                volume: 0.35,
+                volume: 0.25,
             }
         );
     }

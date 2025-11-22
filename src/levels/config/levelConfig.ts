@@ -135,6 +135,7 @@ export interface LevelConfig {
         description?: string;
         babylonVersion?: string;
         captureTime?: number;
+        parTime?: number; // Expected completion time in seconds for scoring
         [key: string]: any;
     };
 

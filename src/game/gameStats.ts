@@ -1,5 +1,6 @@
 import { getAnalytics } from "../analytics";
 import debugLog from "../core/debug";
+import { calculateScore, ScoreCalculation } from "./scoreCalculator";
 
 /**
  * Tracks game statistics for display on status screen
@@ -183,6 +184,27 @@ export class GameStats {
 
         // Restart performance tracking
         this.startPerformanceTracking();
+    }
+
+    /**
+     * Calculate final score based on current statistics
+     *
+     * @param parTime - Expected completion time in seconds (default: 120)
+     * @returns Complete score calculation with multipliers and star ratings
+     */
+    public calculateFinalScore(parTime: number = 120): ScoreCalculation {
+        const gameTimeSeconds = this.getGameTime();
+        const accuracy = this.getAccuracy();
+        const fuelConsumed = this._fuelConsumed * 100; // Convert to percentage
+        const hullDamage = this._hullDamageTaken * 100; // Convert to percentage
+
+        return calculateScore(
+            gameTimeSeconds,
+            accuracy,
+            fuelConsumed,
+            hullDamage,
+            parTime
+        );
     }
 
     /**

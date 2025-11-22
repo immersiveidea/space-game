@@ -32,7 +32,7 @@ export class Level1 implements Level {
     private _audioEngine: AudioEngineV2;
     private _deserializer: LevelDeserializer;
     private _backgroundStars: BackgroundStars;
-    private _physicsRecorder: PhysicsRecorder;
+    private _physicsRecorder: PhysicsRecorder | null = null;
     private _isReplayMode: boolean;
     private _backgroundMusic: StaticSound;
     private _missionBrief: MissionBrief;
@@ -331,15 +331,8 @@ export class Level1 implements Level {
         // Only create recorder in game mode, not replay mode
         if (!this._isReplayMode) {
             setLoadingMessage("Initializing physics recorder...");
-            this._physicsRecorder = new PhysicsRecorder(DefaultScene.MainScene, this._levelConfig);
+            //this._physicsRecorder = new PhysicsRecorder(DefaultScene.MainScene, this._levelConfig);
             debugLog('Physics recorder initialized (will start on XR pose)');
-        }
-
-        // Wire up recording keyboard shortcuts (only in game mode)
-        if (!this._isReplayMode) {
-            this._ship.keyboardInput.onRecordingActionObservable.add((action) => {
-                this.handleRecordingAction(action);
-            });
         }
 
         // Load background music before marking as ready
@@ -364,47 +357,39 @@ export class Level1 implements Level {
 
         this._initialized = true;
 
+        // Set par time for score calculation based on difficulty
+        const parTime = this.getParTimeForDifficulty(this._levelConfig.difficulty);
+        const statusScreen = (this._ship as any)._statusScreen; // Access private status screen
+        if (statusScreen) {
+            statusScreen.setParTime(parTime);
+            debugLog(`Set par time to ${parTime}s for difficulty: ${this._levelConfig.difficulty}`);
+        }
+
         // Notify that initialization is complete
         this._onReadyObservable.notifyObservers(this);
     }
 
     /**
-     * Handle recording keyboard shortcuts
+     * Get par time based on difficulty level
+     * Can be overridden by level config metadata
      */
-    private handleRecordingAction(action: string): void {
-        switch (action) {
-            case "exportRingBuffer":
-                // R key: Export last 30 seconds from ring buffer
-                const ringRecording = this._physicsRecorder.exportRingBuffer(30);
-                this._physicsRecorder.downloadRecording(ringRecording, "ring-buffer-30s");
-                debugLog("Exported ring buffer (last 30 seconds)");
-                break;
-
-            case "toggleLongRecording":
-                // Ctrl+R: Toggle long recording
-                const stats = this._physicsRecorder.getStats();
-                if (stats.isLongRecording) {
-                    this._physicsRecorder.stopLongRecording();
-                    debugLog("Long recording stopped");
-                } else {
-                    this._physicsRecorder.startLongRecording();
-                    debugLog("Long recording started");
-                }
-                break;
-
-            case "exportLongRecording":
-                // Shift+R: Export long recording
-                const longRecording = this._physicsRecorder.exportLongRecording();
-                if (longRecording.snapshots.length > 0) {
-                    this._physicsRecorder.downloadRecording(longRecording, "long-recording");
-                    debugLog("Exported long recording");
-                } else {
-                    debugLog("No long recording data to export");
-                }
-                break;
+    private getParTimeForDifficulty(difficulty: string): number {
+        // Check if level config has explicit par time
+        if (this._levelConfig.metadata?.parTime) {
+            return this._levelConfig.metadata.parTime;
         }
-    }
 
+        // Default par times by difficulty
+        const difficultyMap: { [key: string]: number } = {
+            'recruit': 300,    // 5 minutes
+            'pilot': 180,      // 3 minutes
+            'captain': 120,    // 2 minutes
+            'commander': 90,   // 1.5 minutes
+            'test': 60         // 1 minute
+        };
+
+        return difficultyMap[difficulty.toLowerCase()] || 120; // Default to 2 minutes
+    }
 
     /**
      * Get the physics recorder instance
