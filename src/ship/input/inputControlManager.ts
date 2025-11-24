@@ -119,10 +119,12 @@ export class InputControlManager {
         }
 
         // Enable pointer selection
+        console.log(`[InputControlManager] About to update pointer feature...`);
         this.updatePointerFeature();
 
         // Emit state change event
         this.emitStateChange(requester);
+        console.log(`[InputControlManager] ===== Ship controls disabled =====`);
     }
 
     /**

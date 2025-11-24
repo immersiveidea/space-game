@@ -71,20 +71,28 @@ export class ShipPhysics {
                 // Only apply force if we haven't reached max velocity
                 if (currentSpeed < this._config.maxLinearVelocity) {
                     // Get local direction (Z-axis for forward/backward thrust)
-                    const localDirection = new Vector3(0, 0, -leftStick.y);
+                    const thrustDirection = -leftStick.y; // negative = forward, positive = reverse
+                    const localDirection = new Vector3(0, 0, thrustDirection);
+
                     // Transform to world space
                     const worldDirection = Vector3.TransformNormal(
                         localDirection,
                         transformNode.getWorldMatrix()
                     );
-                    const force = worldDirection.scale(this._config.linearForceMultiplier);
 
-                    // Apply force at center of mass to avoid unintended torque
-                    // (applying at an offset point creates rotation, noticeable at zero linear velocity)
-                    const thrustPoint = Vector3.TransformCoordinates(
-                        physicsBody.getMassProperties().centerOfMass,
-                        transformNode.getWorldMatrix()
+                    // Apply reverse thrust factor: forward at full power, reverse at reduced power
+                    const thrustMultiplier = thrustDirection < 0
+                        ? 1.0  // Forward thrust at full power
+                        : this._config.reverseThrustFactor;  // Reverse thrust scaled down
+
+                    const force = worldDirection.scale(
+                        this._config.linearForceMultiplier * thrustMultiplier
                     );
+
+                    // Apply force at ship's world position (center of mass)
+                    // Since we overrode center of mass to (0,0,0) in local space, the transform origin is the CoM
+                    // Using getAbsolutePosition() instead of transforming CoM avoids gyroscopic coupling during rotation
+                    const thrustPoint = transformNode.getAbsolutePosition();
 
                     physicsBody.applyForce(force, thrustPoint);
 
