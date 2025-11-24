@@ -1,5 +1,5 @@
 {
-  "version": "1.0",
+  "version": "1.1",
   "difficulty": "recruit",
   "timestamp": "2025-11-11T23:44:24.807Z",
   "metadata": {
@@ -11,8 +11,8 @@
   "ship": {
     "position": [
       0,
-      1.5,
-      500
+      2,
+      0
     ],
     "rotation": [
       0,

@@ -1,4 +1,19 @@
 /**
+ * Default ship physics configuration
+ */
+const DEFAULT_SHIP_PHYSICS = {
+    maxLinearVelocity: 200,
+    maxAngularVelocity: 1.4,
+    linearForceMultiplier: 100,
+    angularForceMultiplier: 1.5,
+    linearFuelConsumptionRate: 0.00002778,   // 1 minute at full thrust (60 Hz)
+    angularFuelConsumptionRate: 0.0001389,   // 2 minutes at full thrust (60 Hz)
+    linearDamping: 0.2,
+    angularDamping: 0.3, // Moderate damping for 2-3 second coast
+    alwaysActive: true   // Prevent physics sleep (false may cause abrupt stops at zero velocity)
+};
+
+/**
  * Global game configuration settings
  * Singleton class for managing game-wide settings
  */
@@ -13,12 +28,7 @@ export class GameConfig {
     public progressionEnabled: boolean = true; // Enable level progression system
 
     // Ship physics tuning parameters
-    public shipPhysics = {
-        maxLinearVelocity: 200,
-        maxAngularVelocity: 1.4,
-        linearForceMultiplier: 800,
-        angularForceMultiplier: 15
-    };
+    public shipPhysics = { ...DEFAULT_SHIP_PHYSICS };
 
     /**
      * Private constructor for singleton pattern
@@ -66,10 +76,15 @@ export class GameConfig {
                 // Load ship physics with fallback to defaults
                 if (config.shipPhysics) {
                     this.shipPhysics = {
-                        maxLinearVelocity: config.shipPhysics.maxLinearVelocity ?? 200,
-                        maxAngularVelocity: config.shipPhysics.maxAngularVelocity ?? 1.4,
-                        linearForceMultiplier: config.shipPhysics.linearForceMultiplier ?? 800,
-                        angularForceMultiplier: config.shipPhysics.angularForceMultiplier ?? 15
+                        maxLinearVelocity: config.shipPhysics.maxLinearVelocity ?? DEFAULT_SHIP_PHYSICS.maxLinearVelocity,
+                        maxAngularVelocity: config.shipPhysics.maxAngularVelocity ?? DEFAULT_SHIP_PHYSICS.maxAngularVelocity,
+                        linearForceMultiplier: config.shipPhysics.linearForceMultiplier ?? DEFAULT_SHIP_PHYSICS.linearForceMultiplier,
+                        angularForceMultiplier: config.shipPhysics.angularForceMultiplier ?? DEFAULT_SHIP_PHYSICS.angularForceMultiplier,
+                        linearFuelConsumptionRate: config.shipPhysics.linearFuelConsumptionRate ?? DEFAULT_SHIP_PHYSICS.linearFuelConsumptionRate,
+                        angularFuelConsumptionRate: config.shipPhysics.angularFuelConsumptionRate ?? DEFAULT_SHIP_PHYSICS.angularFuelConsumptionRate,
+                        linearDamping: config.shipPhysics.linearDamping ?? DEFAULT_SHIP_PHYSICS.linearDamping,
+                        angularDamping: config.shipPhysics.angularDamping ?? DEFAULT_SHIP_PHYSICS.angularDamping,
+                        alwaysActive: config.shipPhysics.alwaysActive ?? DEFAULT_SHIP_PHYSICS.alwaysActive,
                     };
                 }
             } else {
@@ -87,12 +102,7 @@ export class GameConfig {
         this.physicsEnabled = true;
         this.debug = false;
         this.progressionEnabled = true;
-        this.shipPhysics = {
-            maxLinearVelocity: 200,
-            maxAngularVelocity: 1.4,
-            linearForceMultiplier: 800,
-            angularForceMultiplier: 15
-        };
+        this.shipPhysics = { ...DEFAULT_SHIP_PHYSICS };
         this.save();
     }
 }

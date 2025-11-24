@@ -61,6 +61,12 @@ export class Level1 implements Level {
                 const currPose =  xr.baseExperience.camera.globalPosition.y;
                 xr.baseExperience.camera.position = new Vector3(0, 1.5, 0);
 
+                // Disable keyboard input in VR mode to prevent interference
+                if (this._ship.keyboardInput) {
+                    this._ship.keyboardInput.setEnabled(false);
+                    debugLog('[Level1] Keyboard input disabled for VR mode');
+                }
+
                 // Track WebXR session start
                 try {
                     const analytics = getAnalytics();
@@ -289,6 +295,22 @@ export class Level1 implements Level {
         }
         await this._ship.initialize();
         setLoadingMessage("Loading level from configuration...");
+
+        // Apply ship configuration from level config
+        const shipConfig = this._deserializer.getShipConfig();
+        this._ship.position = new Vector3(...shipConfig.position);
+
+        if (shipConfig.linearVelocity) {
+            this._ship.setLinearVelocity(new Vector3(...shipConfig.linearVelocity));
+        } else {
+            this._ship.setLinearVelocity(Vector3.Zero());
+        }
+
+        if (shipConfig.angularVelocity) {
+            this._ship.setAngularVelocity(new Vector3(...shipConfig.angularVelocity));
+        } else {
+            this._ship.setAngularVelocity(Vector3.Zero());
+        }
 
         // Use deserializer to create all entities from config
         const entities = await this._deserializer.deserialize(this._ship.scoreboard.onScoreObservable);

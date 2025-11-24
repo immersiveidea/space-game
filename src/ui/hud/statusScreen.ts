@@ -94,6 +94,7 @@ export class StatusScreen {
         this._screenMesh.position = new Vector3(0, 0, 2); // 2 meters forward in local space
         //this._screenMesh.rotation.y = Math.PI; // Face backward (toward user)
         this._screenMesh.renderingGroupId = 3; // Always render on top
+        this._screenMesh.metadata = { uiPickable: true }; // TAG: VR UI - allow pointer selection
 
         // Create material
         const material = new StandardMaterial("statusScreenMaterial", this._scene);

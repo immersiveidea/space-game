@@ -63,7 +63,7 @@ export class ShipPhysics {
         let angularMagnitude = 0;
 
         // Apply linear force from left stick Y (forward/backward)
-        if (Math.abs(leftStick.y) > 0.1) {
+        if (Math.abs(leftStick.y) > 0.15) {
             linearMagnitude = Math.abs(leftStick.y);
 
             // Check if we have fuel before applying force
@@ -79,16 +79,17 @@ export class ShipPhysics {
                     );
                     const force = worldDirection.scale(this._config.linearForceMultiplier);
 
-                    // Calculate thrust point: center of mass + offset (0, 1, 0) in world space
+                    // Apply force at center of mass to avoid unintended torque
+                    // (applying at an offset point creates rotation, noticeable at zero linear velocity)
                     const thrustPoint = Vector3.TransformCoordinates(
-                        physicsBody.getMassProperties().centerOfMass.add(new Vector3(0, 1, 0)),
+                        physicsBody.getMassProperties().centerOfMass,
                         transformNode.getWorldMatrix()
                     );
 
                     physicsBody.applyForce(force, thrustPoint);
 
-                    // Consume fuel: normalized magnitude (0-1) * 0.005 per frame
-                    const fuelConsumption = linearMagnitude * 0.005;
+                    // Consume fuel based on config rate (tuned for 1 minute at full thrust)
+                    const fuelConsumption = linearMagnitude * this._config.linearFuelConsumptionRate;
                     this._shipStatus.consumeFuel(fuelConsumption);
 
                     // Track fuel consumed for statistics
@@ -126,11 +127,15 @@ export class ShipPhysics {
                         transformNode.getWorldMatrix()
                     );
 
+                    // Note: Havok only exposes angular impulse, not torque
+                    // Babylon.js implements applyForce() as: impulse = force * timeStep
+                    // We do the same for angular: scale torque by physics timestep (1/60)
+                    // Since we call this every 10 frames, we accumulate 10 timesteps worth
                     physicsBody.applyAngularImpulse(worldTorque);
 
-                    // Consume fuel: normalized magnitude (0-3 max) / 3 * 0.005 per frame
+                    // Consume fuel based on config rate (tuned for 2 minutes at full thrust)
                     const normalizedAngularMagnitude = Math.min(angularMagnitude / 3.0, 1.0);
-                    const fuelConsumption = normalizedAngularMagnitude * 0.005;
+                    const fuelConsumption = normalizedAngularMagnitude * this._config.angularFuelConsumptionRate;
                     this._shipStatus.consumeFuel(fuelConsumption);
 
                     // Track fuel consumed for statistics

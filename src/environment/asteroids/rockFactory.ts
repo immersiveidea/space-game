@@ -2,9 +2,11 @@ import {
     AbstractMesh,
     AudioEngineV2,
     DistanceConstraint,
+    HavokPlugin,
     InstancedMesh,
     Mesh,
     Observable,
+    PhysicsActivationControl,
     PhysicsAggregate,
     PhysicsBody,
     PhysicsMotionType,
@@ -45,8 +47,8 @@ export class RockFactory {
         // Initialize explosion manager
         const node = new TransformNode('orbitCenter', DefaultScene.MainScene);
         node.position = Vector3.Zero();
-        this._orbitCenter = new PhysicsAggregate(node, PhysicsShapeType.SPHERE, {radius: .1, mass: 1000}, DefaultScene.MainScene );
-        this._orbitCenter.body.setMotionType(PhysicsMotionType.ANIMATED);
+        this._orbitCenter = new PhysicsAggregate(node, PhysicsShapeType.SPHERE, {radius: .1, mass: 0}, DefaultScene.MainScene );
+        this._orbitCenter.body.setMotionType(PhysicsMotionType.STATIC);
         this._explosionManager = new ExplosionManager(DefaultScene.MainScene, {
             duration: 2000,
             explosionForce: 150.0,
@@ -114,6 +116,12 @@ export class RockFactory {
             body.setLinearDamping(0)
             body.setMotionType(PhysicsMotionType.DYNAMIC);
             body.setCollisionCallbackEnabled(true);
+
+            // Prevent asteroids from sleeping to ensure consistent physics simulation
+            const physicsPlugin = DefaultScene.MainScene.getPhysicsEngine()?.getPhysicsPlugin() as HavokPlugin;
+            if (physicsPlugin) {
+                physicsPlugin.setActivationControl(body, PhysicsActivationControl.ALWAYS_ACTIVE);
+            }
 
             debugLog(`[RockFactory] Setting velocities for ${rock.name}:`);
             debugLog(`[RockFactory]   Linear velocity input: ${linearVelocitry.toString()}`);

@@ -538,6 +538,13 @@ export class Main {
                         const inputManager = InputControlManager.getInstance();
                         inputManager.registerPointerFeature(pointerFeature);
                         debugLog("Pointer selection feature registered with InputControlManager");
+
+                        // Configure scene-wide picking predicate to only allow UI meshes
+                        DefaultScene.MainScene.pointerMovePredicate = (mesh) => {
+                            // Only allow picking meshes with metadata.uiPickable = true
+                            return mesh.metadata?.uiPickable === true;
+                        };
+                        debugLog("Scene picking predicate configured for VR UI only");
                     }
 
                     // Hide Discord widget when entering VR, show when exiting

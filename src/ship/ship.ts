@@ -2,8 +2,10 @@ import {
     AbstractMesh,
     Color3,
     FreeCamera,
+    HavokPlugin,
     Mesh,
     Observable,
+    PhysicsActivationControl,
     PhysicsAggregate,
     PhysicsMotionType,
     PhysicsShapeType,
@@ -118,6 +120,18 @@ export class Ship {
         });
     }
 
+    public setLinearVelocity(velocity: Vector3): void {
+        if (this._ship?.physicsBody) {
+            this._ship.physicsBody.setLinearVelocity(velocity);
+        }
+    }
+
+    public setAngularVelocity(velocity: Vector3): void {
+        if (this._ship?.physicsBody) {
+            this._ship.physicsBody.setAngularVelocity(velocity);
+        }
+    }
+
     public async initialize() {
         this._scoreboard = new Scoreboard();
         this._scoreboard.setShip(this); // Pass ship reference for velocity reading
@@ -126,7 +140,7 @@ export class Ship {
         const data = await loadAsset("ship.glb");
         this._ship = data.container.transformNodes[0];
        // this._ship.id = "Ship"; // Set ID so mission brief can find it
-        this._ship.position.y = 5;
+        // Position is now set from level config in Level1.initialize()
 
         // Create physics if enabled
         const config = GameConfig.getInstance();
@@ -144,10 +158,36 @@ export class Ship {
                 );
 
                 agg.body.setMotionType(PhysicsMotionType.DYNAMIC);
-                agg.body.setLinearDamping(0.2);
-                agg.body.setAngularDamping(0.4);
+                agg.body.setLinearDamping(config.shipPhysics.linearDamping);
+                agg.body.setAngularDamping(config.shipPhysics.angularDamping);
                 agg.body.setAngularVelocity(new Vector3(0, 0, 0));
                 agg.body.setCollisionCallbackEnabled(true);
+
+                // Debug: Log center of mass before override
+                const massProps = agg.body.getMassProperties();
+                console.log(`[Ship] Original center of mass (local): ${massProps.centerOfMass.toString()}`);
+                console.log(`[Ship] Mass: ${massProps.mass}`);
+                console.log(`[Ship] Inertia: ${massProps.inertia.toString()}`);
+
+                // Override center of mass to origin to prevent thrust from causing torque
+                // (mesh-based physics was calculating offset center of mass from geometry)
+                agg.body.setMassProperties({
+                    mass: 10,
+                    centerOfMass: new Vector3(0, 0, 0),
+                    inertia: massProps.inertia,
+                    inertiaOrientation: massProps.inertiaOrientation
+                });
+
+                console.log(`[Ship] Center of mass overridden to: ${agg.body.getMassProperties().centerOfMass.toString()}`);
+
+                // Configure physics sleep behavior from config
+                // (disabling sleep prevents abrupt stops at zero linear velocity)
+                if (config.shipPhysics.alwaysActive) {
+                    const physicsPlugin = DefaultScene.MainScene.getPhysicsEngine()?.getPhysicsPlugin() as HavokPlugin;
+                    if (physicsPlugin) {
+                        physicsPlugin.setActivationControl(agg.body, PhysicsActivationControl.ALWAYS_ACTIVE);
+                    }
+                }
 
                 // Register collision handler for energy-based hull damage
                 const observable = agg.body.getCollisionObservable();
@@ -276,18 +316,14 @@ export class Ship {
         this._physics.setGameStats(this._gameStats);
 
         // Setup physics update loop (every 10 frames)
+        DefaultScene.MainScene.onAfterPhysicsObservable.add(() => {
+            this.updatePhysics();
+        })
         DefaultScene.MainScene.onAfterRenderObservable.add(() => {
-            this._frameCount++;
-            if (this._frameCount >= 10) {
-                this._frameCount = 0;
-                this.updatePhysics();
-            }
-
             // Update voice audio system (checks for completed sounds and plays next in queue)
             if (this._voiceAudio) {
                 this._voiceAudio.update();
             }
-
             // Check game end conditions every frame (but only acts once)
             this.checkGameEndConditions();
         });
@@ -473,6 +509,9 @@ export class Ship {
             return;
         }
 
+        // Check if we're in VR mode
+        const inVRMode = DefaultScene.XR?.baseExperience?.state === 2; // WebXRState.IN_XR = 2
+
         // Combine input from keyboard and controller
         const keyboardState = this._keyboardInput?.getInputState() || {
             leftStick: Vector2.Zero(),
@@ -483,16 +522,24 @@ export class Ship {
             rightStick: Vector2.Zero(),
         };
 
-        // Merge inputs (controller takes priority if active)
+        // Merge inputs with smooth deadzone scaling (controller takes priority if active, keyboard disabled in VR)
+        // Deadzone: 0.1-0.15 range with linear scaling (avoids abrupt cliff effect)
+        const leftMagnitude = controllerState.leftStick.length();
+        const rightMagnitude = controllerState.rightStick.length();
+
+        // Scale factor: 0% at 0.1, 100% at 0.15, linear interpolation between
+        const leftScale = Math.max(0, Math.min(1, (leftMagnitude - 0.1) / 0.05));
+        const rightScale = Math.max(0, Math.min(1, (rightMagnitude - 0.1) / 0.05));
+
         const combinedInput = {
             leftStick:
-                controllerState.leftStick.length() > 0.1
-                    ? controllerState.leftStick
-                    : keyboardState.leftStick,
+                leftMagnitude > 0.1
+                    ? controllerState.leftStick.scale(leftScale)
+                    : (inVRMode ? Vector2.Zero() : keyboardState.leftStick),
             rightStick:
-                controllerState.rightStick.length() > 0.1
-                    ? controllerState.rightStick
-                    : keyboardState.rightStick,
+                rightMagnitude > 0.1
+                    ? controllerState.rightStick.scale(rightScale)
+                    : (inVRMode ? Vector2.Zero() : keyboardState.rightStick),
         };
 
         // Apply forces and get magnitudes for audio
