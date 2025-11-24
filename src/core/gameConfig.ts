@@ -5,11 +5,11 @@ const DEFAULT_SHIP_PHYSICS = {
     maxLinearVelocity: 200,
     maxAngularVelocity: 1.4,
     linearForceMultiplier: 500,
-    angularForceMultiplier: 1.5,
+    angularForceMultiplier: .5,
     linearFuelConsumptionRate: 0.0002778,   // 1 minute at full thrust (60 Hz)
     angularFuelConsumptionRate: 0.0001389,   // 2 minutes at full thrust (60 Hz)
     linearDamping: 0.2,
-    angularDamping: 0.5, // Moderate damping for 2-3 second coast
+    angularDamping: 0.6, // Moderate damping for 2-3 second coast
     alwaysActive: true,  // Prevent physics sleep (false may cause abrupt stops at zero velocity)
     reverseThrustFactor: 0.3 // Reverse thrust at 50% of forward thrust power
 };
