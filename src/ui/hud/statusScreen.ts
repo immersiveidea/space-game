@@ -21,6 +21,8 @@ import { AuthService } from "../../services/authService";
 import { FacebookShare, ShareData } from "../../services/facebookShare";
 import { InputControlManager } from "../../ship/input/inputControlManager";
 import { formatStars, getStarColor } from "../../game/scoreCalculator";
+import { GameResultsService } from "../../services/gameResultsService";
+import debugLog from "../../core/debug";
 
 /**
  * Status screen that displays game statistics
@@ -64,8 +66,13 @@ export class StatusScreen {
     // Track whether game has ended
     private _isGameEnded: boolean = false;
 
-    // Track current level name for progression
+    // Track current level info for progression and results
     private _currentLevelName: string | null = null;
+    private _currentLevelId: string | null = null;
+    private _totalAsteroids: number = 0;
+
+    // Track if result has been recorded (prevent duplicates)
+    private _resultRecorded: boolean = false;
 
     constructor(scene: Scene, gameStats: GameStats, onReplay?: () => void, onExit?: () => void, onResume?: () => void, onNextLevel?: () => void) {
         this._scene = scene;
@@ -364,10 +371,13 @@ export class StatusScreen {
 
 
     /**
-     * Set the current level name for progression tracking
+     * Set the current level info for progression tracking and results
      */
-    public setCurrentLevel(levelName: string): void {
+    public setCurrentLevel(levelId: string, levelName: string, totalAsteroids: number): void {
+        console.log('[StatusScreen] setCurrentLevel called:', { levelId, levelName, totalAsteroids });
+        this._currentLevelId = levelId;
         this._currentLevelName = levelName;
+        this._totalAsteroids = totalAsteroids;
     }
 
     /**
@@ -382,8 +392,9 @@ export class StatusScreen {
      * Show the status screen
      * @param isGameEnded - true if game has ended (death/stranded/victory), false if manually paused
      * @param victory - true if the level was completed successfully
+     * @param endReason - specific reason for game end ('victory' | 'death' | 'stranded')
      */
-    public show(isGameEnded: boolean = false, victory: boolean = false): void {
+    public show(isGameEnded: boolean = false, victory: boolean = false, endReason?: 'victory' | 'death' | 'stranded'): void {
         if (!this._screenMesh) {
             return;
         }
@@ -400,6 +411,12 @@ export class StatusScreen {
                 completionTime: gameTimeSeconds,
                 accuracy: stats.accuracy // Already a number from getAccuracy()
             });
+        }
+
+        // Record game result when game ends (not on manual pause)
+        if (isGameEnded && endReason && !this._resultRecorded) {
+            this.recordGameResult(endReason);
+            this._resultRecorded = true;
         }
 
         // Determine if there's a next level
@@ -581,6 +598,47 @@ export class StatusScreen {
                     }
                 }, 2000);
             }
+        }
+    }
+
+    /**
+     * Record game result to the results service
+     */
+    private recordGameResult(endReason: 'victory' | 'death' | 'stranded'): void {
+        console.log('[StatusScreen] recordGameResult called with endReason:', endReason);
+        console.log('[StatusScreen] Level info:', {
+            levelId: this._currentLevelId,
+            levelName: this._currentLevelName,
+            totalAsteroids: this._totalAsteroids,
+            parTime: this._parTime
+        });
+
+        // Only record if we have level info
+        if (!this._currentLevelId || !this._currentLevelName) {
+            console.warn('[StatusScreen] Cannot record result - missing level info');
+            debugLog('[StatusScreen] Cannot record result - missing level info');
+            return;
+        }
+
+        try {
+            const result = GameResultsService.buildResult(
+                this._currentLevelId,
+                this._currentLevelName,
+                this._gameStats,
+                this._totalAsteroids,
+                endReason,
+                this._parTime
+            );
+
+            console.log('[StatusScreen] Built result:', result);
+
+            const service = GameResultsService.getInstance();
+            service.saveResult(result);
+            console.log('[StatusScreen] Game result saved successfully');
+            debugLog('[StatusScreen] Game result recorded:', result.id, result.finalScore, result.endReason);
+        } catch (error) {
+            console.error('[StatusScreen] Failed to record game result:', error);
+            debugLog('[StatusScreen] Failed to record game result:', error);
         }
     }
 

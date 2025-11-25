@@ -390,12 +390,24 @@ export class Level1 implements Level {
 
         this._initialized = true;
 
-        // Set par time for score calculation based on difficulty
+        // Set par time and level info for score calculation and results recording
         const parTime = this.getParTimeForDifficulty(this._levelConfig.difficulty);
-        const statusScreen = (this._ship as any)._statusScreen; // Access private status screen
+        const statusScreen = this._ship.statusScreen;
+        console.log('[Level1] StatusScreen reference:', statusScreen);
+        console.log('[Level1] Level config metadata:', this._levelConfig.metadata);
+        console.log('[Level1] Asteroids count:', entities.asteroids.length);
         if (statusScreen) {
             statusScreen.setParTime(parTime);
-            debugLog(`Set par time to ${parTime}s for difficulty: ${this._levelConfig.difficulty}`);
+            console.log(`[Level1] Set par time to ${parTime}s for difficulty: ${this._levelConfig.difficulty}`);
+
+            // Set level info for game results recording
+            const levelId = this._levelId || 'unknown';
+            const levelName = this._levelConfig.metadata?.description || 'Unknown Level';
+            console.log('[Level1] About to call setCurrentLevel with:', { levelId, levelName, asteroidCount: entities.asteroids.length });
+            statusScreen.setCurrentLevel(levelId, levelName, entities.asteroids.length);
+            console.log('[Level1] setCurrentLevel called successfully');
+        } else {
+            console.error('[Level1] StatusScreen is null/undefined!');
         }
 
         // Notify that initialization is complete

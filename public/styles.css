@@ -179,6 +179,16 @@ body {
     transform: scale(1.05);
 }
 
+.leaderboard-link {
+    background: rgba(255, 215, 0, 0.8);
+    color: #000 !important;
+}
+
+.leaderboard-link:hover {
+    background: rgba(255, 215, 0, 1);
+    transform: scale(1.05);
+}
+
 /* User Profile in Header */
 .user-profile {
     display: flex;

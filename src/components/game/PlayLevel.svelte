@@ -127,33 +127,28 @@
     });
 
     onDestroy(async () => {
+        console.log('[PlayLevel] Component unmounting - cleaning up');
         debugLog('[PlayLevel] Component unmounting - cleaning up');
 
         // Remove event listeners
         window.removeEventListener('beforeunload', handleBeforeUnload);
         window.removeEventListener('popstate', handlePopState);
 
+        // Ensure UI is visible again FIRST (before any async operations)
+        const appElement = document.getElementById('app');
+        if (appElement) {
+            appElement.style.display = 'block';
+            console.log('[PlayLevel] App UI restored');
+            debugLog('[PlayLevel] App UI restored');
+        }
+
         try {
             // Call the cleanup method on Main instance
             if (mainInstance && typeof mainInstance.cleanupAndExit === 'function') {
                 await mainInstance.cleanupAndExit();
             }
-
-            // Ensure UI is visible again
-            const appElement = document.getElementById('app');
-            if (appElement) {
-                appElement.style.display = 'block';
-                debugLog('[PlayLevel] App UI restored');
-            }
-
         } catch (err) {
             console.error('[PlayLevel] Error during cleanup:', err);
-
-            // Force UI to show even if cleanup failed
-            const appElement = document.getElementById('app');
-            if (appElement) {
-                appElement.style.display = 'block';
-            }
         }
     });
 </script>

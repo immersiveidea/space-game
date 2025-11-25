@@ -91,6 +91,10 @@ export class Ship {
         return this._gameStats;
     }
 
+    public get statusScreen(): StatusScreen {
+        return this._statusScreen;
+    }
+
     public get keyboardInput(): KeyboardInput {
         return this._keyboardInput;
     }
@@ -442,6 +446,17 @@ export class Ship {
         debugLog('Exit VR button clicked - navigating to home');
 
         try {
+            // Ensure the app UI is visible before navigating (safety net)
+            const appElement = document.getElementById('app');
+            if (appElement) {
+                appElement.style.display = 'block';
+            }
+            const headerElement = document.getElementById('appHeader');
+            if (headerElement) {
+                headerElement.style.display = 'block';
+            }
+
+
             // Navigate back to home route
             // The PlayLevel component's onDestroy will handle cleanup
             const { navigate } = await import('svelte-routing');
@@ -506,7 +521,7 @@ export class Ship {
         // Check condition 1: Death by hull damage (outside landing zone)
         if (!this._isInLandingZone && hull < 0.01) {
             debugLog('Game end condition met: Hull critical outside landing zone');
-            this._statusScreen.show(true, false); // Game ended, not victory
+            this._statusScreen.show(true, false, 'death'); // Game ended, not victory, death reason
             // InputControlManager will handle disabling controls when status screen shows
             this._statusScreenAutoShown = true;
             return;
@@ -515,7 +530,7 @@ export class Ship {
         // Check condition 2: Stranded (outside landing zone, no fuel, low velocity)
         if (!this._isInLandingZone && fuel < 0.01 && totalVelocity < 5) {
             debugLog('Game end condition met: Stranded (no fuel, low velocity)');
-            this._statusScreen.show(true, false); // Game ended, not victory
+            this._statusScreen.show(true, false, 'stranded'); // Game ended, not victory, stranded reason
             // InputControlManager will handle disabling controls when status screen shows
             this._statusScreenAutoShown = true;
             return;
@@ -525,7 +540,7 @@ export class Ship {
         // Must have had asteroids to destroy in the first place (prevents false victory on init)
         if (asteroidsRemaining <= 0 && this._isInLandingZone && this._scoreboard.hasAsteroidsToDestroy) {
             debugLog('Game end condition met: Victory (all asteroids destroyed)');
-            this._statusScreen.show(true, true); // Game ended, VICTORY!
+            this._statusScreen.show(true, true, 'victory'); // Game ended, VICTORY!
             // InputControlManager will handle disabling controls when status screen shows
             this._statusScreenAutoShown = true;
             return;

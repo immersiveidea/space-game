@@ -3,6 +3,7 @@ import {
     Color3,
     CreateAudioEngineAsync,
     Engine,
+    FreeCamera,
     HavokPlugin,
     ParticleHelper,
     Scene,
@@ -203,11 +204,7 @@ export class Main {
 
                     // Listen for replay requests from the ship
                     if (ship) {
-                        // Set current level name for progression tracking
-                        if (ship._statusScreen) {
-                            ship._statusScreen.setCurrentLevel(levelName);
-                            debugLog(`Set current level for progression: ${levelName}`);
-                        }
+                        // Note: Level info for progression/results is now set in Level1.initialize()
 
                         ship.onReplayRequestObservable.add(() => {
                             debugLog('Replay requested - reloading page');
@@ -564,15 +561,22 @@ export class Main {
             this._assetsLoaded = false;
             this._started = false;
 
-            // 8. Restart render loop with empty scene
-            debugLog('[Main] Restarting render loop with empty scene...');
-            this._engine.runRenderLoop(() => {
-                if (DefaultScene.MainScene) {
-                    DefaultScene.MainScene.render();
+            // 8. Clear the canvas so it doesn't show the last frame
+            debugLog('[Main] Clearing canvas...');
+            const canvas = document.getElementById('gameCanvas') as HTMLCanvasElement;
+            if (canvas) {
+                const gl = canvas.getContext('webgl2') || canvas.getContext('webgl');
+                if (gl) {
+                    gl.clearColor(0, 0, 0, 1);
+                    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
                 }
-            });
+            }
 
-            // 9. Show Discord widget (UI will be shown by Svelte router)
+            // 9. Keep render loop stopped until next game starts
+            // No need to render an empty scene - saves resources
+            debugLog('[Main] Render loop stopped - will restart when game starts');
+
+            // 10. Show Discord widget (UI will be shown by Svelte router)
             const discord = (window as any).__discordWidget as DiscordWidget;
             if (discord) {
                 debugLog('[Main] Showing Discord widget');

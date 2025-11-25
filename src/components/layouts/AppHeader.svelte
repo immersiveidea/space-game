@@ -16,10 +16,10 @@
         <h1 class="app-title">Space Combat VR</h1>
       </div>
       <nav class="header-nav">
-          <Link to="/controls" class="nav-link controls-link">🎮 Customize Controls</Link>
+        <Link to="/controls" class="nav-link controls-link">🎮 Customize Controls</Link>
+        <Link to="/leaderboard" class="nav-link leaderboard-link">🏆 Leaderboard</Link>
         <UserProfile />
         <Link to="/editor" class="nav-link editor-link">📝 Level Editor</Link>
-
         <Link to="/settings" class="nav-link settings-link">⚙️ Settings</Link>
       </nav>
     </div>
