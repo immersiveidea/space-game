@@ -1,7 +1,6 @@
 <script lang="ts">
   import { levelRegistryStore } from '../../stores/levelRegistry';
   import { authStore } from '../../stores/auth';
-  import { link } from 'svelte-spa-router';
   import LevelCard from './LevelCard.svelte';
   import ProgressBar from './ProgressBar.svelte';
 

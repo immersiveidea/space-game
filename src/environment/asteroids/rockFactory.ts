@@ -35,9 +35,9 @@ export class Rock {
 }
 
 export class RockFactory {
-    private static _asteroidMesh: AbstractMesh;
-    private static _explosionManager: ExplosionManager;
-    private static _orbitCenter: PhysicsAggregate;
+    private static _asteroidMesh: AbstractMesh | null = null;
+    private static _explosionManager: ExplosionManager | null = null;
+    private static _orbitCenter: PhysicsAggregate | null = null;
 
     /**
      * Initialize non-audio assets (meshes, explosion manager)
@@ -56,8 +56,25 @@ export class RockFactory {
         });
         await this._explosionManager.initialize();
 
-        if (!this._asteroidMesh) {
+        // Reload mesh if not loaded or if it was disposed during cleanup
+        if (!this._asteroidMesh || this._asteroidMesh.isDisposed()) {
             await this.loadMesh();
+        }
+    }
+
+    /**
+     * Reset static state - call during game cleanup
+     */
+    public static reset(): void {
+        debugLog('[RockFactory] Resetting static state');
+        this._asteroidMesh = null;
+        if (this._explosionManager) {
+            this._explosionManager.dispose();
+            this._explosionManager = null;
+        }
+        if (this._orbitCenter) {
+            this._orbitCenter.dispose();
+            this._orbitCenter = null;
         }
     }
 
@@ -67,20 +84,28 @@ export class RockFactory {
      */
     public static async initAudio(audioEngine: AudioEngineV2) {
         debugLog('[RockFactory] Initializing audio via ExplosionManager');
-        await this._explosionManager.initAudio(audioEngine);
+        if (this._explosionManager) {
+            await this._explosionManager.initAudio(audioEngine);
+        }
         debugLog('[RockFactory] Audio initialization complete');
     }
     private static async loadMesh() {
         debugLog('loading mesh');
-        this._asteroidMesh = (await  loadAsset("asteroid.glb")).meshes.get('Asteroid');
-        //this._asteroidMesh.setParent(null);
-        this._asteroidMesh.setEnabled(false);
+        const asset = await loadAsset("asteroid.glb");
+        this._asteroidMesh = asset.meshes.get('Asteroid') || null;
+        if (this._asteroidMesh) {
+            this._asteroidMesh.setEnabled(false);
+        }
         debugLog(this._asteroidMesh);
     }
 
     public static async createRock(i: number, position: Vector3, scale: number,
                                    linearVelocitry: Vector3, angularVelocity: Vector3, score: Observable<ScoreEvent>,
                                    useOrbitConstraint: boolean = true): Promise<Rock> {
+
+        if (!this._asteroidMesh) {
+            throw new Error('[RockFactory] Asteroid mesh not loaded. Call init() first.');
+        }
 
         const rock = new InstancedMesh("asteroid-" +i, this._asteroidMesh as Mesh);
         debugLog(rock.id);
@@ -104,8 +129,8 @@ export class RockFactory {
                 }, DefaultScene.MainScene);
             const body = agg.body;
 
-            // Only apply orbit constraint if enabled for this level
-            if (useOrbitConstraint) {
+            // Only apply orbit constraint if enabled for this level and orbit center exists
+            if (useOrbitConstraint && this._orbitCenter) {
                 debugLog(`[RockFactory] Applying orbit constraint for ${rock.name}`);
                 const constraint = new DistanceConstraint(Vector3.Distance(position, this._orbitCenter.body.transformNode.position), DefaultScene.MainScene);
                 body.addConstraint(this._orbitCenter.body, constraint);
@@ -160,7 +185,9 @@ export class RockFactory {
 
                         // Play explosion (visual + audio handled by ExplosionManager)
                         // Note: ExplosionManager will dispose the asteroid mesh after explosion
-                        RockFactory._explosionManager.playExplosion(asteroidMesh);
+                        if (RockFactory._explosionManager) {
+                            RockFactory._explosionManager.playExplosion(asteroidMesh);
+                        }
 
                         // Dispose projectile physics objects
                         debugLog('[RockFactory] Disposing projectile physics objects...');

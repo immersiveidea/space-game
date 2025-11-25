@@ -7,7 +7,7 @@ export type  LoadedAsset = {
     meshes: Map<string, AbstractMesh>,
 }
 export default async function loadAsset(file: string, theme: string = "default"): Promise<LoadedAsset> {
-    const assetPath = `assets/themes/${theme}/models/${file}`;
+    const assetPath = `/assets/themes/${theme}/models/${file}`;
     debugLog(`[loadAsset] Loading: ${assetPath}`);
 
     try {

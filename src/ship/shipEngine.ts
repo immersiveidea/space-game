@@ -66,7 +66,7 @@ export class ShipEngine {
             //myParticleSystem.minEmitPower = 2;
             //myParticleSystem.maxEmitPower = 10;
 
-            myParticleSystem.particleTexture = new Texture("./flare.png");
+            myParticleSystem.particleTexture = new Texture("/flare.png");
             myParticleSystem.emitter = mesh;
             const coneEmitter = myParticleSystem.createConeEmitter(0.1, Math.PI / 9);
             myParticleSystem.addSizeGradient(0, .01);

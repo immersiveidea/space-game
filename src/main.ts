@@ -262,14 +262,12 @@ export class Main {
                         preloader.hide();
                     }, 500);
 
-                    // Remove UI
-                    console.log('[Main] ========== ABOUT TO REMOVE MAIN DIV ==========');
+                    // Hide UI (no longer remove from DOM - let Svelte routing handle it)
+                    console.log('[Main] ========== HIDING UI FOR GAMEPLAY ==========');
                     console.log('[Main] mainDiv exists:', !!mainDiv);
                     console.log('[Main] Timestamp:', Date.now());
-                    if (mainDiv) {
-                        mainDiv.remove();
-                        console.log('[Main] mainDiv removed from DOM');
-                    }
+                    // Note: With route-based loading, the app will be hidden by PlayLevel component
+                    // This code path is only used when dispatching levelSelected event (legacy support)
 
                     // Start the game (XR session already active, or flat mode)
                     console.log('[Main] About to call this.play()');
@@ -346,10 +344,12 @@ export class Main {
                         debugLog('[Main] ========== TEST LEVEL READY OBSERVABLE FIRED ==========');
                         setLoadingMessage("Test Scene Ready! Entering VR...");
 
-                        // Remove UI and play immediately (must maintain user activation for XR)
-                        if (mainDiv) {
-                            mainDiv.remove();
-                            debugLog('[Main] mainDiv removed');
+                        // Hide UI for gameplay (no longer remove from DOM)
+                        // Test level doesn't use routing, so we need to hide the app element
+                        const appElement = document.getElementById('app');
+                        if (appElement) {
+                            appElement.style.display = 'none';
+                            debugLog('[Main] App UI hidden for test level');
                         }
                         debugLog('[Main] About to call this.play()...');
                         await this.play();
@@ -491,6 +491,102 @@ export class Main {
      */
     public getAudioEngine(): AudioEngineV2 {
         return this._audioEngine;
+    }
+
+    /**
+     * Cleanup and exit XR gracefully, returning to main menu
+     */
+    public async cleanupAndExit(): Promise<void> {
+        debugLog('[Main] cleanupAndExit() called - starting graceful shutdown');
+
+        try {
+            // 1. Stop render loop first (before disposing anything)
+            debugLog('[Main] Stopping render loop...');
+            this._engine.stopRenderLoop();
+
+            // 2. Dispose current level and all its resources (includes ship, weapons, etc.)
+            if (this._currentLevel) {
+                debugLog('[Main] Disposing level...');
+                this._currentLevel.dispose();
+                this._currentLevel = null;
+            }
+
+            // 2.5. Reset RockFactory static state (asteroid mesh, explosion manager, etc.)
+            RockFactory.reset();
+
+            // 3. Exit XR session if active (after disposing level to avoid state issues)
+            if (DefaultScene.XR && DefaultScene.XR.baseExperience.state === 2) { // WebXRState.IN_XR = 2
+                debugLog('[Main] Exiting XR session...');
+                try {
+                    await DefaultScene.XR.baseExperience.exitXRAsync();
+                    debugLog('[Main] XR session exited successfully');
+                } catch (error) {
+                    debugLog('[Main] Error exiting XR session:', error);
+                }
+            }
+
+            // 4. Clear remaining scene objects (anything not disposed by level)
+            if (DefaultScene.MainScene) {
+                debugLog('[Main] Disposing remaining scene meshes and materials...');
+                // Clone arrays to avoid modification during iteration
+                const meshes = DefaultScene.MainScene.meshes.slice();
+                const materials = DefaultScene.MainScene.materials.slice();
+
+                meshes.forEach(mesh => {
+                    if (!mesh.isDisposed()) {
+                        try {
+                            mesh.dispose();
+                        } catch (error) {
+                            debugLog('[Main] Error disposing mesh:', error);
+                        }
+                    }
+                });
+                materials.forEach(material => {
+                    try {
+                        material.dispose();
+                    } catch (error) {
+                        debugLog('[Main] Error disposing material:', error);
+                    }
+                });
+            }
+
+            // 5. Disable physics engine (properly disposes AND clears scene reference)
+            if (DefaultScene.MainScene && DefaultScene.MainScene.isPhysicsEnabled()) {
+                debugLog('[Main] Disabling physics engine...');
+                DefaultScene.MainScene.disablePhysicsEngine();
+            }
+
+            // 6. Clear XR reference (will be recreated on next game start)
+            DefaultScene.XR = null;
+
+            // 7. Reset initialization flags so game can be restarted
+            this._initialized = false;
+            this._assetsLoaded = false;
+            this._started = false;
+
+            // 8. Restart render loop with empty scene
+            debugLog('[Main] Restarting render loop with empty scene...');
+            this._engine.runRenderLoop(() => {
+                if (DefaultScene.MainScene) {
+                    DefaultScene.MainScene.render();
+                }
+            });
+
+            // 9. Show Discord widget (UI will be shown by Svelte router)
+            const discord = (window as any).__discordWidget as DiscordWidget;
+            if (discord) {
+                debugLog('[Main] Showing Discord widget');
+                discord.show();
+            }
+
+            debugLog('[Main] Cleanup complete - ready for new game');
+
+        } catch (error) {
+            console.error('[Main] Error during cleanup:', error);
+            // If cleanup fails, fall back to page reload
+            debugLog('[Main] Cleanup failed, falling back to page reload');
+            window.location.reload();
+        }
     }
 
     public async play() {
@@ -789,7 +885,7 @@ async function initializeApp() {
                     await LevelRegistry.getInstance().initialize();
                     console.log('[Main] LevelRegistry.initialize() completed successfully [AFTER MIGRATION]');
                     debugLog('[Main] LevelRegistry initialized after migration');
-                    // NOTE: Old router disabled - now using svelte-spa-router
+                    // NOTE: Old router disabled - now using svelte-routing
                     // router.start();
 
                     // Mount Svelte app
@@ -817,7 +913,7 @@ async function initializeApp() {
                     resolve();
                 } catch (error) {
                     console.error('[Main] Failed to initialize LevelRegistry after migration:', error);
-                    // NOTE: Old router disabled - now using svelte-spa-router
+                    // NOTE: Old router disabled - now using svelte-routing
                     // router.start(); // Start anyway to show error state
                     resolve();
                 }
@@ -844,7 +940,7 @@ async function initializeApp() {
                 console.log('[Main] To clear caches: window.__levelRegistry.clearAllCaches().then(() => location.reload())');
             }
 
-            // NOTE: Old router disabled - now using svelte-spa-router
+            // NOTE: Old router disabled - now using svelte-routing
             // console.log('[Main] About to call router.start()');
             // router.start();
             // console.log('[Main] router.start() completed');
@@ -852,7 +948,7 @@ async function initializeApp() {
             console.error('[Main] !!!!! EXCEPTION in LevelRegistry initialization !!!!!');
             console.error('[Main] Failed to initialize LevelRegistry:', error);
             console.error('[Main] Error stack:', error?.stack);
-            // NOTE: Old router disabled - now using svelte-spa-router
+            // NOTE: Old router disabled - now using svelte-routing
             // router.start(); // Start anyway to show error state
         }
     }

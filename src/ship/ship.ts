@@ -68,8 +68,15 @@ export class Ship {
     // Auto-show status screen flag
     private _statusScreenAutoShown: boolean = false;
 
+    // Flag to prevent game end checks until gameplay has started
+    private _gameplayStarted: boolean = false;
+
     // Controls enabled state
     private _controlsEnabled: boolean = true;
+
+    // Scene observer references (for cleanup)
+    private _physicsObserver: any = null;
+    private _renderObserver: any = null;
 
     constructor(audioEngine?: AudioEngineV2, isReplayMode: boolean = false) {
         this._audioEngine = audioEngine;
@@ -90,6 +97,15 @@ export class Ship {
 
     public get isInLandingZone(): boolean {
         return this._isInLandingZone;
+    }
+
+    /**
+     * Start gameplay - enables game end condition checking
+     * Call this after level initialization is complete
+     */
+    public startGameplay(): void {
+        this._gameplayStarted = true;
+        debugLog('[Ship] Gameplay started - game end conditions now active');
     }
 
     public get onMissionBriefTriggerObservable(): Observable<void> {
@@ -316,10 +332,10 @@ export class Ship {
         this._physics.setGameStats(this._gameStats);
 
         // Setup physics update loop (every 10 frames)
-        DefaultScene.MainScene.onAfterPhysicsObservable.add(() => {
+        this._physicsObserver = DefaultScene.MainScene.onAfterPhysicsObservable.add(() => {
             this.updatePhysics();
-        })
-        DefaultScene.MainScene.onAfterRenderObservable.add(() => {
+        });
+        this._renderObserver = DefaultScene.MainScene.onAfterRenderObservable.add(() => {
             // Update voice audio system (checks for completed sounds and plays next in queue)
             if (this._voiceAudio) {
                 this._voiceAudio.update();
@@ -422,9 +438,18 @@ export class Ship {
     /**
      * Handle exit VR button click from status screen
      */
-    private handleExitVR(): void {
-        debugLog('Exit VR button clicked - refreshing browser');
-        window.location.reload();
+    private async handleExitVR(): Promise<void> {
+        debugLog('Exit VR button clicked - navigating to home');
+
+        try {
+            // Navigate back to home route
+            // The PlayLevel component's onDestroy will handle cleanup
+            const { navigate } = await import('svelte-routing');
+            navigate('/', { replace: true });
+        } catch (error) {
+            console.error('Failed to navigate, falling back to reload:', error);
+            window.location.reload();
+        }
     }
 
     /**
@@ -454,6 +479,11 @@ export class Ship {
      * 3. All asteroids destroyed AND ship inside landing zone (victory)
      */
     private checkGameEndConditions(): void {
+        // Skip if gameplay hasn't started yet (prevents false triggers during initialization)
+        if (!this._gameplayStarted) {
+            return;
+        }
+
         // Skip if already auto-shown or status screen doesn't exist
         if (this._statusScreenAutoShown || !this._statusScreen || !this._scoreboard) {
             return;
@@ -492,7 +522,8 @@ export class Ship {
         }
 
         // Check condition 3: Victory (all asteroids destroyed, inside landing zone)
-        if (asteroidsRemaining <= 0 && this._isInLandingZone) {
+        // Must have had asteroids to destroy in the first place (prevents false victory on init)
+        if (asteroidsRemaining <= 0 && this._isInLandingZone && this._scoreboard.hasAsteroidsToDestroy) {
             debugLog('Game end condition met: Victory (all asteroids destroyed)');
             this._statusScreen.show(true, true); // Game ended, VICTORY!
             // InputControlManager will handle disabling controls when status screen shows
@@ -679,6 +710,17 @@ export class Ship {
      * Dispose of ship resources
      */
     public dispose(): void {
+        // Remove scene observers first to stop update loops
+        if (this._physicsObserver) {
+            DefaultScene.MainScene?.onAfterPhysicsObservable.remove(this._physicsObserver);
+            this._physicsObserver = null;
+        }
+
+        if (this._renderObserver) {
+            DefaultScene.MainScene?.onAfterRenderObservable.remove(this._renderObserver);
+            this._renderObserver = null;
+        }
+
         if (this._sight) {
             this._sight.dispose();
         }

@@ -18,6 +18,7 @@ export type ScoreEvent = {
 export class Scoreboard {
     private _score: number = 0;
     private _remaining: number = 0;
+    private _initialAsteroidCount: number = 0;
     private _startTime: number = Date.now();
 
     private _active = false;
@@ -76,6 +77,17 @@ export class Scoreboard {
 
     public setRemainingCount(count: number) {
         this._remaining = count;
+        // Track initial count for victory validation
+        if (this._initialAsteroidCount === 0 && count > 0) {
+            this._initialAsteroidCount = count;
+        }
+    }
+
+    /**
+     * Check if asteroids were properly initialized (count > 0)
+     */
+    public get hasAsteroidsToDestroy(): boolean {
+        return this._initialAsteroidCount > 0;
     }
 
     /**

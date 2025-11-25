@@ -193,6 +193,9 @@ export class Level1 implements Level {
         this._gameStarted = true;
         debugLog('[Level1] Starting gameplay');
 
+        // Enable game end condition checking on ship
+        this._ship.startGameplay();
+
         // Start game timer
         this._ship.gameStats.startTimer();
         debugLog('Game timer started');
@@ -275,7 +278,9 @@ export class Level1 implements Level {
         if (this._startBase) {
             this._startBase.dispose();
         }
-        this._endBase.dispose();
+        if (this._endBase) {
+            this._endBase.dispose();
+        }
         if (this._backgroundStars) {
             this._backgroundStars.dispose();
         }
@@ -284,6 +289,12 @@ export class Level1 implements Level {
         }
         if (this._missionBrief) {
             this._missionBrief.dispose();
+        }
+        if (this._ship) {
+            this._ship.dispose();
+        }
+        if (this._backgroundMusic) {
+            this._backgroundMusic.dispose();
         }
     }
 

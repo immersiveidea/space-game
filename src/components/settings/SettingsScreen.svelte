@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { link } from 'svelte-spa-router';
+  import { Link } from 'svelte-routing';
   import { gameConfigStore } from '../../stores/gameConfig';
   import Button from '../shared/Button.svelte';
   import Section from '../shared/Section.svelte';
@@ -46,7 +46,7 @@
 </script>
 
 <div class="editor-container">
-  <a href="/" use:link class="back-link">← Back to Game</a>
+  <Link to="/" class="back-link">← Back to Game</Link>
 
   <h1>⚙️ Game Settings</h1>
   <p class="subtitle">Configure graphics quality and physics settings</p>

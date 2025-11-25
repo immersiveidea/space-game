@@ -39,9 +39,9 @@ export default defineConfig({
     },
     server: {
         port: 3000,
-
         allowedHosts: true
     },
+    // appType: 'spa' is default - Vite automatically serves index.html for SPA routes
     preview: {
         port: 3000,
     },

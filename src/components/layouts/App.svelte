@@ -1,34 +1,17 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import Router from 'svelte-spa-router';
-  import { wrap } from 'svelte-spa-router/wrap';
+  import { Router, Route } from 'svelte-routing';
   import AppHeader from './AppHeader.svelte';
   import { navigationStore } from '../../stores/navigation';
   import { AuthService } from '../../services/authService';
   import { authStore } from '../../stores/auth';
 
-  // Import game view directly (most common route)
+  // Import game views
   import LevelSelect from '../game/LevelSelect.svelte';
-
-  // Lazy load other views for better performance
-  const routes = {
-    '/': LevelSelect,
-    '/editor': wrap({
-      asyncComponent: () => import('../editor/LevelEditor.svelte')
-    }),
-    '/settings': wrap({
-      asyncComponent: () => import('../settings/SettingsScreen.svelte')
-    }),
-    '/controls': wrap({
-      asyncComponent: () => import('../controls/ControlsScreen.svelte')
-    }),
-  };
-
-  // Track route changes
-  function routeLoaded(event: CustomEvent) {
-    const { route } = event.detail;
-    navigationStore.setRoute(route);
-  }
+  import PlayLevel from '../game/PlayLevel.svelte';
+  import LevelEditor from '../editor/LevelEditor.svelte';
+  import SettingsScreen from '../settings/SettingsScreen.svelte';
+  import ControlsScreen from '../controls/ControlsScreen.svelte';
 
   // Initialize Auth0 when component mounts
   onMount(async () => {
@@ -50,13 +33,21 @@
   });
 </script>
 
-<div class="app">
-  <AppHeader />
+<Router>
+  <div class="app">
+    <AppHeader />
 
-  <div class="app-content">
-    <Router {routes} on:routeLoaded={routeLoaded} />
+    <div class="app-content">
+      <Route path="/"><LevelSelect /></Route>
+      <Route path="/play/:levelId" let:params>
+        <PlayLevel {params} />
+      </Route>
+      <Route path="/editor"><LevelEditor /></Route>
+      <Route path="/settings"><SettingsScreen /></Route>
+      <Route path="/controls"><ControlsScreen /></Route>
+    </div>
   </div>
-</div>
+</Router>
 
 <style>
   .app {

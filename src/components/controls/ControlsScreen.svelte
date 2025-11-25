@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { link } from 'svelte-spa-router';
+  import { Link } from 'svelte-routing';
   import { controllerMappingStore } from '../../stores/controllerMapping';
   import { ControllerMappingConfig } from '../../ship/input/controllerMapping';
   import Button from '../shared/Button.svelte';
@@ -81,7 +81,7 @@
 </script>
 
 <div class="editor-container">
-  <a href="/" use:link class="back-link">← Back to Game</a>
+  <Link to="/" class="back-link">← Back to Game</Link>
 
   <h1>🎮 Controller Mapping</h1>
   <p class="subtitle">Customize VR controller button and stick mappings</p>

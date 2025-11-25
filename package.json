@@ -25,9 +25,9 @@
     "@babylonjs/procedural-textures": "8.36.1",
     "@babylonjs/serializers": "8.36.1",
     "@newrelic/browser-agent": "^1.302.0",
-    "openai": "4.52.3",
     "loglevel": "^1.9.2",
-    "svelte-spa-router": "^4.0.1"
+    "openai": "4.52.3",
+    "svelte-routing": "^2.13.0"
   },
   "devDependencies": {
     "@sveltejs/vite-plugin-svelte": "^6.2.1",

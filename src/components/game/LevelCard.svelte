@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { navigate } from 'svelte-routing';
   import type { LevelDirectoryEntry } from '../../levels/storage/levelRegistry';
   import { levelRegistryStore } from '../../stores/levelRegistry';
   import { authStore } from '../../stores/auth';
@@ -37,17 +38,9 @@
       return;
     }
 
-    // Dispatch custom event for main.ts to handle
-    console.log('[LevelCard] Level unlocked, loading config...');
-    const config = await levelRegistryStore.getLevel(levelId);
-    if (config) {
-      console.log('[LevelCard] Config loaded, dispatching levelSelected event');
-      window.dispatchEvent(new CustomEvent('levelSelected', {
-        detail: { levelName: levelId, config }
-      }));
-    } else {
-      console.error('[LevelCard] Failed to load level config');
-    }
+    // Navigate to level play route
+    console.log('[LevelCard] Level unlocked, navigating to /play/' + levelId);
+    navigate(`/play/${levelId}`);
   }
 
   async function handleDelete() {

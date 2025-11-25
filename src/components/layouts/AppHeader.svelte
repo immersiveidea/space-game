@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { link } from 'svelte-spa-router';
+  import { Link } from 'svelte-routing';
   import { authStore } from '../../stores/auth';
   import UserProfile from '../auth/UserProfile.svelte';
 
@@ -16,11 +16,11 @@
         <h1 class="app-title">Space Combat VR</h1>
       </div>
       <nav class="header-nav">
-          <a href="/controls" use:link class="nav-link controls-link">🎮 Customize Controls</a>
+          <Link to="/controls" class="nav-link controls-link">🎮 Customize Controls</Link>
         <UserProfile />
-        <a href="/editor" use:link class="nav-link editor-link">📝 Level Editor</a>
+        <Link to="/editor" class="nav-link editor-link">📝 Level Editor</Link>
 
-        <a href="/settings" use:link class="nav-link settings-link">⚙️ Settings</a>
+        <Link to="/settings" class="nav-link settings-link">⚙️ Settings</Link>
       </nav>
     </div>
   </header>

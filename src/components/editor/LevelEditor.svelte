@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { link } from 'svelte-spa-router';
+  import { Link } from 'svelte-routing';
   import Button from '../shared/Button.svelte';
   import Section from '../shared/Section.svelte';
 
@@ -8,7 +8,7 @@
 </script>
 
 <div class="editor-container">
-  <a href="/" use:link class="back-link">← Back to Game</a>
+  <Link to="/" class="back-link">← Back to Game</Link>
 
   <h1>📝 Level Editor</h1>
   <p class="subtitle">Create and customize your own asteroid field levels</p>
