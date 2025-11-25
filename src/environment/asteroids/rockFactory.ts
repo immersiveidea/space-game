@@ -123,11 +123,15 @@ export class RockFactory {
             // PhysicsAggregate will automatically compute sphere size from mesh bounding info
             // The mesh scaling is already applied, so Babylon will create correctly sized physics shape
             const agg = new PhysicsAggregate(rock, PhysicsShapeType.SPHERE, {
-                mass: 10000,
-                restitution: .5
+                mass: 200,
+                friction: 0,
+                restitution: .8
                 // Don't pass radius - let Babylon compute from scaled mesh bounds
                 }, DefaultScene.MainScene);
             const body = agg.body;
+            body.setAngularDamping(0);
+
+
 
             // Only apply orbit constraint if enabled for this level and orbit center exists
             if (useOrbitConstraint && this._orbitCenter) {

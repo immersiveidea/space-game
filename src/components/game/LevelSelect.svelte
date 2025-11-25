@@ -4,10 +4,10 @@
   import LevelCard from './LevelCard.svelte';
   import ProgressBar from './ProgressBar.svelte';
 
-  // Get default levels in order
+  // Get default levels in order (must match directory.json)
   const DEFAULT_LEVEL_ORDER = [
     'rookie-training',
-    'rescue-mission',
+    'asteroid-mania',
     'deep-space-patrol',
     'enemy-territory',
     'the-gauntlet',

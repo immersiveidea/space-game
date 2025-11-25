@@ -1,5 +1,5 @@
 {
-  "version": "1.0.6",
+  "version": "1.0.11",
   "levels": [
     {
       "id": "rookie-training",
@@ -21,21 +21,21 @@
       "defaultLocked": false
     },
     {
-      "id": "rescue-mission",
-      "name": "Rescue Mission",
-      "description": "Rescue operation in moderate asteroid field",
-      "version": "1.0",
-      "levelPath": "rescue-mission.json",
+      "id": "asteroid-mania",
+      "name": "Asteroid Mania!!!",
+      "description": "Still low stakes, just more asteroids",
+      "version": "1.1",
+      "levelPath": "asteroid-mania.json",
       "difficulty": "pilot",
       "estimatedTime": "5-8 minutes",
       "missionBrief": [
         "More asteroids and increased difficulty",
         "Manage your fuel and ammunition carefully",
         "Complete the mission and return to base",
-        "Use your radar to track asteroids",
-        "Watch your shield strength"
+        "Watch your hull integrity!",
+        "Some of the asteroids are a little more distant"
       ],
-      "unlockRequirements": ["rookie-training"],
+      "unlockRequirements": [],
       "tags": ["medium"],
       "defaultLocked": true
     },

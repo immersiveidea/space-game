@@ -23,8 +23,6 @@ import Level from "./levels/level";
 import setLoadingMessage from "./utils/setLoadingMessage";
 import {RockFactory} from "./environment/asteroids/rockFactory";
 import {ControllerDebug} from "./utils/controllerDebug";
-import {router, showView} from "./core/router";
-import {populateLevelSelector} from "./levels/ui/levelSelector";
 import {LevelConfig} from "./levels/config/levelConfig";
 import {LegacyMigration} from "./levels/migration/legacyMigration";
 import {LevelRegistry} from "./levels/storage/levelRegistry";
@@ -747,128 +745,7 @@ export class Main {
     }
 }
 
-// Setup router
-router.on('/', async () => {
-    debugLog('[Router] Home route triggered');
-
-    // Always show game view
-    showView('game');
-    debugLog('[Router] Game view shown');
-
-    // Initialize auth service (but don't block on it)
-    try {
-        const authService = AuthService.getInstance();
-        debugLog('[Router] Initializing auth service...');
-        await authService.initialize();
-        debugLog('[Router] Auth service initialized');
-
-        // Check if user is authenticated
-        const isAuthenticated = await authService.isAuthenticated();
-        const user = authService.getUser();
-        debugLog('[Router] Auth check - authenticated:', isAuthenticated, 'user:', user);
-
-        if (isAuthenticated && user) {
-            // User is authenticated - update profile display
-            debugLog('User authenticated:', user?.email || user?.name || 'Unknown');
-            updateUserProfile(user.name || user.email || 'Player');
-        } else {
-            // User not authenticated - show login/signup button
-            debugLog('User not authenticated, showing login button');
-            updateUserProfile(null); // This will show login button instead
-        }
-    } catch (error) {
-        // Auth failed, but allow game to continue
-        debugLog('Auth initialization failed, continuing without auth:', error);
-        updateUserProfile(null);
-    }
-
-    // Show the app header
-    const appHeader = document.getElementById('appHeader');
-    if (appHeader) {
-        appHeader.style.display = 'block';
-    }
-
-    // Just show the level selector - don't initialize anything yet!
-    if (!DEBUG_CONTROLLERS) {
-        debugLog('[Router] Populating level selector (no engine initialization yet)');
-        await populateLevelSelector();
-
-        // Create Main instance lazily only if it doesn't exist
-        // But don't initialize it yet - that will happen on level selection
-        if (!(window as any).__mainInstance) {
-            debugLog('[Router] Creating Main instance (not initialized)');
-            const main = new Main();
-            (window as any).__mainInstance = main;
-
-            // Initialize demo mode without engine (just for UI purposes)
-            const demo = new Demo(main);
-        }
-
-        // Discord widget initialization with enhanced error logging
-        /*if (!(window as any).__discordWidget) {
-            debugLog('[Router] Initializing Discord widget');
-            const discord = new DiscordWidget();
-
-            // Initialize with your server and channel IDs
-            discord.initialize({
-                server: '1112846185913401475', // Replace with your Discord server ID
-                channel: '1437561367908581406', // Replace with your Discord channel ID
-                color: '#667eea',
-                glyph: ['💬', '✖️'],
-                notifications: true
-            }).then(() => {
-                debugLog('[Router] Discord widget ready');
-                (window as any).__discordWidget = discord;
-            }).catch(error => {
-                console.error('[Router] Failed to initialize Discord widget:', error);
-                console.error('[Router] Error type:', error?.constructor?.name);
-                console.error('[Router] Error message:', error?.message);
-                console.error('[Router] Error stack:', error?.stack);
-                if (error?.response) {
-                    console.error('[Router] GraphQL response error:', error.response);
-                }
-            });
-        }*/
-    }
-
-    debugLog('[Router] Home route handler complete');
-});
-
-router.on('/editor', () => {
-    showView('editor');
-    // Dynamically import and initialize editor
-    if (!(window as any).__editorInitialized) {
-        import('./levels/generation/levelEditor').then(() => {
-            (window as any).__editorInitialized = true;
-        });
-    }
-});
-
-router.on('/settings', () => {
-    showView('settings');
-    // Dynamically import and initialize settings
-    if (!(window as any).__settingsInitialized) {
-        import('./ui/screens/settingsScreen').then((module) => {
-            module.initializeSettingsScreen();
-            (window as any).__settingsInitialized = true;
-        });
-    }
-});
-
-router.on('/controls', () => {
-    showView('controls');
-    // Dynamically import and initialize controls screen
-    if (!(window as any).__controlsInitialized) {
-        import('./ui/screens/controlsScreen').then((module) => {
-            const controlsScreen = new module.ControlsScreen();
-            controlsScreen.initialize();
-            (window as any).__controlsInitialized = true;
-        });
-    }
-});
-
-// Initialize registry and start router
-// This must happen BEFORE router.start() so levels are available
+// Initialize registry and mount Svelte app
 async function initializeApp() {
     console.log('[Main] ========================================');
     console.log('[Main] initializeApp() STARTED at', new Date().toISOString());
@@ -889,8 +766,6 @@ async function initializeApp() {
                     await LevelRegistry.getInstance().initialize();
                     console.log('[Main] LevelRegistry.initialize() completed successfully [AFTER MIGRATION]');
                     debugLog('[Main] LevelRegistry initialized after migration');
-                    // NOTE: Old router disabled - now using svelte-routing
-                    // router.start();
 
                     // Mount Svelte app
                     console.log('[Main] Mounting Svelte app [AFTER MIGRATION]');
@@ -917,8 +792,6 @@ async function initializeApp() {
                     resolve();
                 } catch (error) {
                     console.error('[Main] Failed to initialize LevelRegistry after migration:', error);
-                    // NOTE: Old router disabled - now using svelte-routing
-                    // router.start(); // Start anyway to show error state
                     resolve();
                 }
             });
@@ -941,19 +814,12 @@ async function initializeApp() {
             if (isDev) {
                 (window as any).__levelRegistry = LevelRegistry.getInstance();
                 console.log('[Main] LevelRegistry exposed to window.__levelRegistry for debugging');
-                console.log('[Main] To clear caches: window.__levelRegistry.clearAllCaches().then(() => location.reload())');
+                console.log('[Main] To clear caches: window.__levelRegistry.reset(); location.reload()');
             }
-
-            // NOTE: Old router disabled - now using svelte-routing
-            // console.log('[Main] About to call router.start()');
-            // router.start();
-            // console.log('[Main] router.start() completed');
         } catch (error) {
             console.error('[Main] !!!!! EXCEPTION in LevelRegistry initialization !!!!!');
             console.error('[Main] Failed to initialize LevelRegistry:', error);
             console.error('[Main] Error stack:', error?.stack);
-            // NOTE: Old router disabled - now using svelte-routing
-            // router.start(); // Start anyway to show error state
         }
     }
 

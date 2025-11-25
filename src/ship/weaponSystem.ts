@@ -104,7 +104,8 @@ export class WeaponSystem {
         ammoAggregate.body.setCollisionCallbackEnabled(true);
 
         // Set projectile velocity (already includes ship velocity)
-        ammoAggregate.body.setLinearVelocity(velocityVector);
+        // Clone to capture current direction - prevents curving if source vector updates
+        ammoAggregate.body.setLinearVelocity(velocityVector.clone());
 
         // Consume ammo
         if (this._shipStatus) {
