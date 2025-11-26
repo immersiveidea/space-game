@@ -58,8 +58,17 @@ export class Level1 implements Level {
 
             xr.baseExperience.onInitialXRPoseSetObservable.add(() => {
                 xr.baseExperience.camera.parent = this._ship.transformNode;
-                const currPose =  xr.baseExperience.camera.globalPosition.y;
                 xr.baseExperience.camera.position = new Vector3(0, 1.5, 0);
+                // Rotate camera 180 degrees around Y to compensate for inverted ship GLB model
+                xr.baseExperience.camera.rotationQuaternion = null;
+                xr.baseExperience.camera.rotation = new Vector3(0, 0, 0);
+
+                // Resume render loop if it was stopped (ensures camera is properly set before first visible frame)
+                const engine = DefaultScene.MainScene.getEngine();
+                engine.runRenderLoop(() => {
+                    DefaultScene.MainScene.render();
+                });
+                debugLog('[Level1] Render loop resumed after XR camera setup');
 
                 // Disable keyboard input in VR mode to prevent interference
                 if (this._ship.keyboardInput) {

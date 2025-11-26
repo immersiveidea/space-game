@@ -116,8 +116,9 @@ export class CloudLeaderboardService {
 
     /**
      * Fetch the global leaderboard (top scores across all players)
+     * Supports pagination with offset for infinite scroll
      */
-    public async getGlobalLeaderboard(limit: number = 20): Promise<CloudLeaderboardEntry[]> {
+    public async getGlobalLeaderboard(limit: number = 20, offset: number = 0): Promise<CloudLeaderboardEntry[]> {
         const supabase = SupabaseService.getInstance();
         const client = supabase.getClient();
 
@@ -130,7 +131,7 @@ export class CloudLeaderboardService {
             .from('leaderboard')
             .select('*')
             .order('final_score', { ascending: false })
-            .limit(limit);
+            .range(offset, offset + limit - 1);
 
         if (error) {
             console.error('[CloudLeaderboardService] Failed to fetch leaderboard:', error);

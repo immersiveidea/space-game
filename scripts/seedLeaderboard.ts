@@ -83,10 +83,22 @@ async function ensureTestDataColumn(): Promise<void> {
     console.log('  Column and index created ✓');
 }
 
-// Levels from directory.json
+// Levels from directory.json with actual config values
 const LEVELS = [
-    { id: 'rookie-training', name: 'Rookie Training', difficulty: 'recruit' },
-    { id: 'asteroid-mania', name: 'Asteroid Mania!!!', difficulty: 'recruit' },
+    {
+        id: 'rookie-training',
+        name: 'Rookie Training',
+        difficulty: 'recruit',
+        asteroids: 5,
+        parTime: 120  // 2 minutes expected
+    },
+    {
+        id: 'asteroid-mania',
+        name: 'Asteroid Mania!!!',
+        difficulty: 'pilot',
+        asteroids: 12,
+        parTime: 180  // 3 minutes expected (more asteroids, farther away)
+    },
 ];
 
 // Pool of realistic player names
@@ -136,49 +148,105 @@ function randomDate(daysBack: number): string {
     return pastDate.toISOString();
 }
 
+/**
+ * Calculate score using the actual game's scoring formula
+ * Base: 10,000 × timeMultiplier × accuracyMultiplier × fuelMultiplier × hullMultiplier
+ */
+function calculateScore(
+    gameTime: number,
+    parTime: number,
+    accuracy: number,
+    fuelConsumed: number,
+    hullDamage: number
+): number {
+    const BASE_SCORE = 10000;
+
+    // Time multiplier: exponential decay from par time (0.1x to 3.0x)
+    const timeRatio = gameTime / parTime;
+    const timeMultiplier = Math.min(3.0, Math.max(0.1, Math.exp(-timeRatio + 1) * 2));
+
+    // Accuracy multiplier: 1.0x to 2.0x
+    const accuracyMultiplier = 1.0 + (accuracy / 100);
+
+    // Fuel efficiency multiplier: 0.5x to 2.0x
+    const fuelMultiplier = Math.max(0.5, 1.0 + ((100 - fuelConsumed) / 100));
+
+    // Hull integrity multiplier: 0.5x to 2.0x
+    const hullMultiplier = Math.max(0.5, 1.0 + ((100 - hullDamage) / 100));
+
+    return Math.floor(BASE_SCORE * timeMultiplier * accuracyMultiplier * fuelMultiplier * hullMultiplier);
+}
+
+/**
+ * Calculate star rating using the actual game's star system (0-12 total)
+ */
+function calculateStars(
+    gameTime: number,
+    parTime: number,
+    accuracy: number,
+    fuelConsumed: number,
+    hullDamage: number
+): number {
+    const timeRatio = gameTime / parTime;
+
+    // Time stars (3 = ≤50% par, 2 = ≤100%, 1 = ≤150%, 0 = >150%)
+    const timeStars = timeRatio <= 0.5 ? 3 : timeRatio <= 1.0 ? 2 : timeRatio <= 1.5 ? 1 : 0;
+
+    // Accuracy stars (3 = ≥75%, 2 = ≥50%, 1 = ≥25%, 0 = <25%)
+    const accuracyStars = accuracy >= 75 ? 3 : accuracy >= 50 ? 2 : accuracy >= 25 ? 1 : 0;
+
+    // Fuel stars (3 = ≤30%, 2 = ≤60%, 1 = ≤80%, 0 = >80%)
+    const fuelStars = fuelConsumed <= 30 ? 3 : fuelConsumed <= 60 ? 2 : fuelConsumed <= 80 ? 1 : 0;
+
+    // Hull stars (3 = ≤10%, 2 = ≤30%, 1 = ≤60%, 0 = >60%)
+    const hullStars = hullDamage <= 10 ? 3 : hullDamage <= 30 ? 2 : hullDamage <= 60 ? 1 : 0;
+
+    return timeStars + accuracyStars + fuelStars + hullStars;
+}
+
 function generateFakeEntry() {
     const level = LEVELS[randomInt(0, LEVELS.length - 1)];
     const endReasonObj = weightedRandom(END_REASONS);
     const completed = endReasonObj.reason === 'victory';
 
-    // Harder levels tend to have lower scores
-    const difficultyMultiplier = {
-        'recruit': 1.0,
-        'pilot': 0.9,
-        'captain': 0.8,
-        'commander': 0.7,
-    }[level.difficulty] || 0.8;
-
-    // Generate stats
-    const totalAsteroids = randomInt(5, 50);
+    // Use level-specific asteroid count
+    const totalAsteroids = level.asteroids;
     const asteroidsDestroyed = completed
         ? totalAsteroids
-        : randomInt(Math.floor(totalAsteroids * 0.2), totalAsteroids - 1);
+        : randomInt(Math.floor(totalAsteroids * 0.3), totalAsteroids - 1);
 
-    const accuracy = completed
-        ? randomFloat(50, 95)
-        : randomFloat(30, 70);
+    // Generate realistic stats based on 2-5 minute gameplay
+    let gameTimeSeconds: number;
+    let accuracy: number;
+    let hullDamageTaken: number;
+    let fuelConsumed: number;
 
-    const gameTimeSeconds = randomInt(60, 300);
-    const hullDamageTaken = completed
-        ? randomFloat(0, 60)
-        : randomFloat(40, 100);
+    if (completed) {
+        // Victory: 2-5 minutes, decent stats
+        gameTimeSeconds = randomInt(level.parTime * 0.8, level.parTime * 2.5); // 80% to 250% of par
+        accuracy = randomFloat(45, 85);           // Most players hit 45-85%
+        hullDamageTaken = randomFloat(5, 55);     // Some damage but survived
+        fuelConsumed = randomFloat(25, 70);       // Used fuel but made it back
+    } else if (endReasonObj.reason === 'death') {
+        // Death: Usually faster (died before completing), worse stats
+        gameTimeSeconds = randomInt(level.parTime * 0.5, level.parTime * 1.5);
+        accuracy = randomFloat(25, 60);           // Struggled with aim
+        hullDamageTaken = randomFloat(80, 100);   // Took fatal damage
+        fuelConsumed = randomFloat(30, 80);       // Died before fuel was an issue
+    } else {
+        // Stranded: Ran out of fuel far from base
+        gameTimeSeconds = randomInt(level.parTime * 1.5, level.parTime * 3);
+        accuracy = randomFloat(35, 70);           // Okay aim
+        hullDamageTaken = randomFloat(20, 60);    // Some damage
+        fuelConsumed = randomFloat(95, 100);      // Ran out of fuel!
+    }
 
-    const fuelConsumed = completed
-        ? randomFloat(20, 80)
-        : randomFloat(50, 100);
+    // Calculate score and stars using actual game formulas
+    const finalScore = completed
+        ? calculateScore(gameTimeSeconds, level.parTime, accuracy, fuelConsumed, hullDamageTaken)
+        : Math.floor(calculateScore(gameTimeSeconds, level.parTime, accuracy, fuelConsumed, hullDamageTaken) * 0.3); // 30% penalty for not completing
 
-    // Calculate score (simplified version)
-    const baseScore = asteroidsDestroyed * 1000;
-    const accuracyBonus = Math.floor(accuracy * 10);
-    const timeBonus = Math.max(0, 300 - gameTimeSeconds);
-    const survivalBonus = completed ? 500 : 0;
-    const finalScore = Math.floor((baseScore + accuracyBonus + timeBonus + survivalBonus) * difficultyMultiplier);
-
-    // Star rating based on performance (0-12)
-    const starRating = completed
-        ? randomInt(4, 12)
-        : randomInt(0, 4);
+    const starRating = calculateStars(gameTimeSeconds, level.parTime, accuracy, fuelConsumed, hullDamageTaken);
 
     return {
         user_id: `test-data|fake-${randomInt(1000, 9999)}`,

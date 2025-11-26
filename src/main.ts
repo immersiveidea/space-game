@@ -161,11 +161,22 @@ export class Main {
                 if (DefaultScene.XR) {
                     try {
                         preloader.updateProgress(75, 'Entering VR...');
+
+                        // Stop render loop BEFORE entering XR to prevent showing wrong camera orientation
+                        // The ship model is rotated 180 degrees, so the XR camera would briefly face backwards
+                        // We'll resume rendering after the camera is properly parented to the ship
+                        this._engine.stopRenderLoop();
+                        debugLog('Render loop stopped before entering XR');
+
                         xrSession = await DefaultScene.XR.baseExperience.enterXRAsync('immersive-vr', 'local-floor');
-                        debugLog('XR session started successfully');
+                        debugLog('XR session started successfully (render loop paused until camera is ready)');
                     } catch (error) {
                         debugLog('Failed to enter XR, will fall back to flat mode:', error);
                         DefaultScene.XR = null; // Disable XR for this session
+                        // Resume render loop for flat mode
+                        this._engine.runRenderLoop(() => {
+                            DefaultScene.MainScene.render();
+                        });
                     }
                 }
 
@@ -227,7 +238,16 @@ export class Main {
                             debugLog('Manually parenting XR camera to ship transformNode');
                             DefaultScene.XR.baseExperience.camera.parent = ship.transformNode;
                             DefaultScene.XR.baseExperience.camera.position = new Vector3(0, 1.5, 0);
-                            console.log('[Main] Camera parented successfully');
+                            // Rotate camera 180 degrees around Y to compensate for inverted ship GLB model
+                            DefaultScene.XR.baseExperience.camera.rotationQuaternion = null;
+                            DefaultScene.XR.baseExperience.camera.rotation = new Vector3(0, Math.PI, 0);
+                            console.log('[Main] Camera parented and rotated 180° to face forward');
+
+                            // NOW resume the render loop - camera is properly positioned
+                            this._engine.runRenderLoop(() => {
+                                DefaultScene.MainScene.render();
+                            });
+                            debugLog('Render loop resumed after camera setup');
 
                             console.log('[Main] ========== ABOUT TO SHOW MISSION BRIEF ==========');
                             console.log('[Main] level1 object:', level1);
@@ -246,9 +266,17 @@ export class Main {
                             console.log('[Main] ship exists:', !!ship);
                             console.log('[Main] ship.transformNode exists:', ship ? !!ship.transformNode : 'N/A');
                             debugLog('WARNING: Could not parent XR camera - ship or transformNode not found');
+                            // Resume render loop anyway to avoid black screen
+                            this._engine.runRenderLoop(() => {
+                                DefaultScene.MainScene.render();
+                            });
                         }
                     } else {
                         console.log('[Main] XR not active yet - will use onInitialXRPoseSetObservable instead');
+                        // Resume render loop for non-XR path (flat mode or XR entry via observable)
+                        this._engine.runRenderLoop(() => {
+                            DefaultScene.MainScene.render();
+                        });
                     }
 
                     // Hide preloader

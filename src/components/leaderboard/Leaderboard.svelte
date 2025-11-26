@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
+  import { onMount, onDestroy } from 'svelte';
   import { Link } from 'svelte-routing';
   import { gameResultsStore } from '../../stores/gameResults';
   import type { GameResult } from '../../services/gameResultsService';
@@ -10,23 +10,52 @@
   let activeView: 'local' | 'cloud' = 'cloud';
   let cloudResults: CloudLeaderboardEntry[] = [];
   let cloudLoading = false;
+  let cloudLoadingMore = false;
   let cloudError = '';
+  let hasMore = true;
+  const PAGE_SIZE = 20;
+
+  // Reference to the scroll container for infinite scroll
+  let scrollContainer: HTMLElement;
+  let sentinel: HTMLElement;
+  let observer: IntersectionObserver;
 
   // Check if cloud is available
   const cloudService = CloudLeaderboardService.getInstance();
   const cloudAvailable = cloudService.isAvailable();
 
-  // Load cloud leaderboard
-  async function loadCloudLeaderboard() {
-    cloudLoading = true;
+  // Load cloud leaderboard (initial or more)
+  async function loadCloudLeaderboard(loadMore = false) {
+    if (loadMore) {
+      if (cloudLoadingMore || !hasMore) return;
+      cloudLoadingMore = true;
+    } else {
+      cloudLoading = true;
+      cloudResults = [];
+      hasMore = true;
+    }
     cloudError = '';
+
     try {
-      cloudResults = await cloudService.getGlobalLeaderboard(20);
+      const offset = loadMore ? cloudResults.length : 0;
+      const newResults = await cloudService.getGlobalLeaderboard(PAGE_SIZE, offset);
+
+      if (loadMore) {
+        cloudResults = [...cloudResults, ...newResults];
+      } else {
+        cloudResults = newResults;
+      }
+
+      // If we got fewer results than requested, there are no more
+      if (newResults.length < PAGE_SIZE) {
+        hasMore = false;
+      }
     } catch (error) {
       cloudError = 'Failed to load cloud leaderboard';
       console.error('[Leaderboard] Cloud load error:', error);
     } finally {
       cloudLoading = false;
+      cloudLoadingMore = false;
     }
   }
 
@@ -38,11 +67,43 @@
     }
   }
 
+  // Setup intersection observer for infinite scroll
+  function setupInfiniteScroll() {
+    // Disconnect previous observer if exists
+    if (observer) {
+      observer.disconnect();
+    }
+
+    if (!sentinel) return;
+
+    observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && activeView === 'cloud' && hasMore && !cloudLoadingMore) {
+          loadCloudLeaderboard(true);
+        }
+      },
+      { rootMargin: '200px' } // Trigger earlier for smoother experience
+    );
+
+    observer.observe(sentinel);
+  }
+
+  // Reactively setup observer when sentinel element is bound
+  $: if (sentinel && cloudResults.length > 0) {
+    setupInfiniteScroll();
+  }
+
   // Refresh data on mount
   onMount(() => {
     gameResultsStore.refresh();
     if (cloudAvailable && activeView === 'cloud') {
       loadCloudLeaderboard();
+    }
+  });
+
+  onDestroy(() => {
+    if (observer) {
+      observer.disconnect();
     }
   });
 
@@ -101,7 +162,7 @@
   <Link to="/" class="back-link">← Back to Game</Link>
 
   <h1>Leaderboard</h1>
-  <p class="subtitle">Top 20 High Scores</p>
+  <p class="subtitle">Global High Scores</p>
 
   <!-- View Toggle -->
   {#if cloudAvailable}
@@ -180,15 +241,31 @@
           {/each}
         </tbody>
       </table>
+
+      <!-- Infinite scroll sentinel and loading indicator -->
+      {#if activeView === 'cloud'}
+        <div bind:this={sentinel} class="scroll-sentinel">
+          {#if cloudLoadingMore}
+            <div class="loading-more">
+              <span class="spinner"></span>
+              Loading more...
+            </div>
+          {:else if !hasMore && cloudResults.length > 0}
+            <div class="end-of-list">
+              You've reached the end!
+            </div>
+          {/if}
+        </div>
+      {/if}
     {/if}
   </div>
 
   <div class="leaderboard-footer">
     <p class="muted">
       {#if activeView === 'cloud'}
-        Showing top 20 global scores
+        Showing {displayResults.length} global scores
       {:else}
-        Showing top 20 local scores (this device only)
+        Showing {displayResults.length} local scores (this device only)
       {/if}
     </p>
   </div>
@@ -242,7 +319,7 @@
     background: var(--color-bg-card, rgba(20, 20, 40, 0.9));
     border: 1px solid var(--color-border-default, rgba(255, 255, 255, 0.2));
     border-radius: var(--radius-lg, 10px);
-    overflow: hidden;
+    overflow-x: auto; /* Allow horizontal scroll on mobile, but not hidden */
     margin-top: var(--space-xl, 32px);
   }
 
@@ -374,6 +451,39 @@
   }
 
   .leaderboard-footer .muted {
+    color: var(--color-text-muted, #aaaaaa);
+    font-size: var(--font-size-sm, 0.9rem);
+  }
+
+  /* Infinite scroll */
+  .scroll-sentinel {
+    padding: var(--space-lg, 24px);
+    text-align: center;
+  }
+
+  .loading-more {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-sm, 8px);
+    color: var(--color-text-secondary, #e8e8e8);
+    font-size: var(--font-size-sm, 0.9rem);
+  }
+
+  .spinner {
+    width: 16px;
+    height: 16px;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-top-color: var(--color-primary, #4f46e5);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+
+  .end-of-list {
     color: var(--color-text-muted, #aaaaaa);
     font-size: var(--font-size-sm, 0.9rem);
   }

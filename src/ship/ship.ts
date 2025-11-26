@@ -355,6 +355,8 @@ export class Ship {
             DefaultScene.MainScene
         );
         this._camera.parent = this._ship;
+        // Rotate camera 180 degrees around Y to compensate for inverted ship GLB model
+        this._camera.rotation = new Vector3(0, Math.PI, 0);
 
         // Set as active camera if XR is not available
         if (!DefaultScene.XR && !this._isReplayMode) {
