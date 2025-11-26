@@ -23,7 +23,11 @@ jobs:
         NODE_OPTIONS: '--max-old-space-size=4096'
         VITE_AUTH0_DOMAIN: ${{ secrets.VITE_AUTH0_DOMAIN }}
         VITE_AUTH0_CLIENT_ID: ${{ secrets.VITE_AUTH0_CLIENT_ID }}
+        VITE_AUTH0_AUDIENCE: ${{ secrets.VITE_AUTH0_AUDIENCE }}
         AUTH0_CLIENT_SECRET: ${{ secrets.AUTH0_CLIENT_SECRET }}
+        VITE_SUPABASE_PROJECT: ${{ secrets.VITE_SUPABASE_PROJECT }}
+        VITE_SUPABASE_KEY: ${{ secrets.VITE_SUPABASE_KEY }}
+        
 
     - name: Extract hostname from package.json
       id: get-hostname

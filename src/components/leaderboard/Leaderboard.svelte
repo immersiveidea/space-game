@@ -3,11 +3,47 @@
   import { Link } from 'svelte-routing';
   import { gameResultsStore } from '../../stores/gameResults';
   import type { GameResult } from '../../services/gameResultsService';
+  import { CloudLeaderboardService, type CloudLeaderboardEntry } from '../../services/cloudLeaderboardService';
   import { formatStars } from '../../game/scoreCalculator';
+
+  // View toggle: 'local' or 'cloud'
+  let activeView: 'local' | 'cloud' = 'cloud';
+  let cloudResults: CloudLeaderboardEntry[] = [];
+  let cloudLoading = false;
+  let cloudError = '';
+
+  // Check if cloud is available
+  const cloudService = CloudLeaderboardService.getInstance();
+  const cloudAvailable = cloudService.isAvailable();
+
+  // Load cloud leaderboard
+  async function loadCloudLeaderboard() {
+    cloudLoading = true;
+    cloudError = '';
+    try {
+      cloudResults = await cloudService.getGlobalLeaderboard(20);
+    } catch (error) {
+      cloudError = 'Failed to load cloud leaderboard';
+      console.error('[Leaderboard] Cloud load error:', error);
+    } finally {
+      cloudLoading = false;
+    }
+  }
+
+  // Switch view
+  function setView(view: 'local' | 'cloud') {
+    activeView = view;
+    if (view === 'cloud' && cloudResults.length === 0 && !cloudLoading) {
+      loadCloudLeaderboard();
+    }
+  }
 
   // Refresh data on mount
   onMount(() => {
     gameResultsStore.refresh();
+    if (cloudAvailable && activeView === 'cloud') {
+      loadCloudLeaderboard();
+    }
   });
 
   // Format time as MM:SS
@@ -28,18 +64,37 @@
   }
 
   // Get color for end reason badge
-  function getEndReasonColor(result: GameResult): string {
-    if (result.endReason === 'victory') return '#4ade80';
-    if (result.endReason === 'death') return '#ef4444';
+  function getEndReasonColor(endReason: string): string {
+    if (endReason === 'victory') return '#4ade80';
+    if (endReason === 'death') return '#ef4444';
     return '#f59e0b'; // stranded
   }
 
-  // Get emoji for end reason
-  function getEndReasonEmoji(result: GameResult): string {
-    if (result.endReason === 'victory') return '';
-    if (result.endReason === 'death') return '';
-    return '';
+  // Normalize cloud entry to match local result shape for display
+  function normalizeCloudEntry(entry: CloudLeaderboardEntry): GameResult {
+    return {
+      id: entry.id,
+      timestamp: new Date(entry.created_at).getTime(),
+      playerName: entry.player_name,
+      levelId: entry.level_id,
+      levelName: entry.level_name,
+      completed: entry.completed,
+      endReason: entry.end_reason as 'victory' | 'death' | 'stranded',
+      gameTimeSeconds: entry.game_time_seconds,
+      asteroidsDestroyed: entry.asteroids_destroyed,
+      totalAsteroids: entry.total_asteroids,
+      accuracy: entry.accuracy,
+      hullDamageTaken: entry.hull_damage_taken,
+      fuelConsumed: entry.fuel_consumed,
+      finalScore: entry.final_score,
+      starRating: entry.star_rating
+    };
   }
+
+  // Get current results based on active view
+  $: displayResults = activeView === 'cloud'
+    ? cloudResults.map(normalizeCloudEntry)
+    : $gameResultsStore;
 </script>
 
 <div class="editor-container">
@@ -48,8 +103,37 @@
   <h1>Leaderboard</h1>
   <p class="subtitle">Top 20 High Scores</p>
 
+  <!-- View Toggle -->
+  {#if cloudAvailable}
+    <div class="view-toggle">
+      <button
+        class="toggle-btn"
+        class:active={activeView === 'cloud'}
+        on:click={() => setView('cloud')}
+      >
+        Global
+      </button>
+      <button
+        class="toggle-btn"
+        class:active={activeView === 'local'}
+        on:click={() => setView('local')}
+      >
+        Local
+      </button>
+    </div>
+  {/if}
+
   <div class="leaderboard-wrapper">
-    {#if $gameResultsStore.length === 0}
+    {#if cloudLoading && activeView === 'cloud'}
+      <div class="no-results">
+        <p>Loading global leaderboard...</p>
+      </div>
+    {:else if cloudError && activeView === 'cloud'}
+      <div class="no-results">
+        <p>{cloudError}</p>
+        <button class="retry-btn" on:click={loadCloudLeaderboard}>Retry</button>
+      </div>
+    {:else if displayResults.length === 0}
       <div class="no-results">
         <p>No game results yet!</p>
         <p class="muted">Play a level to see your scores here.</p>
@@ -69,7 +153,7 @@
           </tr>
         </thead>
         <tbody>
-          {#each $gameResultsStore as result, i}
+          {#each displayResults as result, i}
             <tr class:victory={result.completed}>
               <td class="rank-col">
                 <span class="rank-badge" class:gold={i === 0} class:silver={i === 1} class:bronze={i === 2}>
@@ -86,8 +170,8 @@
                 <span class="star-count">{result.starRating}/12</span>
               </td>
               <td class="result-col">
-                <span class="result-badge" style="background-color: {getEndReasonColor(result)}">
-                  {getEndReasonEmoji(result)} {result.endReason}
+                <span class="result-badge" style="background-color: {getEndReasonColor(result.endReason)}">
+                  {result.endReason}
                 </span>
               </td>
               <td class="time-col">{formatTime(result.gameTimeSeconds)}</td>
@@ -100,11 +184,60 @@
   </div>
 
   <div class="leaderboard-footer">
-    <p class="muted">Showing top 20 scores sorted by highest score</p>
+    <p class="muted">
+      {#if activeView === 'cloud'}
+        Showing top 20 global scores
+      {:else}
+        Showing top 20 local scores (this device only)
+      {/if}
+    </p>
   </div>
 </div>
 
 <style>
+  .view-toggle {
+    display: flex;
+    justify-content: center;
+    gap: var(--space-sm, 8px);
+    margin-top: var(--space-lg, 24px);
+  }
+
+  .toggle-btn {
+    padding: var(--space-sm, 8px) var(--space-xl, 32px);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    background: rgba(255, 255, 255, 0.1);
+    color: var(--color-text-secondary, #e8e8e8);
+    border-radius: var(--radius-md, 6px);
+    cursor: pointer;
+    font-size: var(--font-size-sm, 0.9rem);
+    transition: all var(--transition-fast, 0.2s ease);
+  }
+
+  .toggle-btn:hover {
+    background: rgba(255, 255, 255, 0.2);
+  }
+
+  .toggle-btn.active {
+    background: var(--color-primary, #4f46e5);
+    border-color: var(--color-primary, #4f46e5);
+    color: white;
+  }
+
+  .retry-btn {
+    margin-top: var(--space-md, 16px);
+    padding: var(--space-sm, 8px) var(--space-lg, 24px);
+    background: var(--color-primary, #4f46e5);
+    color: white;
+    border: none;
+    border-radius: var(--radius-md, 6px);
+    cursor: pointer;
+    font-size: var(--font-size-sm, 0.9rem);
+  }
+
+  .retry-btn:hover {
+    opacity: 0.9;
+  }
+
   .leaderboard-wrapper {
     background: var(--color-bg-card, rgba(20, 20, 40, 0.9));
     border: 1px solid var(--color-border-default, rgba(255, 255, 255, 0.2));

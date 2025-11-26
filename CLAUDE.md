@@ -144,3 +144,4 @@ public/
 - TypeScript target is ES6 with ESNext modules
 - Vite handles bundling and dev server (though dev mode is disabled per user preference)
 - Inspector can be toggled with 'i' key for debugging (only in development)
+- https://dev.flatearthdefense.com  is local development, it's proxied back to my localhost which is running npm run dev

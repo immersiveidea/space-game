@@ -42,11 +42,13 @@ export class AuthService {
         }
 
         console.log('[AuthService] Creating Auth0 client...');
+        const audience = import.meta.env.VITE_AUTH0_AUDIENCE;
         this._client = await createAuth0Client({
             domain,
             clientId,
             authorizationParams: {
-                redirect_uri: window.location.origin
+                redirect_uri: window.location.origin,
+                audience: audience || undefined
             },
             cacheLocation: 'localstorage', // Persist tokens across page reloads
             useRefreshTokens: true // Enable silent token refresh

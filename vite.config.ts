@@ -29,6 +29,7 @@ export default defineConfig({
             '@babylonjs/core',
             '@babylonjs/loaders',
             '@babylonjs/havok',
+            '@babylonjs/materials',
             '@babylonjs/procedural-textures',
             '@babylonjs/procedural-textures/fireProceduralTexture'
         ],

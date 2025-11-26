@@ -25,6 +25,7 @@
     "@babylonjs/procedural-textures": "8.36.1",
     "@babylonjs/serializers": "8.36.1",
     "@newrelic/browser-agent": "^1.302.0",
+    "@supabase/supabase-js": "^2.84.0",
     "loglevel": "^1.9.2",
     "openai": "4.52.3",
     "svelte-routing": "^2.13.0"

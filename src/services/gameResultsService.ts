@@ -1,4 +1,5 @@
 import { AuthService } from './authService';
+import { CloudLeaderboardService } from './cloudLeaderboardService';
 import { GameStats } from '../game/gameStats';
 import { Scoreboard } from '../ui/hud/scoreboard';
 import debugLog from '../core/debug';
@@ -50,7 +51,7 @@ export class GameResultsService {
     }
 
     /**
-     * Save a game result to storage
+     * Save a game result to storage (local + cloud)
      */
     public saveResult(result: GameResult): void {
         console.log('[GameResultsService] saveResult called with:', result);
@@ -60,6 +61,29 @@ export class GameResultsService {
         this.saveToStorage(results);
         console.log('[GameResultsService] Saved result:', result.id, result.finalScore);
         debugLog('[GameResultsService] Saved result:', result.id, result.finalScore);
+
+        // Submit to cloud leaderboard (non-blocking)
+        this.submitToCloud(result);
+    }
+
+    /**
+     * Submit result to cloud leaderboard (async, non-blocking)
+     */
+    private async submitToCloud(result: GameResult): Promise<void> {
+        try {
+            const cloudService = CloudLeaderboardService.getInstance();
+            if (cloudService.isAvailable()) {
+                const success = await cloudService.submitScore(result);
+                if (success) {
+                    console.log('[GameResultsService] Cloud submission successful');
+                } else {
+                    console.log('[GameResultsService] Cloud submission skipped (not authenticated or failed)');
+                }
+            }
+        } catch (error) {
+            // Don't let cloud failures affect local save
+            console.warn('[GameResultsService] Cloud submission error:', error);
+        }
     }
 
     /**
