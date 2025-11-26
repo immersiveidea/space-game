@@ -22,6 +22,7 @@ export interface CloudLeaderboardEntry {
     final_score: number;
     star_rating: number;
     created_at: string;
+    is_test_data?: boolean;  // Flag for seed/test data - allows cleanup
 }
 
 /**

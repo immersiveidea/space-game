@@ -12,7 +12,9 @@
     "speech": "tsc && node ./dist/server/voices.js",
     "export-blend": "tsx scripts/exportBlend.ts",
     "export-blend:watch": "tsx scripts/exportBlend.ts --watch",
-    "export-blend:batch": "tsx scripts/exportBlend.ts --batch"
+    "export-blend:batch": "tsx scripts/exportBlend.ts --batch",
+    "seed:leaderboard": "tsx scripts/seedLeaderboard.ts",
+    "seed:leaderboard:clean": "tsx scripts/seedLeaderboard.ts --clean"
   },
   "dependencies": {
     "@auth0/auth0-spa-js": "^2.8.0",
@@ -33,6 +35,8 @@
   "devDependencies": {
     "@sveltejs/vite-plugin-svelte": "^6.2.1",
     "@types/node": "^20.0.0",
+    "dotenv": "^16.3.1",
+    "postgres": "^3.4.4",
     "svelte": "^5.43.14",
     "svelte-preprocess": "^6.0.3",
     "tsx": "^4.7.1",
