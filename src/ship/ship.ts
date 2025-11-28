@@ -159,6 +159,7 @@ export class Ship {
         this._ship = new TransformNode("shipBase", DefaultScene.MainScene);
         const data = await loadAsset("ship.glb");
         this._ship = data.container.transformNodes[0];
+        //this._ship.rotation = new Vector3(0, Math.PI, 0);
        // this._ship.id = "Ship"; // Set ID so mission brief can find it
         // Position is now set from level config in Level1.initialize()
 

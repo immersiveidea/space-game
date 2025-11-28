@@ -129,7 +129,7 @@ export class Scoreboard {
             gauges.setParent(null);
             gauges.setPivotPoint(gauges.getBoundingInfo().boundingSphere.center);
             gauges.setParent(oldParent);
-            //gauges.rotation.z = Math.PI;
+            //gauges.rotation.y = Math.PI;
 
             // Create gauges display
             this.createGaugesDisplay(gauges);

@@ -46,6 +46,7 @@ export class MissionBrief {
 
             mesh.parent = ship;
             mesh.position = new Vector3(0,1,2.8);
+//            mesh.rotation = new Vector3(0, Math.PI, 0);
             //mesh.renderingGroupId = 3; // Same as status screen for consistent rendering
             mesh.metadata = { uiPickable: true }; // TAG: VR UI - allow pointer selection
             console.log('[MissionBrief] Mesh parented to ship at position:', mesh.position);
