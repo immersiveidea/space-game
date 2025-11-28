@@ -162,11 +162,10 @@ export class Main {
                     try {
                         preloader.updateProgress(75, 'Entering VR...');
 
-                        // Stop render loop BEFORE entering XR to prevent showing wrong camera orientation
-                        // The ship model is rotated 180 degrees, so the XR camera would briefly face backwards
-                        // We'll resume rendering after the camera is properly parented to the ship
-                        this._engine.stopRenderLoop();
-                        debugLog('Render loop stopped before entering XR');
+                        // FIX: Don't stop render loop - it may prevent XR observables from firing properly
+                        // The brief camera orientation flash is acceptable for now
+                        // this._engine.stopRenderLoop();
+                        // debugLog('Render loop stopped before entering XR');
 
                         xrSession = await DefaultScene.XR.baseExperience.enterXRAsync('immersive-vr', 'local-floor');
                         debugLog('XR session started successfully (render loop paused until camera is ready)');
@@ -231,46 +230,15 @@ export class Main {
                     }
 
                     if (DefaultScene.XR && xrSession && DefaultScene.XR.baseExperience.state === 2) { // WebXRState.IN_XR = 2
-                        console.log('[Main] ========== XR ALREADY ACTIVE - MANUAL SETUP ==========');
+                        debugLog('[Main] XR already active - using consolidated setupXRCamera()');
 
-                        if (ship && ship.transformNode) {
-                            console.log('[Main] Ship and transformNode exist - parenting camera');
-                            debugLog('Manually parenting XR camera to ship transformNode');
-                            DefaultScene.XR.baseExperience.camera.parent = ship.transformNode;
-                            DefaultScene.XR.baseExperience.camera.position = new Vector3(0, 1.5, 0);
-                            // Rotate camera 180 degrees around Y to compensate for inverted ship GLB model
-                            DefaultScene.XR.baseExperience.camera.rotationQuaternion = null;
-                            DefaultScene.XR.baseExperience.camera.rotation = new Vector3(0, Math.PI, 0);
-                            console.log('[Main] Camera parented and rotated 180° to face forward');
+                        // Use consolidated XR camera setup from Level1
+                        level1.setupXRCamera();
 
-                            // NOW resume the render loop - camera is properly positioned
-                            this._engine.runRenderLoop(() => {
-                                DefaultScene.MainScene.render();
-                            });
-                            debugLog('Render loop resumed after camera setup');
+                        // Show mission brief (since onInitialXRPoseSetObservable won't fire when already in XR)
+                        await level1.showMissionBrief();
 
-                            console.log('[Main] ========== ABOUT TO SHOW MISSION BRIEF ==========');
-                            console.log('[Main] level1 object:', level1);
-                            console.log('[Main] level1._missionBrief:', (level1 as any)._missionBrief);
-
-                            // Show mission brief (since onInitialXRPoseSetObservable won't fire)
-                            await level1.showMissionBrief();
-
-                            console.log('[Main] ========== MISSION BRIEF SHOW() RETURNED ==========');
-                            console.log('[Main] Mission brief will call startGameplay() when trigger is pulled');
-
-                            // NOTE: Don't start timer/recording here anymore - mission brief will do it
-                            // when the user clicks the START button
-                        } else {
-                            console.error('[Main] !!!!! SHIP OR TRANSFORM NODE NOT FOUND !!!!!');
-                            console.log('[Main] ship exists:', !!ship);
-                            console.log('[Main] ship.transformNode exists:', ship ? !!ship.transformNode : 'N/A');
-                            debugLog('WARNING: Could not parent XR camera - ship or transformNode not found');
-                            // Resume render loop anyway to avoid black screen
-                            this._engine.runRenderLoop(() => {
-                                DefaultScene.MainScene.render();
-                            });
-                        }
+                        debugLog('[Main] XR setup and mission brief complete');
                     } else {
                         console.log('[Main] XR not active yet - will use onInitialXRPoseSetObservable instead');
                         // Resume render loop for non-XR path (flat mode or XR entry via observable)
@@ -651,37 +619,41 @@ export class Main {
                 debugLog(WebXRFeaturesManager.GetAvailableFeatures());
                 debugLog("WebXR initialized successfully");
 
-                // Register pointer selection feature with InputControlManager
+                // FIX: Pointer selection feature must be registered AFTER XR session starts
+                // The feature is not available during initialize() - it only becomes enabled
+                // when the XR session is active. Moving registration to onStateChangedObservable.
                 if (DefaultScene.XR) {
-                    const pointerFeature = DefaultScene.XR.baseExperience.featuresManager.getEnabledFeature(
-                        "xr-controller-pointer-selection"
-                    );
-                    if (pointerFeature) {
-                        // Store for backward compatibility (can be removed later if not needed)
-                        (DefaultScene.XR as any).pointerSelectionFeature = pointerFeature;
-
-                        // Register with InputControlManager
-                        const inputManager = InputControlManager.getInstance();
-                        inputManager.registerPointerFeature(pointerFeature);
-                        debugLog("Pointer selection feature registered with InputControlManager");
-
-                        // Configure scene-wide picking predicate to only allow UI meshes
-                        /*DefaultScene.MainScene.pointerMovePredicate = (mesh) => {
-                            // Only allow picking meshes with metadata.uiPickable = true
-                            return mesh.metadata?.uiPickable === true;
-                        };*/
-                        debugLog("Scene picking predicate configured for VR UI only");
-                    }
-
-                    // Hide Discord widget when entering VR, show when exiting
+                    // Handle XR state changes - register pointer feature when entering VR
                     DefaultScene.XR.baseExperience.onStateChangedObservable.add((state) => {
-                        const discord = (window as any).__discordWidget as DiscordWidget;
-                        if (discord) {
-                            if (state === 2) { // WebXRState.IN_XR
-                                debugLog('[Main] Entering VR - hiding Discord widget');
+                        if (state === 2) { // WebXRState.IN_XR
+                            debugLog('[Main] Entering VR - registering pointer selection feature');
+
+                            // Register pointer selection feature NOW that XR session is active
+                            const pointerFeature = DefaultScene.XR!.baseExperience.featuresManager.getEnabledFeature(
+                                "xr-controller-pointer-selection"
+                            );
+                            if (pointerFeature) {
+                                // Store for backward compatibility (can be removed later if not needed)
+                                (DefaultScene.XR as any).pointerSelectionFeature = pointerFeature;
+
+                                // Register with InputControlManager
+                                const inputManager = InputControlManager.getInstance();
+                                inputManager.registerPointerFeature(pointerFeature);
+                                debugLog("Pointer selection feature registered with InputControlManager");
+                            } else {
+                                debugLog('[Main] WARNING: Pointer selection feature not available');
+                            }
+
+                            // Hide Discord widget when entering VR
+                            const discord = (window as any).__discordWidget as DiscordWidget;
+                            if (discord) {
+                                debugLog('[Main] Hiding Discord widget');
                                 discord.hide();
-                            } else if (state === 0) { // WebXRState.NOT_IN_XR
-                                debugLog('[Main] Exiting VR - showing Discord widget');
+                            }
+                        } else if (state === 0) { // WebXRState.NOT_IN_XR
+                            debugLog('[Main] Exiting VR - showing Discord widget');
+                            const discord = (window as any).__discordWidget as DiscordWidget;
+                            if (discord) {
                                 discord.show();
                             }
                         }

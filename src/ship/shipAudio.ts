@@ -24,7 +24,7 @@ export class ShipAudio {
 
         this._primaryThrustSound = await this._audioEngine.createSoundAsync(
             "thrust",
-            "/thrust5.mp3",
+            "/assets/themes/default/audio/thrust5.mp3",
             {
                 loop: true,
                 volume: 0.2,
@@ -33,7 +33,7 @@ export class ShipAudio {
 
         this._secondaryThrustSound = await this._audioEngine.createSoundAsync(
             "thrust2",
-            "/thrust5.mp3",
+            "/assets/themes/default/audio/thrust5.mp3",
             {
                 loop: true,
                 volume: 0.5,
@@ -42,7 +42,7 @@ export class ShipAudio {
 
         this._weaponSound = await this._audioEngine.createSoundAsync(
             "shot",
-            "/shot.mp3",
+            "/assets/themes/default/audio/shot.mp3",
             {
                 loop: false,
                 volume: 0.5,

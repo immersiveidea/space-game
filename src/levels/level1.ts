@@ -4,6 +4,7 @@ import {
     AbstractMesh,
     Observable,
     PhysicsAggregate,
+    TransformNode,
     Vector3,
     WebXRState
 } from "@babylonjs/core";
@@ -57,43 +58,12 @@ export class Level1 implements Level {
             debugLog('onControllerAddedObservable exists:', !!xr.input?.onControllerAddedObservable);
 
             xr.baseExperience.onInitialXRPoseSetObservable.add(() => {
-                xr.baseExperience.camera.parent = this._ship.transformNode;
-                xr.baseExperience.camera.position = new Vector3(0, 1.5, 0);
-                // Rotate camera 180 degrees around Y to compensate for inverted ship GLB model
-                xr.baseExperience.camera.rotationQuaternion = null;
-                xr.baseExperience.camera.rotation = new Vector3(0, 0, 0);
+                debugLog('[Level1] onInitialXRPoseSetObservable fired');
 
-                // Resume render loop if it was stopped (ensures camera is properly set before first visible frame)
-                const engine = DefaultScene.MainScene.getEngine();
-                engine.runRenderLoop(() => {
-                    DefaultScene.MainScene.render();
-                });
-                debugLog('[Level1] Render loop resumed after XR camera setup');
+                // Use consolidated XR camera setup
+                this.setupXRCamera();
 
-                // Disable keyboard input in VR mode to prevent interference
-                if (this._ship.keyboardInput) {
-                    this._ship.keyboardInput.setEnabled(false);
-                    debugLog('[Level1] Keyboard input disabled for VR mode');
-                }
-
-                // Track WebXR session start
-                try {
-                    const analytics = getAnalytics();
-                    analytics.track('webxr_session_start', {
-                        deviceName: navigator.userAgent,
-                        isImmersive: true
-                    });
-                } catch (error) {
-                    debugLog('Analytics tracking failed:', error);
-                }
-
-                // Add controllers
-                const observer = xr.input.onControllerAddedObservable.add((controller) => {
-                    debugLog('🎮 onControllerAddedObservable FIRED for:', controller.inputSource.handedness);
-                    this._ship.addController(controller);
-                });
-
-                // Show mission brief instead of starting immediately
+                // Show mission brief after camera setup
                 debugLog('[Level1] Showing mission brief on XR entry');
                 this.showMissionBrief();
             });
@@ -103,6 +73,83 @@ export class Level1 implements Level {
 
     getReadyObservable(): Observable<Level> {
         return this._onReadyObservable;
+    }
+
+    /**
+     * Setup XR camera, pointer selection, and controllers
+     * Consolidated function called from both onInitialXRPoseSetObservable and main.ts
+     * when XR is already active before level creation
+     */
+    public setupXRCamera(): void {
+        const xr = DefaultScene.XR;
+        if (!xr) {
+            debugLog('[Level1] setupXRCamera: No XR experience available');
+            return;
+        }
+
+        if (!this._ship?.transformNode) {
+            console.error('[Level1] setupXRCamera: Ship or transformNode not available');
+            return;
+        }
+
+        debugLog('[Level1] ========== setupXRCamera START ==========');
+
+        // Create intermediate TransformNode for camera rotation
+        // WebXR camera only uses rotationQuaternion (not .rotation), and XR frame updates overwrite it
+        // By rotating an intermediate node, we can orient the camera without fighting XR frame updates
+        const cameraRig = new TransformNode("xrCameraRig", DefaultScene.MainScene);
+        cameraRig.parent = this._ship.transformNode;
+        cameraRig.rotation = new Vector3(0, 0, 0); // Rotate 180° to face forward
+        debugLog('[Level1] Created cameraRig TransformNode, rotated 180°');
+
+        // Parent XR camera to the rig
+        xr.baseExperience.camera.parent = cameraRig;
+        xr.baseExperience.camera.position = new Vector3(0, .8, 0);
+        debugLog('[Level1] XR camera parented to cameraRig at position (0, 1.2, 0)');
+
+        // Ensure render loop is running
+        const engine = DefaultScene.MainScene.getEngine();
+        engine.runRenderLoop(() => {
+            DefaultScene.MainScene.render();
+        });
+        debugLog('[Level1] Render loop started/resumed');
+
+        // Disable keyboard input in VR mode to prevent interference
+        if (this._ship.keyboardInput) {
+            this._ship.keyboardInput.setEnabled(false);
+            debugLog('[Level1] Keyboard input disabled for VR mode');
+        }
+
+        // Register pointer selection feature
+        const pointerFeature = xr.baseExperience.featuresManager.getEnabledFeature(
+            "xr-controller-pointer-selection"
+        );
+        if (pointerFeature) {
+            const inputManager = InputControlManager.getInstance();
+            inputManager.registerPointerFeature(pointerFeature);
+            debugLog('[Level1] Pointer selection feature registered');
+        } else {
+            debugLog('[Level1] WARNING: Pointer selection feature not available');
+        }
+
+        // Track WebXR session start
+        try {
+            const analytics = getAnalytics();
+            analytics.track('webxr_session_start', {
+                deviceName: navigator.userAgent,
+                isImmersive: true
+            });
+        } catch (error) {
+            debugLog('[Level1] Analytics tracking failed:', error);
+        }
+
+        // Setup controller observer
+        xr.input.onControllerAddedObservable.add((controller) => {
+            debugLog('[Level1] 🎮 Controller added:', controller.inputSource.handedness);
+            this._ship.addController(controller);
+        });
+
+        debugLog('[Level1] ========== setupXRCamera COMPLETE ==========');
     }
 
     /**
@@ -380,7 +427,7 @@ export class Level1 implements Level {
         // Load background music before marking as ready
         if (this._audioEngine) {
             setLoadingMessage("Loading background music...");
-            this._backgroundMusic = await this._audioEngine.createSoundAsync("background", "/song1.mp3", {
+            this._backgroundMusic = await this._audioEngine.createSoundAsync("background", "/assets/themes/default/audio/song1.mp3", {
                 loop: true,
                 volume: 0.5
             });
