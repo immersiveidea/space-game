@@ -1,20 +1,18 @@
 <script lang="ts">
   import { navigate } from 'svelte-routing';
-  import type { LevelDirectoryEntry } from '../../levels/storage/levelRegistry';
-  import { levelRegistryStore } from '../../stores/levelRegistry';
+  import type { CloudLevelEntry } from '../../services/cloudLevelService';
   import { authStore } from '../../stores/auth';
   import { progressionStore } from '../../stores/progression';
   import { gameConfigStore } from '../../stores/gameConfig';
   import Button from '../shared/Button.svelte';
 
   export let levelId: string;
-  export let directoryEntry: LevelDirectoryEntry;
-  export let isDefault: boolean = true;
+  export let levelEntry: CloudLevelEntry;
 
   async function handleLevelClick() {
     console.log('[LevelCard] Level clicked:', {
       levelId,
-      levelName: directoryEntry.name,
+      levelName: levelEntry.name,
       isUnlocked,
       isAuthenticated: $authStore.isAuthenticated,
       buttonText
@@ -43,15 +41,9 @@
     navigate(`/play/${levelId}`);
   }
 
-  async function handleDelete() {
-    if (confirm(`Are you sure you want to delete "${levelId}"?`)) {
-      levelRegistryStore.deleteCustomLevel(levelId);
-    }
-  }
-
-  // Determine if level is unlocked - complex logic matching original implementation
+  // Determine if level is unlocked
   $: {
-    const isTutorial = progressionStore.isTutorial(directoryEntry.name);
+    const isTutorial = progressionStore.isTutorial(levelEntry.name);
     const isAuthenticated = $authStore.isAuthenticated;
     const progressionEnabled = $gameConfigStore.progressionEnabled;
 
@@ -65,11 +57,11 @@
       isUnlocked = false;
       lockReason = 'Sign in to unlock';
       buttonText = 'Sign In Required';
-    } else if (progressionEnabled && isDefault) {
+    } else if (progressionEnabled) {
       // Check sequential progression
-      isUnlocked = progressionStore.isLevelUnlocked(directoryEntry.name, isDefault);
+      isUnlocked = progressionStore.isLevelUnlocked(levelEntry.name, true);
       if (!isUnlocked) {
-        const prevLevel = progressionStore.getPreviousLevelName(directoryEntry.name);
+        const prevLevel = progressionStore.getPreviousLevelName(levelEntry.name);
         lockReason = prevLevel ? `Complete "${prevLevel}" to unlock` : 'Locked';
         buttonText = 'Locked';
       } else {
@@ -77,7 +69,7 @@
         buttonText = 'Play Level';
       }
     } else {
-      // Custom levels or progression disabled - always unlocked when authenticated
+      // Progression disabled - always unlocked when authenticated
       isUnlocked = true;
       lockReason = '';
       buttonText = 'Play Level';
@@ -93,23 +85,20 @@
 
 <div class={cardClasses}>
   <div class="level-card-header">
-    <h2 class="level-card-title">{directoryEntry.name}</h2>
+    <h2 class="level-card-title">{levelEntry.name}</h2>
     {#if !isUnlocked}
       <div class="level-card-status level-card-status-locked">🔒</div>
-    {/if}
-    {#if !isDefault}
-      <div class="level-card-badge level-card-badge-custom">CUSTOM</div>
     {/if}
   </div>
 
   <div class="level-meta">
-    Difficulty: {directoryEntry.difficulty || 'unknown'}
-    {#if directoryEntry.estimatedTime}
-      • {directoryEntry.estimatedTime}
+    Difficulty: {levelEntry.difficulty || 'unknown'}
+    {#if levelEntry.estimatedTime}
+      • {levelEntry.estimatedTime}
     {/if}
   </div>
 
-  <p class="level-card-description">{directoryEntry.description}</p>
+  <p class="level-card-description">{levelEntry.description}</p>
 
   {#if !isUnlocked && lockReason}
     <div class="level-lock-reason">{lockReason}</div>
@@ -122,12 +111,6 @@
     >
       {buttonText}
     </Button>
-
-    {#if !isDefault && isUnlocked}
-      <Button variant="secondary" on:click={handleDelete} title="Delete level">
-        🗑️
-      </Button>
-    {/if}
   </div>
 </div>
 

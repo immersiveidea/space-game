@@ -86,8 +86,8 @@ export class StatusScreen {
     /**
      * Initialize the status screen mesh and UI
      */
-    public initialize(camera: Camera): void {
-        this._camera = camera;
+    public initialize(): void {
+        this._camera = DefaultScene.XR.baseExperience.camera;
 
         // Create a plane mesh for the status screen
         this._screenMesh = MeshBuilder.CreatePlane(

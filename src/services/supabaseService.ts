@@ -90,4 +90,59 @@ export class SupabaseService {
 
         return this._authenticatedClient;
     }
+
+    /**
+     * Ensure user exists in internal users table, creating if needed
+     * Maps Auth0 sub to internal UUID
+     * Returns the internal user ID (UUID)
+     */
+    public async ensureUserExists(): Promise<string | null> {
+        const client = await this.getAuthenticatedClient();
+        if (!client) {
+            return null;
+        }
+
+        const authService = AuthService.getInstance();
+        const user = authService.getUser();
+        if (!user?.sub) {
+            console.warn('[SupabaseService] No user sub available');
+            return null;
+        }
+
+        // Try to get existing user
+        const { data: existingUser, error: fetchError } = await client
+            .from('users')
+            .select('id')
+            .eq('auth0_sub', user.sub)
+            .single();
+
+        if (existingUser) {
+            return existingUser.id;
+        }
+
+        // User doesn't exist, create them
+        if (fetchError && fetchError.code === 'PGRST116') {
+            const { data: newUser, error: insertError } = await client
+                .from('users')
+                .insert({
+                    auth0_sub: user.sub,
+                    display_name: user.name || user.nickname || 'Player'
+                })
+                .select('id')
+                .single();
+
+            if (insertError) {
+                console.error('[SupabaseService] Failed to create user:', insertError);
+                return null;
+            }
+
+            return newUser?.id || null;
+        }
+
+        if (fetchError) {
+            console.error('[SupabaseService] Failed to fetch user:', fetchError);
+        }
+
+        return null;
+    }
 }

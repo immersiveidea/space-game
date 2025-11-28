@@ -431,7 +431,7 @@ export class Ship {
             () => this.handleResume(),
             () => this.handleNextLevel()
         );
-        this._statusScreen.initialize(this._camera);
+        this._statusScreen.initialize();
     }
 
     /**

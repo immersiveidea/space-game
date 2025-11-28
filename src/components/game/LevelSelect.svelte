@@ -1,11 +1,10 @@
 <script lang="ts">
   import { levelRegistryStore } from '../../stores/levelRegistry';
-  import { authStore } from '../../stores/auth';
   import LevelCard from './LevelCard.svelte';
   import ProgressBar from './ProgressBar.svelte';
 
-  // Get default levels in order (must match directory.json)
-  const DEFAULT_LEVEL_ORDER = [
+  // Get levels in order (by sortOrder from Supabase)
+  const LEVEL_ORDER = [
     'rookie-training',
     'asteroid-mania',
     'deep-space-patrol',
@@ -16,13 +15,10 @@
 
   // Reactive declarations for store values
   $: isReady = $levelRegistryStore.isInitialized;
-  $: defaultLevels = $levelRegistryStore.defaultLevels;
-  $: customLevels = $levelRegistryStore.customLevels;
+  $: levels = $levelRegistryStore.levels;
 </script>
 
 <div id="mainDiv">
-
-
   <div id="levelSelect" class:ready={isReady}>
     <!-- Hero Section -->
     <div class="hero">
@@ -41,42 +37,23 @@
       <div class="card-container" id="levelCardsContainer">
         {#if !isReady}
           <div class="loading-message">Loading levels...</div>
-        {:else if defaultLevels.size === 0}
+        {:else if levels.size === 0}
           <div class="no-levels-message">
             <h2>No Levels Found</h2>
-            <p>No levels available. Please check your installation.</p>
+            <p>No levels available. Please check your connection.</p>
           </div>
         {:else}
-          {#each DEFAULT_LEVEL_ORDER as levelId}
-            {@const entry = defaultLevels.get(levelId)}
+          {#each LEVEL_ORDER as levelId}
+            {@const entry = levels.get(levelId)}
             {#if entry}
               <LevelCard
                 {levelId}
-                directoryEntry={entry.directoryEntry}
-                isDefault={entry.isDefault}
+                levelEntry={entry}
               />
             {/if}
           {/each}
-
-          {#if customLevels.size > 0}
-            <div style="grid-column: 1 / -1; margin-top: var(--space-2xl);">
-              <h3 class="level-header">Custom Levels</h3>
-            </div>
-
-            {#each Array.from(customLevels.entries()) as [levelId, entry]}
-              <LevelCard
-                {levelId}
-                directoryEntry={entry.directoryEntry}
-                isDefault={false}
-              />
-            {/each}
-          {/if}
         {/if}
       </div>
-
-
-
-
     </div>
   </div>
 </div>

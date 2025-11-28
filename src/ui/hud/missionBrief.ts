@@ -10,7 +10,7 @@ import { DefaultScene } from "../../core/defaultScene";
 import {Mesh, MeshBuilder, Vector3, Observable, Observer} from "@babylonjs/core";
 import debugLog from '../../core/debug';
 import { LevelConfig } from "../../levels/config/levelConfig";
-import { LevelDirectoryEntry } from "../../levels/storage/levelRegistry";
+import { CloudLevelEntry } from "../../services/cloudLevelService";
 
 /**
  * Mission brief display for VR
@@ -46,8 +46,8 @@ export class MissionBrief {
 
             mesh.parent = ship;
             mesh.position = new Vector3(0,1,2.8);
-//            mesh.rotation = new Vector3(0, Math.PI, 0);
-            //mesh.renderingGroupId = 3; // Same as status screen for consistent rendering
+            mesh.rotation = new Vector3(0, 0, 0);
+            mesh.renderingGroupId = 3; // Same as status screen for consistent rendering
             mesh.metadata = { uiPickable: true }; // TAG: VR UI - allow pointer selection
             console.log('[MissionBrief] Mesh parented to ship at position:', mesh.position);
             console.log('[MissionBrief] Mesh absolute position:', mesh.getAbsolutePosition());
@@ -93,7 +93,7 @@ export class MissionBrief {
      * @param triggerObservable - Observable that fires when trigger is pulled
      * @param onStart - Callback when start button is pressed
      */
-    public show(levelConfig: LevelConfig, directoryEntry: LevelDirectoryEntry | null, triggerObservable: Observable<void>, onStart: () => void): void {
+    public show(levelConfig: LevelConfig, directoryEntry: CloudLevelEntry | null, triggerObservable: Observable<void>, onStart: () => void): void {
         console.log('[MissionBrief] ========== SHOW() CALLED ==========');
         console.log('[MissionBrief] Container exists:', !!this._container);
         console.log('[MissionBrief] AdvancedTexture exists:', !!this._advancedTexture);
@@ -261,7 +261,7 @@ export class MissionBrief {
     /**
      * Get mission description text based on level config and directory entry
      */
-    private getMissionDescription(levelConfig: LevelConfig, directoryEntry: LevelDirectoryEntry | null): string {
+    private getMissionDescription(levelConfig: LevelConfig, directoryEntry: CloudLevelEntry | null): string {
         const difficulty = levelConfig.difficulty.toUpperCase();
         const name = directoryEntry?.name || levelConfig.metadata?.description || "Mission";
         const description = directoryEntry?.description || "Clear the asteroid field";
@@ -276,7 +276,7 @@ export class MissionBrief {
     /**
      * Get objectives text based on level config and directory entry
      */
-    private getObjectives(levelConfig: LevelConfig, directoryEntry: LevelDirectoryEntry | null): string {
+    private getObjectives(levelConfig: LevelConfig, directoryEntry: CloudLevelEntry | null): string {
         const asteroidCount = levelConfig.asteroids?.length || 0;
 
         // Use mission brief from directory if available

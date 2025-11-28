@@ -18,7 +18,8 @@ import debugLog from '../core/debug';
 import {PhysicsRecorder} from "../replay/recording/physicsRecorder";
 import {getAnalytics} from "../analytics";
 import {MissionBrief} from "../ui/hud/missionBrief";
-import {LevelRegistry, LevelDirectoryEntry} from "./storage/levelRegistry";
+import {LevelRegistry} from "./storage/levelRegistry";
+import type {CloudLevelEntry} from "../services/cloudLevelService";
 import { InputControlManager } from "../ship/input/inputControlManager";
 
 export class Level1 implements Level {
@@ -166,7 +167,7 @@ export class Level1 implements Level {
         this._missionBriefShown = true;
         console.log('[Level1] showMissionBrief() called');
 
-        let directoryEntry: LevelDirectoryEntry | null = null;
+        let directoryEntry: CloudLevelEntry | null = null;
 
         // Try to get directory entry if we have a level ID
         if (this._levelId) {
@@ -182,12 +183,12 @@ export class Level1 implements Level {
                 console.log('[Level1] Registry entry found:', !!registryEntry);
 
                 if (registryEntry) {
-                    directoryEntry = registryEntry.directoryEntry;
-                    console.log('[Level1] Directory entry data:', {
+                    directoryEntry = registryEntry;
+                    console.log('[Level1] Level entry data:', {
                         id: directoryEntry?.id,
+                        slug: directoryEntry?.slug,
                         name: directoryEntry?.name,
                         description: directoryEntry?.description,
-                        levelPath: directoryEntry?.levelPath,
                         missionBriefCount: directoryEntry?.missionBrief?.length || 0,
                         estimatedTime: directoryEntry?.estimatedTime,
                         difficulty: directoryEntry?.difficulty
@@ -199,11 +200,7 @@ export class Level1 implements Level {
                             console.log(`  ${i + 1}. ${item}`);
                         });
                     } else {
-                        console.warn('[Level1] ⚠️  No missionBrief found in directory entry!');
-                    }
-
-                    if (!directoryEntry?.levelPath) {
-                        console.warn('[Level1] ⚠️  No levelPath found in directory entry!');
+                        console.warn('[Level1] ⚠️  No missionBrief found in level entry!');
                     }
                 } else {
                     console.error('[Level1] ❌ No registry entry found for level ID:', this._levelId);
