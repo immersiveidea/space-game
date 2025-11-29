@@ -83,7 +83,7 @@ export class WeaponSystem {
         // Create projectile instance
         const ammo = new InstancedMesh("ammo", this._ammoBaseMesh as Mesh);
         ammo.parent = shipTransform;
-        ammo.position.y = 0.1;
+        ammo.position.y = 0.5;
         ammo.position.z = 8.4;
 
         // Detach from parent to move independently

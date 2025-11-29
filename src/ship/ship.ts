@@ -697,11 +697,29 @@ export class Ship {
         }
 
         if (this._weapons && this._ship && this._ship.physicsBody) {
-            // Calculate projectile velocity: ship forward + ship velocity
-            const shipVelocity = this._ship.physicsBody.getLinearVelocity();
+            // Get ship velocities
+            const linearVelocity = this._ship.physicsBody.getLinearVelocity();
+            const angularVelocity = this._ship.physicsBody.getAngularVelocity();
+
+            // Spawn offset in local space (must match weaponSystem.ts)
+            const localSpawnOffset = new Vector3(0, 0.5, 8.4);
+
+            // Transform spawn offset to world space (direction only)
+            const worldSpawnOffset = Vector3.TransformNormal(
+                localSpawnOffset,
+                this._ship.getWorldMatrix()
+            );
+
+            // Calculate tangential velocity at spawn point: ω × r
+            const tangentialVelocity = angularVelocity.cross(worldSpawnOffset);
+
+            // Velocity at spawn point = linear + tangential
+            const velocityAtSpawn = linearVelocity.add(tangentialVelocity);
+
+            // Final projectile velocity: forward direction + spawn point velocity
             const projectileVelocity = this._ship.forward
                 .scale(200000)
-                .add(shipVelocity);
+                .add(velocityAtSpawn);
 
             this._weapons.fire(this._ship, projectileVelocity);
         }
