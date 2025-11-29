@@ -14,9 +14,6 @@ export class Preloader {
     }
 
     private createUI(): void {
-        const levelSelect = document.getElementById('levelSelect');
-        if (!levelSelect) return;
-
         // Create preloader container
         this.container = document.createElement('div');
         this.container.className = 'preloader';
@@ -45,7 +42,8 @@ export class Preloader {
             </div>
         `;
 
-        levelSelect.appendChild(this.container);
+        // Append to body so it's visible even when other UI elements are hidden
+        document.body.appendChild(this.container);
 
         // Get references
         this.progressBar = document.getElementById('preloaderProgress');

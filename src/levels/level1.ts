@@ -106,6 +106,12 @@ export class Level1 implements Level {
         xr.baseExperience.camera.position = new Vector3(0, 1.2, 0);
         log.debug('[Level1] XR camera parented to cameraRig at position (0, 1.2, 0)');
 
+        // Show the canvas now that camera is properly positioned in ship
+        const canvas = document.getElementById('gameCanvas');
+        if (canvas) {
+            canvas.style.display = 'block';
+        }
+
         // Ensure render loop is running
         const engine = DefaultScene.MainScene.getEngine();
         engine.runRenderLoop(() => {

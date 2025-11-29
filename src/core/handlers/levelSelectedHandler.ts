@@ -92,6 +92,11 @@ export function createLevelSelectedHandler(context: LevelSelectedContext): (e: C
                 } catch (error) {
                     log.debug('Failed to enter XR, will fall back to flat mode:', error);
                     DefaultScene.XR = null;
+                    // Show canvas for flat mode
+                    const canvas = document.getElementById('gameCanvas');
+                    if (canvas) {
+                        canvas.style.display = 'block';
+                    }
                     engine.runRenderLoop(() => {
                         DefaultScene.MainScene.render();
                     });
@@ -154,6 +159,11 @@ export function createLevelSelectedHandler(context: LevelSelectedContext): (e: C
                     log.debug('[Main] XR setup and mission brief complete');
                 } else {
                     log.info('[Main] XR not active yet - will use onInitialXRPoseSetObservable instead');
+                    // Show canvas for non-XR mode
+                    const canvas = document.getElementById('gameCanvas');
+                    if (canvas) {
+                        canvas.style.display = 'block';
+                    }
                     engine.runRenderLoop(() => {
                         DefaultScene.MainScene.render();
                     });

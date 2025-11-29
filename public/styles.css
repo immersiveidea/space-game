@@ -107,6 +107,7 @@ body {
     margin: 0;
     padding: 0;
     background: transparent;
+    display: none; /* Hidden until camera is positioned in ship */
 }
 
 /* ============================================================================
