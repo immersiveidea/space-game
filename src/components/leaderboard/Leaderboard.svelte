@@ -5,6 +5,7 @@
   import type { GameResult } from '../../services/gameResultsService';
   import { CloudLeaderboardService, type CloudLeaderboardEntry, getDisplayName } from '../../services/cloudLeaderboardService';
   import { formatStars } from '../../game/scoreCalculator';
+  import log from '../../core/logger';
 
   // View toggle: 'local' or 'cloud'
   let activeView: 'local' | 'cloud' = 'cloud';
@@ -52,7 +53,7 @@
       }
     } catch (error) {
       cloudError = 'Failed to load cloud leaderboard';
-      console.error('[Leaderboard] Cloud load error:', error);
+      log.error('[Leaderboard] Cloud load error:', error);
     } finally {
       cloudLoading = false;
       cloudLoadingMore = false;

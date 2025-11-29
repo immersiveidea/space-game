@@ -6,7 +6,7 @@ import {
     Observable,
     Vector3,
 } from "@babylonjs/core";
-import debugLog from '../../core/debug';
+import log from '../../core/logger';
 import { ShipStatus } from '../../ship/shipStatus';
 
 export type ScoreEvent = {
@@ -101,8 +101,8 @@ export class Scoreboard {
         const scene = DefaultScene.MainScene;
 
         const parent = scene.getNodeById('ship');
-        debugLog('Scoreboard parent:', parent);
-        debugLog('Initializing scoreboard');
+        log.debug('Scoreboard parent:', parent);
+        log.debug('Initializing scoreboard');
         let scoreboard: Mesh | null = null;
 
         // Retrieve and setup screen mesh from the loaded GLB
@@ -137,7 +137,7 @@ export class Scoreboard {
 
         // Fallback: create a plane if screen mesh not found
         if (!scoreboard) {
-            console.error('Screen mesh not found, creating fallback plane');
+            log.error('Screen mesh not found, creating fallback plane');
             scoreboard = MeshBuilder.CreatePlane("scoreboard", {width: 1, height: 1}, scene);
             scoreboard.parent = parent;
 
@@ -249,7 +249,7 @@ export class Scoreboard {
             oldMaterial.dispose(true, true);
         }
 
-        debugLog('Gauges texture created, material:', gaugesMesh.material?.name);
+        log.debug('Gauges texture created, material:', gaugesMesh.material?.name);
 
         // Create a vertical stack panel for the gauges
         const panel = new StackPanel('GaugesPanel');
@@ -274,7 +274,7 @@ export class Scoreboard {
         this._shipStatus.setHull(1);
         this._shipStatus.setAmmo(1);
 
-        debugLog('Gauges display created with initial test values');
+        log.debug('Gauges display created with initial test values');
     }
 
     /**

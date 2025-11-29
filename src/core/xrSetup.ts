@@ -1,7 +1,7 @@
 import { WebXRDefaultExperience, WebXRFeaturesManager } from "@babylonjs/core";
 import { DefaultScene } from "./defaultScene";
 import { InputControlManager } from "../ship/input/inputControlManager";
-import debugLog from './debug';
+import log from './logger';
 
 export interface ProgressReporter {
     reportProgress(percent: number, message: string): void;
@@ -24,7 +24,7 @@ export async function initializeXR(reporter: ProgressReporter): Promise<void> {
         registerXRStateHandler();
         reporter.reportProgress(40, 'VR support enabled');
     } catch (error) {
-        debugLog("WebXR initialization failed:", error);
+        log.debug("WebXR initialization failed:", error);
         DefaultScene.XR = null;
         reporter.reportProgress(40, 'Desktop mode');
     }
@@ -37,7 +37,7 @@ async function createXRExperience(): Promise<void> {
         disableHandTracking: true,
         disableDefaultUI: true
     });
-    debugLog(WebXRFeaturesManager.GetAvailableFeatures());
+    log.debug(WebXRFeaturesManager.GetAvailableFeatures());
 }
 
 function registerXRStateHandler(): void {

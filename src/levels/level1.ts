@@ -14,7 +14,7 @@ import setLoadingMessage from "../utils/setLoadingMessage";
 import {LevelConfig} from "./config/levelConfig";
 import {LevelDeserializer} from "./config/levelDeserializer";
 import {BackgroundStars} from "../environment/background/backgroundStars";
-import debugLog from '../core/debug';
+import log from '../core/logger';
 import {getAnalytics} from "../analytics";
 import {MissionBrief} from "../ui/hud/missionBrief";
 import {LevelRegistry} from "./storage/levelRegistry";
@@ -52,18 +52,18 @@ export class Level1 implements Level {
         if (!isReplayMode && DefaultScene.XR) {
             const xr = DefaultScene.XR;
 
-            debugLog('Level1 constructor - Setting up XR observables');
-            debugLog('XR input exists:', !!xr.input);
-            debugLog('onControllerAddedObservable exists:', !!xr.input?.onControllerAddedObservable);
+            log.debug('Level1 constructor - Setting up XR observables');
+            log.debug('XR input exists:', !!xr.input);
+            log.debug('onControllerAddedObservable exists:', !!xr.input?.onControllerAddedObservable);
 
             xr.baseExperience.onInitialXRPoseSetObservable.add(() => {
-                debugLog('[Level1] onInitialXRPoseSetObservable fired');
+                log.debug('[Level1] onInitialXRPoseSetObservable fired');
 
                 // Use consolidated XR camera setup
                 this.setupXRCamera();
 
                 // Show mission brief after camera setup
-                debugLog('[Level1] Showing mission brief on XR entry');
+                log.debug('[Level1] Showing mission brief on XR entry');
                 this.showMissionBrief();
             });
         }
@@ -82,16 +82,16 @@ export class Level1 implements Level {
     public setupXRCamera(): void {
         const xr = DefaultScene.XR;
         if (!xr) {
-            debugLog('[Level1] setupXRCamera: No XR experience available');
+            log.debug('[Level1] setupXRCamera: No XR experience available');
             return;
         }
 
         if (!this._ship?.transformNode) {
-            console.error('[Level1] setupXRCamera: Ship or transformNode not available');
+            log.error('[Level1] setupXRCamera: Ship or transformNode not available');
             return;
         }
 
-        debugLog('[Level1] ========== setupXRCamera START ==========');
+        log.debug('[Level1] ========== setupXRCamera START ==========');
 
         // Create intermediate TransformNode for camera rotation
         // WebXR camera only uses rotationQuaternion (not .rotation), and XR frame updates overwrite it
@@ -99,24 +99,24 @@ export class Level1 implements Level {
         const cameraRig = new TransformNode("xrCameraRig", DefaultScene.MainScene);
         cameraRig.parent = this._ship.transformNode;
         cameraRig.rotation = new Vector3(0, 0, 0); // Rotate 180° to face forward
-        debugLog('[Level1] Created cameraRig TransformNode, rotated 180°');
+        log.debug('[Level1] Created cameraRig TransformNode, rotated 180°');
 
         // Parent XR camera to the rig
         xr.baseExperience.camera.parent = cameraRig;
         xr.baseExperience.camera.position = new Vector3(0, .8, 0);
-        debugLog('[Level1] XR camera parented to cameraRig at position (0, 1.2, 0)');
+        log.debug('[Level1] XR camera parented to cameraRig at position (0, 1.2, 0)');
 
         // Ensure render loop is running
         const engine = DefaultScene.MainScene.getEngine();
         engine.runRenderLoop(() => {
             DefaultScene.MainScene.render();
         });
-        debugLog('[Level1] Render loop started/resumed');
+        log.debug('[Level1] Render loop started/resumed');
 
         // Disable keyboard input in VR mode to prevent interference
         if (this._ship.keyboardInput) {
             this._ship.keyboardInput.setEnabled(false);
-            debugLog('[Level1] Keyboard input disabled for VR mode');
+            log.debug('[Level1] Keyboard input disabled for VR mode');
         }
 
         // Register pointer selection feature
@@ -126,9 +126,9 @@ export class Level1 implements Level {
         if (pointerFeature) {
             const inputManager = InputControlManager.getInstance();
             inputManager.registerPointerFeature(pointerFeature);
-            debugLog('[Level1] Pointer selection feature registered');
+            log.debug('[Level1] Pointer selection feature registered');
         } else {
-            debugLog('[Level1] WARNING: Pointer selection feature not available');
+            log.debug('[Level1] WARNING: Pointer selection feature not available');
         }
 
         // Track WebXR session start
@@ -139,16 +139,16 @@ export class Level1 implements Level {
                 isImmersive: true
             });
         } catch (error) {
-            debugLog('[Level1] Analytics tracking failed:', error);
+            log.debug('[Level1] Analytics tracking failed:', error);
         }
 
         // Setup controller observer
         xr.input.onControllerAddedObservable.add((controller) => {
-            debugLog('[Level1] 🎮 Controller added:', controller.inputSource.handedness);
+            log.debug('[Level1] 🎮 Controller added:', controller.inputSource.handedness);
             this._ship.addController(controller);
         });
 
-        debugLog('[Level1] ========== setupXRCamera COMPLETE ==========');
+        log.debug('[Level1] ========== setupXRCamera COMPLETE ==========');
     }
 
     /**
@@ -158,12 +158,12 @@ export class Level1 implements Level {
     public async showMissionBrief(): Promise<void> {
         // Prevent showing twice
         if (this._missionBriefShown) {
-            console.log('[Level1] Mission brief already shown, skipping');
+            log.info('[Level1] Mission brief already shown, skipping');
             return;
         }
 
         this._missionBriefShown = true;
-        console.log('[Level1] showMissionBrief() called');
+        log.info('[Level1] showMissionBrief() called');
 
         let directoryEntry: CloudLevelEntry | null = null;
 
@@ -171,18 +171,18 @@ export class Level1 implements Level {
         if (this._levelId) {
             try {
                 const registry = LevelRegistry.getInstance();
-                console.log('[Level1] ======================================');
-                console.log('[Level1] Getting all levels from registry...');
+                log.info('[Level1] ======================================');
+                log.info('[Level1] Getting all levels from registry...');
                 const allLevels = registry.getAllLevels();
-                console.log('[Level1] Total levels in registry:', allLevels.size);
-                console.log('[Level1] Looking for level ID:', this._levelId);
+                log.info('[Level1] Total levels in registry:', allLevels.size);
+                log.info('[Level1] Looking for level ID:', this._levelId);
 
                 const registryEntry = allLevels.get(this._levelId);
-                console.log('[Level1] Registry entry found:', !!registryEntry);
+                log.info('[Level1] Registry entry found:', !!registryEntry);
 
                 if (registryEntry) {
                     directoryEntry = registryEntry;
-                    console.log('[Level1] Level entry data:', {
+                    log.info('[Level1] Level entry data:', {
                         id: directoryEntry?.id,
                         slug: directoryEntry?.slug,
                         name: directoryEntry?.name,
@@ -193,39 +193,39 @@ export class Level1 implements Level {
                     });
 
                     if (directoryEntry?.missionBrief) {
-                        console.log('[Level1] Mission brief objectives:');
+                        log.info('[Level1] Mission brief objectives:');
                         directoryEntry.missionBrief.forEach((item, i) => {
-                            console.log(`  ${i + 1}. ${item}`);
+                            log.info(`  ${i + 1}. ${item}`);
                         });
                     } else {
-                        console.warn('[Level1] ⚠️  No missionBrief found in level entry!');
+                        log.warn('[Level1] ⚠️  No missionBrief found in level entry!');
                     }
                 } else {
-                    console.error('[Level1] ❌ No registry entry found for level ID:', this._levelId);
-                    console.log('[Level1] Available level IDs:', Array.from(allLevels.keys()));
+                    log.error('[Level1] ❌ No registry entry found for level ID:', this._levelId);
+                    log.info('[Level1] Available level IDs:', Array.from(allLevels.keys()));
                 }
-                console.log('[Level1] ======================================');
+                log.info('[Level1] ======================================');
 
-                debugLog('[Level1] Retrieved directory entry for level:', this._levelId, directoryEntry);
+                log.debug('[Level1] Retrieved directory entry for level:', this._levelId, directoryEntry);
             } catch (error) {
-                console.error('[Level1] ❌ Exception while getting directory entry:', error);
-                debugLog('[Level1] Failed to get directory entry:', error);
+                log.error('[Level1] ❌ Exception while getting directory entry:', error);
+                log.debug('[Level1] Failed to get directory entry:', error);
             }
         } else {
-            console.warn('[Level1] ⚠️  No level ID available, using config-only mission brief');
-            debugLog('[Level1] No level ID available, using config-only mission brief');
+            log.warn('[Level1] ⚠️  No level ID available, using config-only mission brief');
+            log.debug('[Level1] No level ID available, using config-only mission brief');
         }
 
-        console.log('[Level1] About to show mission brief. Has directoryEntry:', !!directoryEntry);
+        log.info('[Level1] About to show mission brief. Has directoryEntry:', !!directoryEntry);
 
         // Disable ship controls while mission brief is showing
-        debugLog('[Level1] Disabling ship controls for mission brief');
+        log.debug('[Level1] Disabling ship controls for mission brief');
         const inputManager = InputControlManager.getInstance();
         inputManager.disableShipControls("MissionBrief");
 
         // Show mission brief with trigger observable
         this._missionBrief.show(this._levelConfig, directoryEntry, this._ship.onMissionBriefTriggerObservable, () => {
-            debugLog('[Level1] Mission brief dismissed - enabling controls and starting game');
+            log.debug('[Level1] Mission brief dismissed - enabling controls and starting game');
             inputManager.enableShipControls("MissionBrief");
             this.startGameplay();
         });
@@ -237,19 +237,19 @@ export class Level1 implements Level {
      */
     private startGameplay(): void {
         if (this._gameStarted) {
-            debugLog('[Level1] startGameplay called but game already started');
+            log.debug('[Level1] startGameplay called but game already started');
             return;
         }
 
         this._gameStarted = true;
-        debugLog('[Level1] Starting gameplay');
+        log.debug('[Level1] Starting gameplay');
 
         // Enable game end condition checking on ship
         this._ship.startGameplay();
 
         // Start game timer
         this._ship.gameStats.startTimer();
-        debugLog('Game timer started');
+        log.debug('Game timer started');
     }
 
     public async play() {
@@ -266,55 +266,55 @@ export class Level1 implements Level {
                 playCount: 1 // TODO: Get actual play count from progression system
             });
         } catch (error) {
-            debugLog('Analytics tracking failed:', error);
+            log.debug('Analytics tracking failed:', error);
         }
 
         // Play background music (already loaded during initialization)
         if (this._backgroundMusic) {
             this._backgroundMusic.play();
-            debugLog('Started playing background music');
+            log.debug('Started playing background music');
         }
 
         // If XR is available and session is active, mission brief will handle starting gameplay
         if (DefaultScene.XR && DefaultScene.XR.baseExperience.state === WebXRState.IN_XR) {
             // XR session already active, mission brief is showing or has been dismissed
-            debugLog('XR session already active, checking for controllers. Count:', DefaultScene.XR.input.controllers.length);
+            log.debug('XR session already active, checking for controllers. Count:', DefaultScene.XR.input.controllers.length);
             DefaultScene.XR.input.controllers.forEach((controller, index) => {
-                debugLog(`Controller ${index} - handedness: ${controller.inputSource.handedness}`);
+                log.debug(`Controller ${index} - handedness: ${controller.inputSource.handedness}`);
                 this._ship.addController(controller);
             });
 
             // Wait and check again after a delay (controllers might connect later)
-            debugLog('Waiting 2 seconds to check for controllers again...');
+            log.debug('Waiting 2 seconds to check for controllers again...');
             setTimeout(() => {
-                debugLog('After 2 second delay - controller count:', DefaultScene.XR.input.controllers.length);
+                log.debug('After 2 second delay - controller count:', DefaultScene.XR.input.controllers.length);
                 DefaultScene.XR.input.controllers.forEach((controller, index) => {
-                    debugLog(`  Late controller ${index} - handedness: ${controller.inputSource.handedness}`);
+                    log.debug(`  Late controller ${index} - handedness: ${controller.inputSource.handedness}`);
                 });
             }, 2000);
 
             // Note: Mission brief will call startGameplay() when start button is clicked
-            debugLog('XR mode: Mission brief will control game start');
+            log.debug('XR mode: Mission brief will control game start');
         } else if (DefaultScene.XR) {
             // XR available but not entered yet, try to enter
             try {
                 const _xr = await DefaultScene.XR.baseExperience.enterXRAsync('immersive-vr', 'local-floor');
-                debugLog('Entered XR mode from play()');
+                log.debug('Entered XR mode from play()');
                 // Check for controllers
                 DefaultScene.XR.input.controllers.forEach((controller, index) => {
-                    debugLog(`Controller ${index} - handedness: ${controller.inputSource.handedness}`);
+                    log.debug(`Controller ${index} - handedness: ${controller.inputSource.handedness}`);
                     this._ship.addController(controller);
                 });
                 // Mission brief will show and handle starting gameplay
-                debugLog('XR mode entered: Mission brief will control game start');
+                log.debug('XR mode entered: Mission brief will control game start');
             } catch (error) {
-                debugLog('Failed to enter XR from play(), falling back to flat mode:', error);
+                log.debug('Failed to enter XR from play(), falling back to flat mode:', error);
                 // Start flat mode immediately
                 this.startGameplay();
             }
         } else {
             // Flat camera mode - start game timer and physics recording immediately
-            debugLog('Playing in flat camera mode (no XR)');
+            log.debug('Playing in flat camera mode (no XR)');
             this.startGameplay();
         }
     }
@@ -341,9 +341,9 @@ export class Level1 implements Level {
     }
 
     public async initialize() {
-        debugLog('Initializing level from config:', this._levelConfig.difficulty);
+        log.debug('Initializing level from config:', this._levelConfig.difficulty);
         if (this._initialized) {
-            console.error('Initialize called twice');
+            log.error('Initialize called twice');
             return;
         }
         await this._ship.initialize();
@@ -380,7 +380,7 @@ export class Level1 implements Level {
 
         // Initialize scoreboard with total asteroid count
         this._ship.scoreboard.setRemainingCount(entities.asteroids.length);
-        debugLog(`Initialized scoreboard with ${entities.asteroids.length} asteroids`);
+        log.debug(`Initialized scoreboard with ${entities.asteroids.length} asteroids`);
 
         // Create background starfield
         setLoadingMessage("Creating starfield...");
@@ -407,7 +407,7 @@ export class Level1 implements Level {
         if (!this._isReplayMode) {
             setLoadingMessage("Initializing physics recorder...");
             //this._physicsRecorder = new PhysicsRecorder(DefaultScene.MainScene, this._levelConfig);
-            debugLog('Physics recorder initialized (will start on XR pose)');
+            log.debug('Physics recorder initialized (will start on XR pose)');
         }
 
         // Load background music before marking as ready
@@ -417,39 +417,39 @@ export class Level1 implements Level {
                 loop: true,
                 volume: 0.5
             });
-            debugLog('Background music loaded successfully');
+            log.debug('Background music loaded successfully');
         }
 
         // Initialize mission brief (will be shown when entering XR)
         setLoadingMessage("Initializing mission brief...");
-        console.log('[Level1] ========== ABOUT TO INITIALIZE MISSION BRIEF ==========');
-        console.log('[Level1] _missionBrief object:', this._missionBrief);
-        console.log('[Level1] Ship exists:', !!this._ship);
-        console.log('[Level1] Ship ID in scene:', DefaultScene.MainScene.getNodeById('Ship') !== null);
+        log.info('[Level1] ========== ABOUT TO INITIALIZE MISSION BRIEF ==========');
+        log.info('[Level1] _missionBrief object:', this._missionBrief);
+        log.info('[Level1] Ship exists:', !!this._ship);
+        log.info('[Level1] Ship ID in scene:', DefaultScene.MainScene.getNodeById('Ship') !== null);
         this._missionBrief.initialize();
-        console.log('[Level1] ========== MISSION BRIEF INITIALIZATION COMPLETE ==========');
-        debugLog('Mission brief initialized');
+        log.info('[Level1] ========== MISSION BRIEF INITIALIZATION COMPLETE ==========');
+        log.debug('Mission brief initialized');
 
         this._initialized = true;
 
         // Set par time and level info for score calculation and results recording
         const parTime = this.getParTimeForDifficulty(this._levelConfig.difficulty);
         const statusScreen = this._ship.statusScreen;
-        console.log('[Level1] StatusScreen reference:', statusScreen);
-        console.log('[Level1] Level config metadata:', this._levelConfig.metadata);
-        console.log('[Level1] Asteroids count:', entities.asteroids.length);
+        log.info('[Level1] StatusScreen reference:', statusScreen);
+        log.info('[Level1] Level config metadata:', this._levelConfig.metadata);
+        log.info('[Level1] Asteroids count:', entities.asteroids.length);
         if (statusScreen) {
             statusScreen.setParTime(parTime);
-            console.log(`[Level1] Set par time to ${parTime}s for difficulty: ${this._levelConfig.difficulty}`);
+            log.info(`[Level1] Set par time to ${parTime}s for difficulty: ${this._levelConfig.difficulty}`);
 
             // Set level info for game results recording
             const levelId = this._levelId || 'unknown';
             const levelName = this._levelConfig.metadata?.description || 'Unknown Level';
-            console.log('[Level1] About to call setCurrentLevel with:', { levelId, levelName, asteroidCount: entities.asteroids.length });
+            log.info('[Level1] About to call setCurrentLevel with:', { levelId, levelName, asteroidCount: entities.asteroids.length });
             statusScreen.setCurrentLevel(levelId, levelName, entities.asteroids.length);
-            console.log('[Level1] setCurrentLevel called successfully');
+            log.info('[Level1] setCurrentLevel called successfully');
         } else {
-            console.error('[Level1] StatusScreen is null/undefined!');
+            log.error('[Level1] StatusScreen is null/undefined!');
         }
 
         // Notify that initialization is complete

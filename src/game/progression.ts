@@ -1,3 +1,5 @@
+import log from '../core/logger';
+
 /**
  * Progression tracking system for level completion and feature unlocks
  */
@@ -62,7 +64,7 @@ export class ProgressionManager {
                 };
             }
         } catch (error) {
-            console.error('Error loading progression data:', error);
+            log.error('Error loading progression data:', error);
         }
 
         // Return fresh progression data
@@ -87,7 +89,7 @@ export class ProgressionManager {
             };
             localStorage.setItem(STORAGE_KEY, JSON.stringify(toSave));
         } catch (error) {
-            console.error('Error saving progression data:', error);
+            log.error('Error saving progression data:', error);
         }
     }
 
@@ -202,7 +204,7 @@ export class ProgressionManager {
         const completedCount = this.getCompletedDefaultLevels().length;
         if (completedCount >= EDITOR_UNLOCK_REQUIREMENT && !this._data.editorUnlocked) {
             this._data.editorUnlocked = true;
-            console.log(`🎉 Editor unlocked! (${completedCount} levels completed)`);
+            log.info(`🎉 Editor unlocked! (${completedCount} levels completed)`);
         }
     }
 

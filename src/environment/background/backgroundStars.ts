@@ -1,5 +1,5 @@
 import {Color3, Color4, PointsCloudSystem, Scene, StandardMaterial, Vector3} from "@babylonjs/core";
-import debugLog from '../../core/debug';
+import log from '../../core/logger';
 
 /**
  * Configuration options for background stars
@@ -109,7 +109,7 @@ export class BackgroundStars {
                 // Make stars always render behind everything else
                 mesh.isPickable = false;
 
-                debugLog(`Created ${this.config.count} background stars`);
+                log.debug(`Created ${this.config.count} background stars`);
             }
         });
     }

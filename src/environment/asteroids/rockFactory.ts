@@ -18,7 +18,7 @@ import {DefaultScene} from "../../core/defaultScene";
 import {ScoreEvent} from "../../ui/hud/scoreboard";
 import {GameConfig} from "../../core/gameConfig";
 import {ExplosionManager} from "./explosionManager";
-import debugLog from '../../core/debug';
+import log from '../../core/logger';
 import loadAsset from "../../utils/loadAsset";
 
 export class Rock {
@@ -66,7 +66,7 @@ export class RockFactory {
      * Reset static state - call during game cleanup
      */
     public static reset(): void {
-        debugLog('[RockFactory] Resetting static state');
+        log.debug('[RockFactory] Resetting static state');
         this._asteroidMesh = null;
         if (this._explosionManager) {
             this._explosionManager.dispose();
@@ -83,20 +83,20 @@ export class RockFactory {
      * Call this AFTER audio engine is unlocked
      */
     public static async initAudio(audioEngine: AudioEngineV2) {
-        debugLog('[RockFactory] Initializing audio via ExplosionManager');
+        log.debug('[RockFactory] Initializing audio via ExplosionManager');
         if (this._explosionManager) {
             await this._explosionManager.initAudio(audioEngine);
         }
-        debugLog('[RockFactory] Audio initialization complete');
+        log.debug('[RockFactory] Audio initialization complete');
     }
     private static async loadMesh() {
-        debugLog('loading mesh');
+        log.debug('loading mesh');
         const asset = await loadAsset("asteroid.glb");
         this._asteroidMesh = asset.meshes.get('Asteroid') || null;
         if (this._asteroidMesh) {
             this._asteroidMesh.setEnabled(false);
         }
-        debugLog(this._asteroidMesh);
+        log.debug(this._asteroidMesh);
     }
 
     public static async createRock(i: number, position: Vector3, scale: number,
@@ -108,7 +108,7 @@ export class RockFactory {
         }
 
         const rock = new InstancedMesh("asteroid-" +i, this._asteroidMesh as Mesh);
-        debugLog(rock.id);
+        log.debug(rock.id);
         rock.scaling = new Vector3(scale, scale, scale);
         rock.position = position;
         //rock.material = this._rockMaterial;
@@ -135,11 +135,11 @@ export class RockFactory {
 
             // Only apply orbit constraint if enabled for this level and orbit center exists
             if (useOrbitConstraint && this._orbitCenter) {
-                debugLog(`[RockFactory] Applying orbit constraint for ${rock.name}`);
+                log.debug(`[RockFactory] Applying orbit constraint for ${rock.name}`);
                 const constraint = new DistanceConstraint(Vector3.Distance(position, this._orbitCenter.body.transformNode.position), DefaultScene.MainScene);
                 body.addConstraint(this._orbitCenter.body, constraint);
             } else {
-                debugLog(`[RockFactory] Orbit constraint disabled for ${rock.name} - asteroid will move freely`);
+                log.debug(`[RockFactory] Orbit constraint disabled for ${rock.name} - asteroid will move freely`);
             }
 
             body.setLinearDamping(0)
@@ -152,9 +152,9 @@ export class RockFactory {
                 physicsPlugin.setActivationControl(body, PhysicsActivationControl.ALWAYS_ACTIVE);
             }
 
-            debugLog(`[RockFactory] Setting velocities for ${rock.name}:`);
-            debugLog(`[RockFactory]   Linear velocity input: ${linearVelocitry.toString()}`);
-            debugLog(`[RockFactory]   Angular velocity input: ${angularVelocity.toString()}`);
+            log.debug(`[RockFactory] Setting velocities for ${rock.name}:`);
+            log.debug(`[RockFactory]   Linear velocity input: ${linearVelocitry.toString()}`);
+            log.debug(`[RockFactory]   Angular velocity input: ${angularVelocity.toString()}`);
 
             body.setLinearVelocity(linearVelocitry);
             body.setAngularVelocity(angularVelocity);
@@ -162,24 +162,24 @@ export class RockFactory {
             // Verify velocities were set
             const setLinear = body.getLinearVelocity();
             const setAngular = body.getAngularVelocity();
-            debugLog(`[RockFactory]   Linear velocity after set: ${setLinear.toString()}`);
-            debugLog(`[RockFactory]   Angular velocity after set: ${setAngular.toString()}`);
+            log.debug(`[RockFactory]   Linear velocity after set: ${setLinear.toString()}`);
+            log.debug(`[RockFactory]   Angular velocity after set: ${setAngular.toString()}`);
             body.getCollisionObservable().add((eventData) => {
                 if (eventData.type == 'COLLISION_STARTED') {
                     if ( eventData.collidedAgainst.transformNode.id == 'ammo') {
-                        debugLog('[RockFactory] ASTEROID HIT! Triggering explosion...');
+                        log.debug('[RockFactory] ASTEROID HIT! Triggering explosion...');
                         score.notifyObservers({score: 1, remaining: -1, message: "Asteroid Destroyed"});
 
                         // Get the asteroid mesh before disposing
                         const asteroidMesh = eventData.collider.transformNode as AbstractMesh;
-                        debugLog('[RockFactory] Asteroid mesh to explode:', {
+                        log.debug('[RockFactory] Asteroid mesh to explode:', {
                             name: asteroidMesh.name,
                             id: asteroidMesh.id,
                             position: asteroidMesh.getAbsolutePosition().toString()
                         });
 
                         // Dispose asteroid physics objects BEFORE explosion (to prevent double-disposal)
-                        debugLog('[RockFactory] Disposing asteroid physics objects...');
+                        log.debug('[RockFactory] Disposing asteroid physics objects...');
                         if (eventData.collider.shape) {
                             eventData.collider.shape.dispose();
                         }
@@ -194,7 +194,7 @@ export class RockFactory {
                         }
 
                         // Dispose projectile physics objects
-                        debugLog('[RockFactory] Disposing projectile physics objects...');
+                        log.debug('[RockFactory] Disposing projectile physics objects...');
                         if (eventData.collidedAgainst.shape) {
                             eventData.collidedAgainst.shape.dispose();
                         }
@@ -204,7 +204,7 @@ export class RockFactory {
                         if (eventData.collidedAgainst) {
                             eventData.collidedAgainst.dispose();
                         }
-                        debugLog('[RockFactory] Disposal complete');
+                        log.debug('[RockFactory] Disposal complete');
                     }
                 }
             });

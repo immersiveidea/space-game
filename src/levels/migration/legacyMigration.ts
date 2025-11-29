@@ -1,4 +1,5 @@
 import {LevelConfig} from "../config/levelConfig";
+import log from "../../core/logger";
 
 const LEGACY_STORAGE_KEY = 'space-game-levels';
 const ARCHIVE_STORAGE_KEY = 'space-game-levels-archive';
@@ -64,7 +65,7 @@ export class LegacyMigration {
             }
             return status;
         } catch (error) {
-            console.error('Failed to parse migration status:', error);
+            log.error('Failed to parse migration status:', error);
             return null;
         }
     }
@@ -127,10 +128,10 @@ export class LegacyMigration {
 
             result.success = true;
 
-            console.log('Migration completed:', result);
+            log.info('Migration completed:', result);
         } catch (error) {
             result.error = error instanceof Error ? error.message : 'Unknown error';
-            console.error('Migration failed:', error);
+            log.error('Migration failed:', error);
         }
 
         return result;
@@ -162,7 +163,7 @@ export class LegacyMigration {
             const archive = JSON.parse(stored);
             return archive.data || null;
         } catch (error) {
-            console.error('Failed to parse archived data:', error);
+            log.error('Failed to parse archived data:', error);
             return null;
         }
     }
@@ -186,7 +187,7 @@ export class LegacyMigration {
 
             return JSON.stringify(exportData, null, 2);
         } catch (error) {
-            console.error('Failed to export legacy data:', error);
+            log.error('Failed to export legacy data:', error);
             return null;
         }
     }
@@ -197,7 +198,7 @@ export class LegacyMigration {
     public static downloadLegacyData(): void {
         const jsonString = this.exportLegacyData();
         if (!jsonString) {
-            console.warn('No legacy data to download');
+            log.warn('No legacy data to download');
             return;
         }
 
@@ -224,7 +225,7 @@ export class LegacyMigration {
      */
     public static resetMigration(): void {
         localStorage.removeItem(MIGRATION_STATUS_KEY);
-        console.log('Migration status reset');
+        log.info('Migration status reset');
     }
 
     /**
@@ -235,7 +236,7 @@ export class LegacyMigration {
         localStorage.removeItem(ARCHIVE_STORAGE_KEY);
         localStorage.removeItem(CUSTOM_LEVELS_KEY);
         localStorage.removeItem(MIGRATION_STATUS_KEY);
-        console.log('Full migration reset completed');
+        log.info('Full migration reset completed');
     }
 
     /**

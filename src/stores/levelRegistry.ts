@@ -2,6 +2,7 @@ import { writable } from 'svelte/store';
 import { LevelRegistry } from '../levels/storage/levelRegistry';
 import type { LevelConfig } from '../levels/config/levelConfig';
 import type { CloudLevelEntry } from '../services/cloudLevelService';
+import log from '../core/logger';
 
 interface LevelRegistryState {
   isInitialized: boolean;
@@ -28,7 +29,7 @@ function createLevelRegistryStore() {
         levels: registry.getAllLevels(),
       }));
     } catch (error) {
-      console.error('[LevelRegistryStore] Failed to initialize:', error);
+      log.error('[LevelRegistryStore] Failed to initialize:', error);
     }
   })();
 

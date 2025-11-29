@@ -1,5 +1,5 @@
 import { getAnalytics } from "../analytics";
-import debugLog from "../core/debug";
+import log from "../core/logger";
 import { calculateScore, ScoreCalculation } from "./scoreCalculator";
 
 /**
@@ -64,7 +64,7 @@ export class GameStats {
                 hullDamage: this._hullDamageTaken
             }, { sampleRate: 0.5 }); // 50% sampling for performance snapshots
         } catch (error) {
-            debugLog('Performance snapshot failed:', error);
+            log.debug('Performance snapshot failed:', error);
         }
     }
 
@@ -159,7 +159,7 @@ export class GameStats {
                 totalAsteroidsDestroyed: this._asteroidsDestroyed
             }, { immediate: true }); // Send immediately
         } catch (error) {
-            debugLog('Session end tracking failed:', error);
+            log.debug('Session end tracking failed:', error);
         }
 
         // Stop performance tracking

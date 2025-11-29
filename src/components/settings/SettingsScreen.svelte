@@ -8,6 +8,7 @@
   import Checkbox from '../shared/Checkbox.svelte';
   import NumberInput from '../shared/NumberInput.svelte';
   import InfoBox from '../shared/InfoBox.svelte';
+  import log from '../../core/logger';
 
   let message = '';
   let messageType: 'success' | 'error' | 'warning' = 'success';
@@ -21,7 +22,7 @@
         const config = JSON.parse(stored);
         gameConfigStore.set(config);
       } catch (error) {
-        console.warn('[SettingsScreen] Failed to reload config:', error);
+        log.warn('[SettingsScreen] Failed to reload config:', error);
       }
     }
   });

@@ -1,7 +1,7 @@
 import { Engine } from "@babylonjs/core";
 import { DefaultScene } from "./defaultScene";
 import { RockFactory } from "../environment/asteroids/rockFactory";
-import debugLog from './debug';
+import log from './logger';
 import Level from "../levels/level";
 
 export interface CleanupContext {
@@ -18,7 +18,7 @@ export async function cleanupAndExit(
     context: CleanupContext,
     canvas: HTMLCanvasElement
 ): Promise<void> {
-    debugLog('[Main] cleanupAndExit() called - starting graceful shutdown');
+    log.debug('[Main] cleanupAndExit() called - starting graceful shutdown');
     try {
         context.getEngine().stopRenderLoop();
         disposeCurrentLevel(context);
@@ -29,7 +29,7 @@ export async function cleanupAndExit(
         context.resetState();
         clearCanvas(canvas);
     } catch (error) {
-        console.error('[Main] Cleanup failed:', error);
+        log.error('[Main] Cleanup failed:', error);
         window.location.reload();
     }
 }
@@ -47,7 +47,7 @@ async function exitXRSession(): Promise<void> {
         try {
             await DefaultScene.XR.baseExperience.exitXRAsync();
         } catch (error) {
-            debugLog('[Main] Error exiting XR:', error);
+            log.debug('[Main] Error exiting XR:', error);
         }
     }
     DefaultScene.XR = null;

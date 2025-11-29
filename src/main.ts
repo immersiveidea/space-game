@@ -3,7 +3,7 @@ import '@babylonjs/loaders';
 
 import { DefaultScene } from "./core/defaultScene";
 import Level from "./levels/level";
-import debugLog from './core/debug';
+import log from './core/logger';
 
 import { initializeAnalytics } from './analytics/initAnalytics';
 import { createLevelSelectedHandler, LevelSelectedContext } from './core/handlers/levelSelectedHandler';
@@ -59,7 +59,7 @@ export class Main implements LevelSelectedContext, CleanupContext {
 
     public async initializeEngine(): Promise<void> {
         if (this._initialized) return;
-        debugLog('[Main] Starting engine initialization');
+        log.debug('[Main] Starting engine initialization');
         this.reportProgress(0, 'Initializing 3D engine...');
         const result = await setupScene(canvas, this);
         this._engine = result.engine;

@@ -5,7 +5,7 @@ import {
     WebXRControllerComponent,
     WebXRInputSource,
 } from "@babylonjs/core";
-import debugLog from "../../core/debug";
+import log from "../../core/logger";
 import { ControllerMappingConfig, StickAction } from "./controllerMapping";
 
 const controllerComponents = [
@@ -159,17 +159,17 @@ export class ControllerInput {
      * Add a VR controller to the input system
      */
     public addController(controller: WebXRInputSource): void {
-        debugLog(
+        log.debug(
             "ControllerInput.addController called for:",
             controller.inputSource.handedness
         );
 
         if (controller.inputSource.handedness === "left") {
-            debugLog("Adding left controller");
+            log.debug("Adding left controller");
             this._leftInputSource = controller;
             this._leftInputSource.onMotionControllerInitObservable.add(
                 (motionController) => {
-                    debugLog(
+                    log.debug(
                         "Left motion controller initialized:",
                         motionController.handness
                     );
@@ -179,17 +179,17 @@ export class ControllerInput {
 
             // Check if motion controller is already initialized
             if (controller.motionController) {
-                debugLog("Left motion controller already initialized, mapping now");
+                log.debug("Left motion controller already initialized, mapping now");
                 this.mapMotionController(controller.motionController);
             }
         }
 
         if (controller.inputSource.handedness === "right") {
-            debugLog("Adding right controller");
+            log.debug("Adding right controller");
             this._rightInputSource = controller;
             this._rightInputSource.onMotionControllerInitObservable.add(
                 (motionController) => {
-                    debugLog(
+                    log.debug(
                         "Right motion controller initialized:",
                         motionController.handness
                     );
@@ -199,7 +199,7 @@ export class ControllerInput {
 
             // Check if motion controller is already initialized
             if (controller.motionController) {
-                debugLog("Right motion controller already initialized, mapping now");
+                log.debug("Right motion controller already initialized, mapping now");
                 this.mapMotionController(controller.motionController);
             }
         }
@@ -211,7 +211,7 @@ export class ControllerInput {
     private mapMotionController(
         controller: WebXRAbstractMotionController
     ): void {
-        debugLog(
+        log.debug(
             "Mapping motion controller:",
             controller.handness,
             "Profile:",
@@ -222,13 +222,13 @@ export class ControllerInput {
             const comp = controller.components[component];
 
             if (!comp) {
-                debugLog(
+                log.debug(
                     `  Component ${component} not found on ${controller.handness} controller`
                 );
                 return;
             }
 
-            debugLog(
+            log.debug(
                 `  Found component ${component} on ${controller.handness} controller`
             );
             const observable = this._controllerObservable;
@@ -329,7 +329,7 @@ export class ControllerInput {
                         this._onStatusScreenToggleObservable.notifyObservers();
                     }
                 }
-                console.log(controllerEvent);
+                log.info(controllerEvent);
             }
         }
     }

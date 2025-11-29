@@ -17,7 +17,7 @@ import type { AudioEngineV2 } from "@babylonjs/core";
 import { DefaultScene } from "../core/defaultScene";
 import { GameConfig } from "../core/gameConfig";
 import { Sight } from "./sight";
-import debugLog from "../core/debug";
+import log from "../core/logger";
 import { Scoreboard } from "../ui/hud/scoreboard";
 import loadAsset from "../utils/loadAsset";
 import { KeyboardInput } from "./input/keyboardInput";
@@ -107,7 +107,7 @@ export class Ship {
      */
     public startGameplay(): void {
         this._gameplayStarted = true;
-        debugLog('[Ship] Gameplay started - game end conditions now active');
+        log.debug('[Ship] Gameplay started - game end conditions now active');
     }
 
     public get onMissionBriefTriggerObservable(): Observable<void> {
@@ -164,7 +164,7 @@ export class Ship {
         // Create physics if enabled
         const config = GameConfig.getInstance();
         if (config.physicsEnabled) {
-            console.log("Physics Enabled for Ship");
+            log.info("Physics Enabled for Ship");
             if (this._ship) {
                 const agg = new PhysicsAggregate(
                     this._ship,
@@ -184,9 +184,9 @@ export class Ship {
 
                 // Debug: Log center of mass before override
                 const massProps = agg.body.getMassProperties();
-                console.log(`[Ship] Original center of mass (local): ${massProps.centerOfMass.toString()}`);
-                console.log(`[Ship] Mass: ${massProps.mass}`);
-                console.log(`[Ship] Inertia: ${massProps.inertia.toString()}`);
+                log.info(`[Ship] Original center of mass (local): ${massProps.centerOfMass.toString()}`);
+                log.info(`[Ship] Mass: ${massProps.mass}`);
+                log.info(`[Ship] Inertia: ${massProps.inertia.toString()}`);
 
                 // Override center of mass to origin to prevent thrust from causing torque
                 // (mesh-based physics was calculating offset center of mass from geometry)
@@ -197,7 +197,7 @@ export class Ship {
                     inertiaOrientation: massProps.inertiaOrientation
                 });
 
-                console.log(`[Ship] Center of mass overridden to: ${agg.body.getMassProperties().centerOfMass.toString()}`);
+                log.info(`[Ship] Center of mass overridden to: ${agg.body.getMassProperties().centerOfMass.toString()}`);
 
                 // Configure physics sleep behavior from config
                 // (disabling sleep prevents abrupt stops at zero linear velocity)
@@ -243,7 +243,7 @@ export class Ship {
                         // Apply damage if above minimum threshold
                         if (this._scoreboard?.shipStatus && damage > 0.001) {
                             this._scoreboard.shipStatus.damageHull(damage);
-                            debugLog(`Collision damage: ${damage.toFixed(4)} (energy: ${kineticEnergy.toFixed(1)}, speed: ${relativeSpeed.toFixed(1)} m/s)`);
+                            log.debug(`Collision damage: ${damage.toFixed(4)} (energy: ${kineticEnergy.toFixed(1)}, speed: ${relativeSpeed.toFixed(1)} m/s)`);
 
                             // Play collision sound
                             if (this._audio) {
@@ -253,7 +253,7 @@ export class Ship {
                     }
                 });
             } else {
-                console.warn("No geometry mesh found, cannot create physics");
+                log.warn("No geometry mesh found, cannot create physics");
             }
         }
 
@@ -361,7 +361,7 @@ export class Ship {
         if (!DefaultScene.XR && !this._isReplayMode) {
             DefaultScene.MainScene.activeCamera = this._camera;
             //this._camera.attachControl(DefaultScene.MainScene.getEngine().getRenderingCanvas(), true);
-            debugLog('Flat camera set as active camera');
+            log.debug('Flat camera set as active camera');
         }
 
         // Create sight reticle
@@ -394,7 +394,7 @@ export class Ship {
                 }, { sampleRate: 0.2 }); // Sample 20% of asteroid events to reduce data
             } catch (error) {
                 // Analytics not initialized or failed - don't break gameplay
-                debugLog('Analytics tracking failed:', error);
+                log.debug('Analytics tracking failed:', error);
             }
         });
 
@@ -415,7 +415,7 @@ export class Ship {
                         source: 'asteroid_collision' // Default assumption
                     });
                 } catch (error) {
-                    debugLog('Analytics tracking failed:', error);
+                    log.debug('Analytics tracking failed:', error);
                 }
             }
         });
@@ -436,7 +436,7 @@ export class Ship {
      * Handle replay button click from status screen
      */
     private handleReplayRequest(): void {
-        debugLog('Replay button clicked - notifying observers');
+        log.debug('Replay button clicked - notifying observers');
         this.onReplayRequestObservable.notifyObservers();
     }
 
@@ -444,7 +444,7 @@ export class Ship {
      * Handle exit VR button click from status screen
      */
     private async handleExitVR(): Promise<void> {
-        debugLog('Exit VR button clicked - navigating to home');
+        log.debug('Exit VR button clicked - navigating to home');
 
         try {
             // Ensure the app UI is visible before navigating (safety net)
@@ -463,7 +463,7 @@ export class Ship {
             const { navigate } = await import('svelte-routing');
             navigate('/', { replace: true });
         } catch (error) {
-            console.error('Failed to navigate, falling back to reload:', error);
+            log.error('Failed to navigate, falling back to reload:', error);
             window.location.reload();
         }
     }
@@ -472,7 +472,7 @@ export class Ship {
      * Handle resume button click from status screen
      */
     private handleResume(): void {
-        debugLog('Resume button clicked - hiding status screen');
+        log.debug('Resume button clicked - hiding status screen');
         // InputControlManager will handle re-enabling controls when status screen hides
         this._statusScreen.hide();
     }
@@ -481,7 +481,7 @@ export class Ship {
      * Handle next level button click from status screen
      */
     private handleNextLevel(): void {
-        debugLog('Next Level button clicked - navigating to level selector');
+        log.debug('Next Level button clicked - navigating to level selector');
         // Navigate back to level selector (root route)
         window.location.hash = '#/';
         window.location.reload();
@@ -521,7 +521,7 @@ export class Ship {
 
         // Check condition 1: Death by hull damage (outside landing zone)
         if (!this._isInLandingZone && hull < 0.01) {
-            debugLog('Game end condition met: Hull critical outside landing zone');
+            log.debug('Game end condition met: Hull critical outside landing zone');
             this._statusScreen.show(true, false, 'death'); // Game ended, not victory, death reason
             // InputControlManager will handle disabling controls when status screen shows
             this._statusScreenAutoShown = true;
@@ -530,7 +530,7 @@ export class Ship {
 
         // Check condition 2: Stranded (outside landing zone, no fuel, low velocity)
         if (!this._isInLandingZone && fuel < 0.01 && totalVelocity < 5) {
-            debugLog('Game end condition met: Stranded (no fuel, low velocity)');
+            log.debug('Game end condition met: Stranded (no fuel, low velocity)');
             this._statusScreen.show(true, false, 'stranded'); // Game ended, not victory, stranded reason
             // InputControlManager will handle disabling controls when status screen shows
             this._statusScreenAutoShown = true;
@@ -540,7 +540,7 @@ export class Ship {
         // Check condition 3: Victory (all asteroids destroyed, inside landing zone)
         // Must have had asteroids to destroy in the first place (prevents false victory on init)
         if (asteroidsRemaining <= 0 && this._isInLandingZone && this._scoreboard.hasAsteroidsToDestroy) {
-            debugLog('Game end condition met: Victory (all asteroids destroyed)');
+            log.debug('Game end condition met: Victory (all asteroids destroyed)');
             this._statusScreen.show(true, true, 'victory'); // Game ended, VICTORY!
             // InputControlManager will handle disabling controls when status screen shows
             this._statusScreenAutoShown = true;
@@ -633,9 +633,9 @@ export class Ship {
 
         // Log zone transitions
         if (this._isInLandingZone && !wasInZone) {
-            debugLog("Ship entered landing zone - resupply active");
+            log.debug("Ship entered landing zone - resupply active");
         } else if (!this._isInLandingZone && wasInZone) {
-            debugLog("Ship exited landing zone - resupply inactive");
+            log.debug("Ship exited landing zone - resupply inactive");
         }
 
         // Resupply at 0.1 per second if in zone
@@ -669,7 +669,7 @@ export class Ship {
     private handleShoot(): void {
         // If controls are disabled, fire mission brief trigger observable instead of shooting
         if (!this._controlsEnabled) {
-            debugLog('[Ship] Controls disabled - firing mission brief trigger observable');
+            log.debug('[Ship] Controls disabled - firing mission brief trigger observable');
             this._onMissionBriefTriggerObservable.notifyObservers();
             return;
         }
@@ -703,7 +703,7 @@ export class Ship {
         landingAggregate.body.getCollisionObservable().add((collisionEvent) => {
             // Check if the collision is with our ship
             if (collisionEvent.collider === this._ship.physicsBody) {
-                debugLog("Physics trigger fired for landing zone");
+                log.debug("Physics trigger fired for landing zone");
             }
         });
     }
@@ -712,7 +712,7 @@ export class Ship {
      * Add a VR controller to the input system
      */
     public addController(controller: WebXRInputSource) {
-        debugLog(
+        log.debug(
             "Ship.addController called for:",
             controller.inputSource.handedness
         );

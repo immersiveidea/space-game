@@ -1,5 +1,6 @@
 import { LevelConfig } from "../config/levelConfig";
 import { CloudLevelService, CloudLevelEntry } from "../../services/cloudLevelService";
+import log from "../../core/logger";
 
 /**
  * Singleton registry for managing levels from cloud (Supabase)
@@ -36,7 +37,7 @@ export class LevelRegistry {
         }
 
         this.initialized = true;
-        console.log('[LevelRegistry] Loaded', this.levels.size, 'levels from cloud:',
+        log.info('[LevelRegistry] Loaded', this.levels.size, 'levels from cloud:',
             Array.from(this.levels.keys()));
     }
 
@@ -74,6 +75,6 @@ export class LevelRegistry {
     public reset(): void {
         this.levels.clear();
         this.initialized = false;
-        console.log('[LevelRegistry] Reset complete. Call initialize() to reload.');
+        log.info('[LevelRegistry] Reset complete. Call initialize() to reload.');
     }
 }

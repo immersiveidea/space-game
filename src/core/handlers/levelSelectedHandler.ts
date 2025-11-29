@@ -5,7 +5,7 @@ import Level from "../../levels/level";
 import { RockFactory } from "../../environment/asteroids/rockFactory";
 import { LevelConfig } from "../../levels/config/levelConfig";
 import { Preloader } from "../../ui/screens/preloader";
-import debugLog from '../debug';
+import log from '../logger';
 
 /**
  * Interface for Main class methods needed by the level selected handler
@@ -35,7 +35,7 @@ export function createLevelSelectedHandler(context: LevelSelectedContext): (e: C
         context.setStarted(true);
         const { levelName, config } = e.detail as { levelName: string, config: LevelConfig };
 
-        debugLog(`[Main] Starting level: ${levelName}`);
+        log.debug(`[Main] Starting level: ${levelName}`);
 
         // Hide all UI elements
         const levelSelect = document.querySelector('#levelSelect') as HTMLElement;
@@ -57,7 +57,7 @@ export function createLevelSelectedHandler(context: LevelSelectedContext): (e: C
         try {
             // Initialize engine if this is first time
             if (!context.isInitialized()) {
-                debugLog('[Main] First level selected - initializing engine');
+                log.debug('[Main] First level selected - initializing engine');
                 preloader.updateProgress(0, 'Initializing game engine...');
                 await context.initializeEngine();
             }
@@ -65,14 +65,14 @@ export function createLevelSelectedHandler(context: LevelSelectedContext): (e: C
             // Load assets if this is the first level being played
             if (!context.areAssetsLoaded()) {
                 preloader.updateProgress(40, 'Loading 3D models and textures...');
-                debugLog('[Main] Loading assets for first time');
+                log.debug('[Main] Loading assets for first time');
 
                 // Load visual assets (meshes, particles)
                 ParticleHelper.BaseAssetsUrl = window.location.href;
                 await RockFactory.init();
                 context.setAssetsLoaded(true);
 
-                debugLog('[Main] Assets loaded successfully');
+                log.debug('[Main] Assets loaded successfully');
                 preloader.updateProgress(60, 'Assets loaded');
             }
 
@@ -88,9 +88,9 @@ export function createLevelSelectedHandler(context: LevelSelectedContext): (e: C
                 try {
                     preloader.updateProgress(75, 'Entering VR...');
                     xrSession = await DefaultScene.XR.baseExperience.enterXRAsync('immersive-vr', 'local-floor');
-                    debugLog('XR session started successfully (render loop paused until camera is ready)');
+                    log.debug('XR session started successfully (render loop paused until camera is ready)');
                 } catch (error) {
-                    debugLog('Failed to enter XR, will fall back to flat mode:', error);
+                    log.debug('Failed to enter XR, will fall back to flat mode:', error);
                     DefaultScene.XR = null;
                     engine.runRenderLoop(() => {
                         DefaultScene.MainScene.render();
@@ -112,9 +112,9 @@ export function createLevelSelectedHandler(context: LevelSelectedContext): (e: C
             const camera = DefaultScene.XR?.baseExperience?.camera || DefaultScene.MainScene.activeCamera;
             if (camera && audioEngine.listener) {
                 audioEngine.listener.attach(camera);
-                debugLog('[Main] Audio listener attached to camera for spatial audio');
+                log.debug('[Main] Audio listener attached to camera for spatial audio');
             } else {
-                debugLog('[Main] WARNING: Could not attach audio listener - camera or listener not available');
+                log.warn('[Main] Could not attach audio listener - camera or listener not available');
             }
 
             preloader.updateProgress(90, 'Creating level...');
@@ -134,26 +134,26 @@ export function createLevelSelectedHandler(context: LevelSelectedContext): (e: C
                 // Listen for replay requests from the ship
                 if (ship) {
                     ship.onReplayRequestObservable.add(() => {
-                        debugLog('Replay requested - reloading page');
+                        log.debug('Replay requested - reloading page');
                         window.location.reload();
                     });
                 }
 
                 // If we entered XR before level creation, manually setup camera parenting
-                console.log('[Main] ========== CHECKING XR STATE ==========');
-                console.log('[Main] DefaultScene.XR exists:', !!DefaultScene.XR);
-                console.log('[Main] xrSession exists:', !!xrSession);
+                log.info('[Main] ========== CHECKING XR STATE ==========');
+                log.info('[Main] DefaultScene.XR exists:', !!DefaultScene.XR);
+                log.info('[Main] xrSession exists:', !!xrSession);
                 if (DefaultScene.XR) {
-                    console.log('[Main] XR base experience state:', DefaultScene.XR.baseExperience.state);
+                    log.info('[Main] XR base experience state:', DefaultScene.XR.baseExperience.state);
                 }
 
                 if (DefaultScene.XR && xrSession && DefaultScene.XR.baseExperience.state === 2) {
-                    debugLog('[Main] XR already active - using consolidated setupXRCamera()');
+                    log.debug('[Main] XR already active - using consolidated setupXRCamera()');
                     level1.setupXRCamera();
                     await level1.showMissionBrief();
-                    debugLog('[Main] XR setup and mission brief complete');
+                    log.debug('[Main] XR setup and mission brief complete');
                 } else {
-                    console.log('[Main] XR not active yet - will use onInitialXRPoseSetObservable instead');
+                    log.info('[Main] XR not active yet - will use onInitialXRPoseSetObservable instead');
                     engine.runRenderLoop(() => {
                         DefaultScene.MainScene.render();
                     });
@@ -166,20 +166,20 @@ export function createLevelSelectedHandler(context: LevelSelectedContext): (e: C
                 }, 500);
 
                 // Hide UI (no longer remove from DOM - let Svelte routing handle it)
-                console.log('[Main] ========== HIDING UI FOR GAMEPLAY ==========');
-                console.log('[Main] Timestamp:', Date.now());
+                log.info('[Main] ========== HIDING UI FOR GAMEPLAY ==========');
+                log.info('[Main] Timestamp:', Date.now());
 
                 // Start the game
-                console.log('[Main] About to call context.play()');
+                log.info('[Main] About to call context.play()');
                 await context.play();
-                console.log('[Main] context.play() completed');
+                log.info('[Main] context.play() completed');
             });
 
             // Now initialize the level (after observable is registered)
             await currentLevel.initialize();
 
         } catch (error) {
-            console.error('[Main] Level initialization failed:', error);
+            log.error('[Main] Level initialization failed:', error);
             preloader.updateProgress(0, 'Failed to load level. Please refresh and try again.');
         }
     };

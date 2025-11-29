@@ -22,7 +22,7 @@ import { FacebookShare, ShareData } from "../../services/facebookShare";
 import { InputControlManager } from "../../ship/input/inputControlManager";
 import { formatStars } from "../../game/scoreCalculator";
 import { GameResultsService } from "../../services/gameResultsService";
-import debugLog from "../../core/debug";
+import log from "../../core/logger";
 
 /**
  * Status screen that displays game statistics
@@ -374,7 +374,7 @@ export class StatusScreen {
      * Set the current level info for progression tracking and results
      */
     public setCurrentLevel(levelId: string, levelName: string, totalAsteroids: number): void {
-        console.log('[StatusScreen] setCurrentLevel called:', { levelId, levelName, totalAsteroids });
+        log.info('[StatusScreen] setCurrentLevel called:', { levelId, levelName, totalAsteroids });
         this._currentLevelId = levelId;
         this._currentLevelName = levelName;
         this._totalAsteroids = totalAsteroids;
@@ -445,7 +445,7 @@ export class StatusScreen {
             if (this._shareButton.isVisible) {
                 const fbShare = FacebookShare.getInstance();
                 fbShare.initialize().catch(error => {
-                    console.error('Failed to initialize Facebook SDK:', error);
+                    log.error('Failed to initialize Facebook SDK:', error);
                 });
             }
         }
@@ -564,7 +564,7 @@ export class StatusScreen {
                 const copied = await fbShare.copyToClipboard(shareData);
                 if (copied) {
                     // Show notification (you could add a toast notification here)
-                    console.log('Results copied to clipboard!');
+                    log.info('Results copied to clipboard!');
 
                     // Update button text temporarily to show feedback
                     if (this._shareButton) {
@@ -605,8 +605,8 @@ export class StatusScreen {
      * Record game result to the results service
      */
     private recordGameResult(endReason: 'victory' | 'death' | 'stranded'): void {
-        console.log('[StatusScreen] recordGameResult called with endReason:', endReason);
-        console.log('[StatusScreen] Level info:', {
+        log.info('[StatusScreen] recordGameResult called with endReason:', endReason);
+        log.info('[StatusScreen] Level info:', {
             levelId: this._currentLevelId,
             levelName: this._currentLevelName,
             totalAsteroids: this._totalAsteroids,
@@ -615,8 +615,8 @@ export class StatusScreen {
 
         // Only record if we have level info
         if (!this._currentLevelId || !this._currentLevelName) {
-            console.warn('[StatusScreen] Cannot record result - missing level info');
-            debugLog('[StatusScreen] Cannot record result - missing level info');
+            log.warn('[StatusScreen] Cannot record result - missing level info');
+            log.debug('[StatusScreen] Cannot record result - missing level info');
             return;
         }
 
@@ -630,15 +630,15 @@ export class StatusScreen {
                 this._parTime
             );
 
-            console.log('[StatusScreen] Built result:', result);
+            log.info('[StatusScreen] Built result:', result);
 
             const service = GameResultsService.getInstance();
             service.saveResult(result);
-            console.log('[StatusScreen] Game result saved successfully');
-            debugLog('[StatusScreen] Game result recorded:', result.id, result.finalScore, result.endReason);
+            log.info('[StatusScreen] Game result saved successfully');
+            log.debug('[StatusScreen] Game result recorded:', result.id, result.finalScore, result.endReason);
         } catch (error) {
-            console.error('[StatusScreen] Failed to record game result:', error);
-            debugLog('[StatusScreen] Failed to record game result:', error);
+            log.error('[StatusScreen] Failed to record game result:', error);
+            log.debug('[StatusScreen] Failed to record game result:', error);
         }
     }
 

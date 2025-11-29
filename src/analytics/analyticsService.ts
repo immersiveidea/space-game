@@ -1,5 +1,6 @@
 import { AnalyticsAdapter, AnalyticsConfig, EventMetadata, EventOptions } from './adapters/analyticsAdapter';
 import { GameEventName, GameEventProperties } from './events/gameEvents';
+import log from '../core/logger';
 
 /**
  * Central analytics service with pluggable adapters
@@ -36,7 +37,7 @@ export class AnalyticsService {
 
     static initialize(config?: AnalyticsConfig): AnalyticsService {
         if (AnalyticsService.instance) {
-            console.warn('AnalyticsService already initialized');
+            log.warn('AnalyticsService already initialized');
             return AnalyticsService.instance;
         }
 
@@ -108,7 +109,7 @@ export class AnalyticsService {
             try {
                 adapter.track(event);
             } catch (error) {
-                console.error(`Adapter ${adapter.name} failed to track event:`, error);
+                log.error(`Adapter ${adapter.name} failed to track event:`, error);
             }
         }
     }
@@ -140,7 +141,7 @@ export class AnalyticsService {
             try {
                 adapter.track(event);
             } catch (error) {
-                console.error(`Adapter ${adapter.name} failed to track custom event:`, error);
+                log.error(`Adapter ${adapter.name} failed to track custom event:`, error);
             }
         }
     }
@@ -170,7 +171,7 @@ export class AnalyticsService {
             try {
                 adapter.flush();
             } catch (error) {
-                console.error(`Adapter ${adapter.name} failed to flush:`, error);
+                log.error(`Adapter ${adapter.name} failed to flush:`, error);
             }
         }
     }
@@ -184,7 +185,7 @@ export class AnalyticsService {
             try {
                 adapter.shutdown();
             } catch (error) {
-                console.error(`Adapter ${adapter.name} failed to shutdown:`, error);
+                log.error(`Adapter ${adapter.name} failed to shutdown:`, error);
             }
         }
         AnalyticsService.instance = null;
@@ -239,7 +240,7 @@ export class AnalyticsService {
 
     private log(message: string, ...args: any[]): void {
         if (this.config.debug) {
-            console.log(`[AnalyticsService] ${message}`, ...args);
+            log.info(`[AnalyticsService] ${message}`, ...args);
         }
     }
 }

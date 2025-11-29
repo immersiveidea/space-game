@@ -1,6 +1,6 @@
 import {DefaultScene} from "../core/defaultScene";
 import {AbstractMesh, AssetContainer, LoadAssetContainerAsync} from "@babylonjs/core";
-import debugLog from "../core/debug";
+import log from "../core/logger";
 
 type LoadedAsset = {
     container: AssetContainer,
@@ -8,23 +8,23 @@ type LoadedAsset = {
 }
 export default async function loadAsset(file: string, theme: string = "default"): Promise<LoadedAsset> {
     const assetPath = `/assets/themes/${theme}/models/${file}`;
-    debugLog(`[loadAsset] Loading: ${assetPath}`);
+    log.debug(`[loadAsset] Loading: ${assetPath}`);
 
     try {
         const container = await LoadAssetContainerAsync(assetPath, DefaultScene.MainScene);
-        debugLog(`[loadAsset] ✓ Container loaded for ${file}`);
+        log.debug(`[loadAsset] ✓ Container loaded for ${file}`);
 
         const map: Map<string, AbstractMesh> = new Map();
         container.addAllToScene();
 
-        debugLog(`[loadAsset] Root nodes count: ${container.rootNodes.length}`);
+        log.debug(`[loadAsset] Root nodes count: ${container.rootNodes.length}`);
         if (container.rootNodes.length === 0) {
-            console.error(`[loadAsset] ERROR: No root nodes found in ${file}`);
+            log.error(`[loadAsset] ERROR: No root nodes found in ${file}`);
             return {container: container, meshes: map};
         }
 
         for (const mesh of container.rootNodes[0].getChildMeshes(false)) {
-            console.log(mesh.id, mesh);
+            log.info(mesh.id, mesh);
             // Ensure mesh is visible and enabled
             mesh.isVisible = true;
             mesh.setEnabled(true);
@@ -42,10 +42,10 @@ export default async function loadAsset(file: string, theme: string = "default")
             map.set(mesh.id, mesh);
         }
 
-        debugLog(`[loadAsset] ✓ Loaded ${map.size} meshes from ${file}`);
+        log.debug(`[loadAsset] ✓ Loaded ${map.size} meshes from ${file}`);
         return {container: container, meshes: map};
     } catch (error) {
-        console.error(`[loadAsset] FAILED to load ${assetPath}:`, error);
+        log.error(`[loadAsset] FAILED to load ${assetPath}:`, error);
         throw error;
     }
 }

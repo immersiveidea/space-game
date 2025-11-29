@@ -1,7 +1,7 @@
 import { Observable } from "@babylonjs/core";
 import { KeyboardInput } from "./keyboardInput";
 import { ControllerInput } from "./controllerInput";
-import debugLog from "../../core/debug";
+import log from "../../core/logger";
 
 /**
  * State change event emitted when ship controls or pointer selection state changes
@@ -42,7 +42,7 @@ export class InputControlManager {
      * Private constructor for singleton pattern
      */
     private constructor() {
-        debugLog('[InputControlManager] Instance created');
+        log.debug('[InputControlManager] Instance created');
     }
 
     /**
@@ -59,7 +59,7 @@ export class InputControlManager {
      * Register input systems (called by Ship during initialization)
      */
     public registerInputSystems(keyboard: KeyboardInput | null, controller: ControllerInput | null): void {
-        debugLog('[InputControlManager] Registering input systems', { keyboard: !!keyboard, controller: !!controller });
+        log.debug('[InputControlManager] Registering input systems', { keyboard: !!keyboard, controller: !!controller });
         this._keyboardInput = keyboard;
         this._controllerInput = controller;
     }
@@ -68,7 +68,7 @@ export class InputControlManager {
      * Register XR pointer feature (called by main.ts during XR setup)
      */
     public registerPointerFeature(pointerFeature: any): void {
-        debugLog('[InputControlManager] Registering XR pointer feature');
+        log.debug('[InputControlManager] Registering XR pointer feature');
         this._xrPointerFeature = pointerFeature;
 
         // Apply current state to the newly registered pointer feature
@@ -79,7 +79,7 @@ export class InputControlManager {
      * Enable ship controls, disable pointer selection
      */
     public enableShipControls(requester: string): void {
-        debugLog(`[InputControlManager] Enabling ship controls (requester: ${requester})`);
+        log.debug(`[InputControlManager] Enabling ship controls (requester: ${requester})`);
 
         // Update state
         this._shipControlsEnabled = true;
@@ -104,7 +104,7 @@ export class InputControlManager {
      * Disable ship controls, enable pointer selection
      */
     public disableShipControls(requester: string): void {
-        debugLog(`[InputControlManager] Disabling ship controls (requester: ${requester})`);
+        log.debug(`[InputControlManager] Disabling ship controls (requester: ${requester})`);
 
         // Update state
         this._shipControlsEnabled = false;
@@ -119,12 +119,12 @@ export class InputControlManager {
         }
 
         // Enable pointer selection
-        console.log(`[InputControlManager] About to update pointer feature...`);
+        log.info(`[InputControlManager] About to update pointer feature...`);
         this.updatePointerFeature();
 
         // Emit state change event
         this.emitStateChange(requester);
-        console.log(`[InputControlManager] ===== Ship controls disabled =====`);
+        log.info(`[InputControlManager] ===== Ship controls disabled =====`);
     }
 
     /**
@@ -139,14 +139,14 @@ export class InputControlManager {
             if (this._pointerSelectionEnabled) {
                 // Enable pointer selection (attach feature)
                 this._xrPointerFeature.attach();
-                debugLog('[InputControlManager] Pointer selection enabled');
+                log.debug('[InputControlManager] Pointer selection enabled');
             } else {
                 // Disable pointer selection (detach feature)
                 this._xrPointerFeature.detach();
-                debugLog('[InputControlManager] Pointer selection disabled');
+                log.debug('[InputControlManager] Pointer selection disabled');
             }
         } catch (error) {
-            console.warn('[InputControlManager] Failed to update pointer feature:', error);
+            log.warn('[InputControlManager] Failed to update pointer feature:', error);
         }
     }
 
@@ -163,7 +163,7 @@ export class InputControlManager {
 
         this._onStateChangedObservable.notifyObservers(stateChange);
 
-        debugLog('[InputControlManager] State changed:', stateChange);
+        log.debug('[InputControlManager] State changed:', stateChange);
     }
 
     /**
@@ -191,7 +191,7 @@ export class InputControlManager {
      * Cleanup (for testing or hot reload)
      */
     public dispose(): void {
-        debugLog('[InputControlManager] Disposing');
+        log.debug('[InputControlManager] Disposing');
         this._onStateChangedObservable.clear();
         this._keyboardInput = null;
         this._controllerInput = null;

@@ -1,4 +1,5 @@
 import { writable, get } from 'svelte/store';
+import log from '../core/logger';
 
 const STORAGE_KEY = 'game-config';
 
@@ -34,7 +35,7 @@ function loadFromStorage(): GameConfigData {
       return { ...defaultConfig, ...parsed };
     }
   } catch (error) {
-    console.warn('[GameConfig Store] Failed to load from localStorage:', error);
+    log.warn('[GameConfig Store] Failed to load from localStorage:', error);
   }
   return { ...defaultConfig };
 }
@@ -51,18 +52,18 @@ function createGameConfigStore() {
       const config = get(gameConfigStore);
       try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(config));
-        console.log('[GameConfig Store] Saved to localStorage');
+        log.info('[GameConfig Store] Saved to localStorage');
       } catch (error) {
-        console.error('[GameConfig Store] Failed to save:', error);
+        log.error('[GameConfig Store] Failed to save:', error);
       }
     },
     reset: () => {
       set({ ...defaultConfig });
       try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(defaultConfig));
-        console.log('[GameConfig Store] Reset to defaults');
+        log.info('[GameConfig Store] Reset to defaults');
       } catch (error) {
-        console.error('[GameConfig Store] Failed to save defaults:', error);
+        log.error('[GameConfig Store] Failed to save defaults:', error);
       }
     },
   };

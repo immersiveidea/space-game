@@ -7,7 +7,7 @@ import {
     Vector3
 } from "@babylonjs/core";
 import {DefaultScene} from "../../core/defaultScene";
-import debugLog from '../../core/debug';
+import log from '../../core/logger';
 
 /**
  * Configuration for explosion effects
@@ -42,7 +42,7 @@ export class ExplosionManager {
     constructor(scene: Scene, config?: ExplosionConfig) {
         this.scene = scene;
         this.config = { ...ExplosionManager.DEFAULT_CONFIG, ...config };
-        debugLog(this.config);
+        log.debug(this.config);
         this._debrisBaseMesh = MeshBuilder.CreateIcoSphere(
             'debrisBase',
             {
@@ -60,7 +60,7 @@ export class ExplosionManager {
      * Initialize the explosion manager (no longer needed for MeshExploder, but kept for API compatibility)
      */
     public async initialize(): Promise<void> {
-        debugLog("ExplosionManager initialized with MeshExploder");
+        log.debug("ExplosionManager initialized with MeshExploder");
     }
 
     /**
@@ -69,7 +69,7 @@ export class ExplosionManager {
     public async initAudio(audioEngine: AudioEngineV2): Promise<void> {
         this.audioEngine = audioEngine;
 
-        debugLog(`ExplosionManager: Initializing audio with pool size ${this.soundPoolSize}`);
+        log.debug(`ExplosionManager: Initializing audio with pool size ${this.soundPoolSize}`);
 
         // Create sound pool for concurrent explosions
         for (let i = 0; i < this.soundPoolSize; i++) {
@@ -89,7 +89,7 @@ export class ExplosionManager {
             this.explosionSounds.push(sound);
         }
 
-        debugLog(`ExplosionManager: Loaded ${this.explosionSounds.length} explosion sounds`);
+        log.debug(`ExplosionManager: Loaded ${this.explosionSounds.length} explosion sounds`);
     }
 
     /**
@@ -104,7 +104,7 @@ export class ExplosionManager {
         }
 
         // If all sounds are playing, reuse the first one (will cut off the oldest)
-        debugLog("ExplosionManager: All sounds in pool are playing, reusing sound 0");
+        log.debug("ExplosionManager: All sounds in pool are playing, reusing sound 0");
         return this.explosionSounds[0] || null;
     }
 
@@ -119,7 +119,7 @@ export class ExplosionManager {
 
         const sound = this.getAvailableSound();
         if (!sound) {
-            debugLog("ExplosionManager: No sound available in pool");
+            log.debug("ExplosionManager: No sound available in pool");
             return;
         }
 
@@ -139,7 +139,7 @@ export class ExplosionManager {
 
 
         } catch (error) {
-            debugLog("ExplosionManager: Error playing explosion audio", error);
+            log.debug("ExplosionManager: Error playing explosion audio", error);
             explosionNode.dispose();
         }
     }
@@ -152,7 +152,7 @@ export class ExplosionManager {
      * @returns Array of sphere mesh objects
      */
     private splitIntoSeparateMeshes(position: Vector3, pieces: number = 32): InstancedMesh[] {
-        debugLog(`[ExplosionManager] Creating ${pieces} sphere debris pieces`);
+        log.debug(`[ExplosionManager] Creating ${pieces} sphere debris pieces`);
 
         const meshPieces: InstancedMesh[] = [];
 
@@ -182,13 +182,13 @@ export class ExplosionManager {
                 sphere.setEnabled(true);
                 meshPieces.push(sphere);
             } catch (error) {
-                console.error(`[ExplosionManager] ERROR creating debris piece ${i}:`, error);
+                log.error(`[ExplosionManager] ERROR creating debris piece ${i}:`, error);
             }
         }
 
-        debugLog(`[ExplosionManager] Successfully created ${meshPieces.length}/${pieces} sphere debris pieces`);
+        log.debug(`[ExplosionManager] Successfully created ${meshPieces.length}/${pieces} sphere debris pieces`);
         if (meshPieces.length > 0) {
-            debugLog('[ExplosionManager] First piece sample:', {
+            log.debug('[ExplosionManager] First piece sample:', {
                 name: meshPieces[0].name,
                 position: meshPieces[0].position.toString(),
                 isVisible: meshPieces[0].isVisible,
@@ -203,8 +203,8 @@ export class ExplosionManager {
      * @param mesh The mesh to explode (will be cloned internally)
      */
     public playExplosion(mesh: AbstractMesh): void {
-        debugLog('[ExplosionManager] playExplosion called');
-        debugLog('[ExplosionManager] Input mesh:', {
+        log.debug('[ExplosionManager] playExplosion called');
+        log.debug('[ExplosionManager] Input mesh:', {
             name: mesh.name,
             id: mesh.id,
             isInstancedMesh: !!(mesh as any).sourceMesh,
@@ -220,14 +220,14 @@ export class ExplosionManager {
         let sourceMesh: Mesh;
         if ((mesh as any).sourceMesh) {
             sourceMesh = (mesh as any).sourceMesh as Mesh;
-            debugLog('[ExplosionManager] Using source mesh from instance:', sourceMesh.name);
+            log.debug('[ExplosionManager] Using source mesh from instance:', sourceMesh.name);
         } else {
             sourceMesh = mesh as Mesh;
-            debugLog('[ExplosionManager] Using mesh directly (not instanced)');
+            log.debug('[ExplosionManager] Using mesh directly (not instanced)');
         }
 
         // Clone the source mesh so we don't affect the original
-        debugLog('[ExplosionManager] Cloning mesh...');
+        log.debug('[ExplosionManager] Cloning mesh...');
         mesh.computeWorldMatrix(true);
         // Apply the instance's transformation to the cloned mesh
         const position = mesh.getAbsolutePosition().clone();
@@ -237,34 +237,34 @@ export class ExplosionManager {
 
         // Check if mesh has proper geometry
         if (!mesh.getTotalVertices || mesh.getTotalVertices() === 0) {
-            console.error('[ExplosionManager] ERROR: Mesh has no vertices, cannot explode');
+            log.error('[ExplosionManager] ERROR: Mesh has no vertices, cannot explode');
             mesh.dispose();
             return;
         }
 
         // Split the mesh into separate mesh objects (MeshExploder requirement)
-        debugLog('[ExplosionManager] Splitting mesh into pieces...');
+        log.debug('[ExplosionManager] Splitting mesh into pieces...');
         const meshPieces = this.splitIntoSeparateMeshes(position, 12);
 
         if (meshPieces.length === 0) {
-            console.error('[ExplosionManager] ERROR: Failed to split mesh into pieces');
+            log.error('[ExplosionManager] ERROR: Failed to split mesh into pieces');
             mesh.dispose();
             return;
         }
 
         // Original mesh is no longer needed - the pieces replace it
-        debugLog('[ExplosionManager] Disposing original cloned mesh');
+        log.debug('[ExplosionManager] Disposing original cloned mesh');
         mesh.dispose();
 
         // Create the exploder with the array of separate meshes
         // The second parameter is optional - it's the center mesh to explode from
         // If not provided, MeshExploder will auto-calculate the center
-        debugLog('[ExplosionManager] Creating MeshExploder...');
+        log.debug('[ExplosionManager] Creating MeshExploder...');
         try {
             const exploder = new MeshExploder((meshPieces as unknown) as Mesh[]);
-            debugLog('[ExplosionManager] MeshExploder created successfully');
+            log.debug('[ExplosionManager] MeshExploder created successfully');
 
-            debugLog(`[ExplosionManager] Starting explosion animation:`, {
+            log.debug(`[ExplosionManager] Starting explosion animation:`, {
                 pieceCount: meshPieces.length,
                 duration: this.config.duration,
                 maxForce: this.config.explosionForce
@@ -286,7 +286,7 @@ export class ExplosionManager {
                 try {
                     exploder.explode(currentValue);
                 } catch (error) {
-                    console.error('[ExplosionManager] ERROR in explode():', error);
+                    log.error('[ExplosionManager] ERROR in explode():', error);
                 }
 
                 // Animate debris size to zero (1.0 to 0.0)
@@ -301,7 +301,7 @@ export class ExplosionManager {
 
                 // Log every 15 frames (approximately every 250ms at 60fps)
                 if (frameCount % 15 === 0 || frameCount === 1) {
-                    debugLog(`[ExplosionManager] Animation frame ${frameCount}:`, {
+                    log.debug(`[ExplosionManager] Animation frame ${frameCount}:`, {
                         elapsed: `${elapsed}ms`,
                         progress: progress.toFixed(3),
                         currentValue: currentValue.toFixed(2),
@@ -313,16 +313,16 @@ export class ExplosionManager {
                 // Continue animation if not complete
                 if (progress >= 1.0) {
                     // Animation complete - remove observer and clean up
-                    debugLog(`[ExplosionManager] Animation complete after ${frameCount} frames, cleaning up`);
+                    log.debug(`[ExplosionManager] Animation complete after ${frameCount} frames, cleaning up`);
                     this.scene.onBeforeRenderObservable.remove(animationObserver);
                     this.cleanupExplosion(meshPieces);
                 }
             });
 
             // Log that animation loop is registered
-            debugLog('[ExplosionManager] Starting animation loop...');
+            log.debug('[ExplosionManager] Starting animation loop...');
         } catch (error) {
-            console.error('[ExplosionManager] ERROR creating MeshExploder:', error);
+            log.error('[ExplosionManager] ERROR creating MeshExploder:', error);
             // Clean up pieces if exploder failed
             meshPieces.forEach(piece => {
                 if (piece && !piece.isDisposed()) {
@@ -336,7 +336,7 @@ export class ExplosionManager {
      * Clean up explosion meshes
      */
     private cleanupExplosion(meshPieces: InstancedMesh[]): void {
-        debugLog('[ExplosionManager] Starting cleanup of explosion meshes...');
+        log.debug('[ExplosionManager] Starting cleanup of explosion meshes...');
 
         let disposedCount = 0;
         // Dispose all the mesh pieces
@@ -346,12 +346,12 @@ export class ExplosionManager {
                     mesh.dispose();
                     disposedCount++;
                 } catch (error) {
-                    console.error(`[ExplosionManager] ERROR disposing piece ${index}:`, error);
+                    log.error(`[ExplosionManager] ERROR disposing piece ${index}:`, error);
                 }
             }
         });
 
-        debugLog(`[ExplosionManager] Cleanup complete - disposed ${disposedCount}/${meshPieces.length} pieces`);
+        log.debug(`[ExplosionManager] Cleanup complete - disposed ${disposedCount}/${meshPieces.length} pieces`);
     }
 
     /**
@@ -360,6 +360,6 @@ export class ExplosionManager {
     public dispose(): void {
         this._debrisBaseMesh.dispose(false, true);
         // Nothing to dispose with MeshExploder approach
-        debugLog("ExplosionManager disposed");
+        log.debug("ExplosionManager disposed");
     }
 }

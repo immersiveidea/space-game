@@ -19,7 +19,7 @@ import {
 } from "./levelConfig";
 import { FireProceduralTexture } from "@babylonjs/procedural-textures";
 import { createSphereLightmap } from "../../environment/celestial/sphereLightmap";
-import debugLog from '../../core/debug';
+import log from '../../core/logger';
 import StarBase from "../../environment/stations/starBase";
 import {LevelRegistry} from "../storage/levelRegistry";
 
@@ -61,7 +61,7 @@ export class LevelDeserializer {
         planets: AbstractMesh[];
         asteroids: AbstractMesh[];
     }> {
-        debugLog('Deserializing level:', this.config.difficulty);
+        log.debug('Deserializing level:', this.config.difficulty);
 
         const baseResult = await this.createStartBase();
         const sun = this.createSun();
@@ -158,7 +158,7 @@ export class LevelDeserializer {
             planets.push(planet);
         }
 
-        debugLog(`Created ${planets.length} planets from config`);
+        log.debug(`Created ${planets.length} planets from config`);
         return planets;
     }
 
@@ -173,15 +173,15 @@ export class LevelDeserializer {
         for (let i = 0; i < this.config.asteroids.length; i++) {
             const asteroidConfig = this.config.asteroids[i];
 
-            debugLog(`[LevelDeserializer] Creating asteroid ${i} (${asteroidConfig.id}):`);
-            debugLog(`[LevelDeserializer]   Position: [${asteroidConfig.position.join(', ')}]`);
-            debugLog(`[LevelDeserializer]   Scale: ${asteroidConfig.scale}`);
-            debugLog(`[LevelDeserializer]   Linear velocity: [${asteroidConfig.linearVelocity.join(', ')}]`);
-            debugLog(`[LevelDeserializer]   Angular velocity: [${asteroidConfig.angularVelocity.join(', ')}]`);
+            log.debug(`[LevelDeserializer] Creating asteroid ${i} (${asteroidConfig.id}):`);
+            log.debug(`[LevelDeserializer]   Position: [${asteroidConfig.position.join(', ')}]`);
+            log.debug(`[LevelDeserializer]   Scale: ${asteroidConfig.scale}`);
+            log.debug(`[LevelDeserializer]   Linear velocity: [${asteroidConfig.linearVelocity.join(', ')}]`);
+            log.debug(`[LevelDeserializer]   Angular velocity: [${asteroidConfig.angularVelocity.join(', ')}]`);
 
             // Use orbit constraints by default (true if not specified)
             const useOrbitConstraints = this.config.useOrbitConstraints !== false;
-            debugLog(`[LevelDeserializer]   Use orbit constraints: ${useOrbitConstraints}`);
+            log.debug(`[LevelDeserializer]   Use orbit constraints: ${useOrbitConstraints}`);
 
             // Use RockFactory to create the asteroid
             const _rock = await RockFactory.createRock(
@@ -202,7 +202,7 @@ export class LevelDeserializer {
             }
         }
 
-        debugLog(`Created ${asteroids.length} asteroids from config`);
+        log.debug(`Created ${asteroids.length} asteroids from config`);
         return asteroids;
     }
 

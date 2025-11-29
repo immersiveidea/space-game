@@ -1,4 +1,4 @@
-import debugLog from '../../core/debug';
+import log from '../../core/logger';
 
 const STORAGE_KEY = 'space-game-controller-mapping';
 
@@ -107,7 +107,7 @@ export class ControllerMappingConfig {
      */
     public setMapping(mapping: ControllerMapping): void {
         this._mapping = { ...mapping };
-        debugLog('[ControllerMapping] Configuration updated:', this._mapping);
+        log.debug('[ControllerMapping] Configuration updated:', this._mapping);
     }
 
     /**
@@ -115,7 +115,7 @@ export class ControllerMappingConfig {
      */
     public resetToDefault(): void {
         this._mapping = { ...ControllerMappingConfig.DEFAULT_MAPPING };
-        debugLog('[ControllerMapping] Reset to default configuration');
+        log.debug('[ControllerMapping] Reset to default configuration');
     }
 
     /**
@@ -125,9 +125,9 @@ export class ControllerMappingConfig {
         try {
             const json = JSON.stringify(this._mapping);
             localStorage.setItem(STORAGE_KEY, json);
-            debugLog('[ControllerMapping] Saved to localStorage');
+            log.debug('[ControllerMapping] Saved to localStorage');
         } catch (error) {
-            console.error('[ControllerMapping] Failed to save to localStorage:', error);
+            log.error('[ControllerMapping] Failed to save to localStorage:', error);
         }
     }
 
@@ -146,12 +146,12 @@ export class ControllerMappingConfig {
                     ...parsed,
                 };
 
-                debugLog('[ControllerMapping] Loaded from localStorage:', this._mapping);
+                log.debug('[ControllerMapping] Loaded from localStorage:', this._mapping);
             } else {
-                debugLog('[ControllerMapping] No saved configuration, using defaults');
+                log.debug('[ControllerMapping] No saved configuration, using defaults');
             }
         } catch (error) {
-            console.warn('[ControllerMapping] Failed to load from localStorage, using defaults:', error);
+            log.warn('[ControllerMapping] Failed to load from localStorage, using defaults:', error);
             this._mapping = { ...ControllerMappingConfig.DEFAULT_MAPPING };
         }
     }

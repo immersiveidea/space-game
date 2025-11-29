@@ -4,7 +4,7 @@
     import { Main } from '../../main';
     import type { LevelConfig } from '../../levels/config/levelConfig';
     import { LevelRegistry } from '../../levels/storage/levelRegistry';
-    import debugLog from '../../core/debug';
+    import log from '../../core/logger';
     import { DefaultScene } from '../../core/defaultScene';
 
     // svelte-routing passes params as an object with route params
@@ -34,17 +34,17 @@
     // Handle popstate (browser back/forward buttons)
     function handlePopState() {
         if (isInitialized && !isExiting && !window.location.pathname.startsWith('/play/')) {
-            debugLog('[PlayLevel] Navigation detected via popstate, starting cleanup');
+            log.debug('[PlayLevel] Navigation detected via popstate, starting cleanup');
             isExiting = true;
         }
     }
 
     onMount(async () => {
-        console.log('[PlayLevel] Component mounted');
-        console.log('[PlayLevel] params:', params);
-        console.log('[PlayLevel] levelId prop:', levelId);
-        console.log('[PlayLevel] actualLevelId:', actualLevelId);
-        console.log('[PlayLevel] window.location.pathname:', window.location.pathname);
+        log.info('[PlayLevel] Component mounted');
+        log.info('[PlayLevel] params:', params);
+        log.info('[PlayLevel] levelId prop:', levelId);
+        log.info('[PlayLevel] actualLevelId:', actualLevelId);
+        log.info('[PlayLevel] window.location.pathname:', window.location.pathname);
 
         // Try to extract levelId from URL if props don't have it
         let extractedLevelId = actualLevelId;
@@ -52,19 +52,19 @@
             const match = window.location.pathname.match(/\/play\/(.+)/);
             if (match) {
                 extractedLevelId = match[1];
-                console.log('[PlayLevel] Extracted levelId from URL:', extractedLevelId);
+                log.info('[PlayLevel] Extracted levelId from URL:', extractedLevelId);
             }
         }
 
         levelName = extractedLevelId;
 
         if (!levelName) {
-            console.error('[PlayLevel] No levelId found!');
+            log.error('[PlayLevel] No levelId found!');
             error = 'No level specified';
             return;
         }
 
-        console.log('[PlayLevel] Using levelName:', levelName);
+        log.info('[PlayLevel] Using levelName:', levelName);
 
         // Add event listeners
         window.addEventListener('beforeunload', handleBeforeUnload);
@@ -75,7 +75,7 @@
             const appElement = document.getElementById('app');
             if (appElement) {
                 appElement.style.display = 'none';
-                debugLog('[PlayLevel] App UI hidden');
+                log.debug('[PlayLevel] App UI hidden');
             }
 
             // Get the main instance (should already exist from app initialization)
@@ -93,7 +93,7 @@
                 throw new Error(`Level "${levelName}" not found`);
             }
 
-            debugLog('[PlayLevel] Level config loaded:', levelEntry);
+            log.debug('[PlayLevel] Level config loaded:', levelEntry);
 
             // Dispatch the levelSelected event (existing system expects this)
             // We'll refactor this later to call Main methods directly
@@ -107,10 +107,10 @@
             window.dispatchEvent(event);
 
             isInitialized = true;
-            debugLog('[PlayLevel] Level initialization started');
+            log.debug('[PlayLevel] Level initialization started');
 
         } catch (err) {
-            console.error('[PlayLevel] Error initializing level:', err);
+            log.error('[PlayLevel] Error initializing level:', err);
             error = err instanceof Error ? err.message : 'Unknown error';
 
             // Show UI again on error
@@ -127,8 +127,8 @@
     });
 
     onDestroy(async () => {
-        console.log('[PlayLevel] Component unmounting - cleaning up');
-        debugLog('[PlayLevel] Component unmounting - cleaning up');
+        log.info('[PlayLevel] Component unmounting - cleaning up');
+        log.debug('[PlayLevel] Component unmounting - cleaning up');
 
         // Remove event listeners
         window.removeEventListener('beforeunload', handleBeforeUnload);
@@ -138,8 +138,8 @@
         const appElement = document.getElementById('app');
         if (appElement) {
             appElement.style.display = 'block';
-            console.log('[PlayLevel] App UI restored');
-            debugLog('[PlayLevel] App UI restored');
+            log.info('[PlayLevel] App UI restored');
+            log.debug('[PlayLevel] App UI restored');
         }
 
         try {
@@ -148,7 +148,7 @@
                 await mainInstance.cleanupAndExit();
             }
         } catch (err) {
-            console.error('[PlayLevel] Error during cleanup:', err);
+            log.error('[PlayLevel] Error during cleanup:', err);
         }
     });
 </script>

@@ -1,6 +1,7 @@
 import { writable, get } from 'svelte/store';
 import type { ControllerMapping } from '../ship/input/controllerMapping';
 import { ControllerMappingConfig } from '../ship/input/controllerMapping';
+import log from '../core/logger';
 
 const _STORAGE_KEY = 'space-game-controller-mapping';
 
@@ -21,13 +22,13 @@ function createControllerMappingStore() {
       const mapping = get(controllerMappingStore);
       config.setMapping(mapping);
       config.save();
-      console.log('[ControllerMapping Store] Saved');
+      log.info('[ControllerMapping Store] Saved');
     },
     reset: () => {
       config.resetToDefault();
       config.save();
       set(config.getMapping());
-      console.log('[ControllerMapping Store] Reset to defaults');
+      log.info('[ControllerMapping Store] Reset to defaults');
     },
     validate: () => {
       return config.validate();

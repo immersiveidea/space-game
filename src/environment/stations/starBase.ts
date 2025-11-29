@@ -7,7 +7,7 @@ import {
 } from "@babylonjs/core";
 import {DefaultScene} from "../../core/defaultScene";
 import {GameConfig} from "../../core/gameConfig";
-import debugLog from "../../core/debug";
+import log from "../../core/logger";
 import loadAsset from "../../utils/loadAsset";
 import {Vector3Array} from "../../levels/config/levelConfig";
 
@@ -50,7 +50,7 @@ export default class StarBase {
             agg2.body.setMotionType(PhysicsMotionType.ANIMATED);
 
             agg2.body.getCollisionObservable().add((collidedBody) => {
-                debugLog('collidedBody', collidedBody);
+                log.debug('collidedBody', collidedBody);
             })
 
             landingAgg = new PhysicsAggregate(landingMesh, PhysicsShapeType.MESH);

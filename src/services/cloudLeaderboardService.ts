@@ -1,6 +1,7 @@
 import { SupabaseService } from './supabaseService';
 import { AuthService } from './authService';
 import type { GameResult } from './gameResultsService';
+import log from '../core/logger';
 
 /**
  * Represents a leaderboard entry from Supabase
@@ -69,7 +70,7 @@ export class CloudLeaderboardService {
         const client = await supabase.getAuthenticatedClient();
 
         if (!client) {
-            console.warn('[CloudLeaderboardService] Not authenticated - cannot sync user');
+            log.warn('[CloudLeaderboardService] Not authenticated - cannot sync user');
             return false;
         }
 
@@ -84,11 +85,11 @@ export class CloudLeaderboardService {
             });
 
         if (error) {
-            console.error('[CloudLeaderboardService] Failed to sync user:', error);
+            log.error('[CloudLeaderboardService] Failed to sync user:', error);
             return false;
         }
 
-        console.log('[CloudLeaderboardService] User synced:', userId);
+        log.info('[CloudLeaderboardService] User synced:', userId);
         return true;
     }
 
@@ -100,7 +101,7 @@ export class CloudLeaderboardService {
         const supabase = SupabaseService.getInstance();
 
         if (!supabase.isConfigured()) {
-            console.warn('[CloudLeaderboardService] Supabase not configured');
+            log.warn('[CloudLeaderboardService] Supabase not configured');
             return false;
         }
 
@@ -109,16 +110,16 @@ export class CloudLeaderboardService {
         const user = authService.getUser();
 
         if (!user?.sub) {
-            console.warn('[CloudLeaderboardService] No user sub claim - user not logged in');
+            log.warn('[CloudLeaderboardService] No user sub claim - user not logged in');
             return false;
         }
 
-        console.log('[CloudLeaderboardService] Submitting score for user:', user.sub);
+        log.info('[CloudLeaderboardService] Submitting score for user:', user.sub);
 
         // Get authenticated client for insert (requires RLS)
         const client = await supabase.getAuthenticatedClient();
         if (!client) {
-            console.warn('[CloudLeaderboardService] Not authenticated - cannot submit score');
+            log.warn('[CloudLeaderboardService] Not authenticated - cannot submit score');
             return false;
         }
 
@@ -141,7 +142,7 @@ export class CloudLeaderboardService {
             star_rating: result.starRating
         };
 
-        console.log('[CloudLeaderboardService] Inserting entry:', entry);
+        log.info('[CloudLeaderboardService] Inserting entry:', entry);
 
         const { data, error } = await client
             .from('leaderboard')
@@ -149,12 +150,12 @@ export class CloudLeaderboardService {
             .select();
 
         if (error) {
-            console.error('[CloudLeaderboardService] Failed to submit score:', error);
-            console.error('[CloudLeaderboardService] Error details:', JSON.stringify(error, null, 2));
+            log.error('[CloudLeaderboardService] Failed to submit score:', error);
+            log.error('[CloudLeaderboardService] Error details:', JSON.stringify(error, null, 2));
             return false;
         }
 
-        console.log('[CloudLeaderboardService] Score submitted successfully:', data);
+        log.info('[CloudLeaderboardService] Score submitted successfully:', data);
         return true;
     }
 
@@ -167,7 +168,7 @@ export class CloudLeaderboardService {
         const client = supabase.getClient();
 
         if (!client) {
-            console.warn('[CloudLeaderboardService] Supabase not configured');
+            log.warn('[CloudLeaderboardService] Supabase not configured');
             return [];
         }
 
@@ -178,7 +179,7 @@ export class CloudLeaderboardService {
             .range(offset, offset + limit - 1);
 
         if (error) {
-            console.error('[CloudLeaderboardService] Failed to fetch leaderboard:', error);
+            log.error('[CloudLeaderboardService] Failed to fetch leaderboard:', error);
             return [];
         }
 
@@ -193,7 +194,7 @@ export class CloudLeaderboardService {
         const client = supabase.getClient();
 
         if (!client) {
-            console.warn('[CloudLeaderboardService] Supabase not configured');
+            log.warn('[CloudLeaderboardService] Supabase not configured');
             return [];
         }
 
@@ -205,7 +206,7 @@ export class CloudLeaderboardService {
             .limit(limit);
 
         if (error) {
-            console.error('[CloudLeaderboardService] Failed to fetch user scores:', error);
+            log.error('[CloudLeaderboardService] Failed to fetch user scores:', error);
             return [];
         }
 
@@ -220,7 +221,7 @@ export class CloudLeaderboardService {
         const client = supabase.getClient();
 
         if (!client) {
-            console.warn('[CloudLeaderboardService] Supabase not configured');
+            log.warn('[CloudLeaderboardService] Supabase not configured');
             return [];
         }
 
@@ -232,7 +233,7 @@ export class CloudLeaderboardService {
             .limit(limit);
 
         if (error) {
-            console.error('[CloudLeaderboardService] Failed to fetch level leaderboard:', error);
+            log.error('[CloudLeaderboardService] Failed to fetch level leaderboard:', error);
             return [];
         }
 

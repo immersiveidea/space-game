@@ -1,5 +1,6 @@
 import { AnalyticsAdapter, AnalyticsEvent } from './analyticsAdapter';
 import { BrowserAgent } from '@newrelic/browser-agent/loaders/browser-agent';
+import log from '../../core/logger';
 
 interface NewRelicAdapterConfig {
     /** Maximum events to batch before auto-flush */
@@ -137,7 +138,7 @@ export class NewRelicAdapter implements AnalyticsAdapter {
             this.agent.addPageAction(event.name, payload);
             this.log('Event sent:', event.name, payload);
         } catch (error) {
-            console.error('Failed to send New Relic event:', error);
+            log.error('Failed to send New Relic event:', error);
         }
     }
 
@@ -163,7 +164,7 @@ export class NewRelicAdapter implements AnalyticsAdapter {
             this.agent.addPageAction(`${eventName}_batch`, batchPayload);
             this.log(`Batched ${events.length} events:`, eventName, batchPayload);
         } catch (error) {
-            console.error('Failed to send batched New Relic event:', error);
+            log.error('Failed to send batched New Relic event:', error);
         }
     }
 
@@ -237,7 +238,7 @@ export class NewRelicAdapter implements AnalyticsAdapter {
 
     private log(message: string, ...args: any[]): void {
         if (this.config.debug) {
-            console.log(`[NewRelicAdapter] ${message}`, ...args);
+            log.info(`[NewRelicAdapter] ${message}`, ...args);
         }
     }
 }

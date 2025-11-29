@@ -1,6 +1,7 @@
 import { SupabaseService } from './supabaseService';
 import { AuthService } from './authService';
 import type { LevelConfig } from '../levels/config/levelConfig';
+import log from '../core/logger';
 
 /**
  * Level entry from the cloud database
@@ -66,7 +67,7 @@ function rowToEntry(row: LevelRow): CloudLevelEntry {
         try {
             config = JSON.parse(row.config);
         } catch (e) {
-            console.error('[CloudLevelService] Failed to parse config string:', e);
+            log.error('[CloudLevelService] Failed to parse config string:', e);
         }
     }
 
@@ -130,24 +131,24 @@ export class CloudLevelService {
     public async getOfficialLevels(): Promise<CloudLevelEntry[]> {
         const client = SupabaseService.getInstance().getClient();
         if (!client) {
-            console.warn('[CloudLevelService] Supabase not configured');
+            log.warn('[CloudLevelService] Supabase not configured');
             return [];
         }
 
-        console.log('[CloudLevelService] Fetching official levels...');
+        log.info('[CloudLevelService] Fetching official levels...');
         const { data, error } = await client
             .from('levels')
             .select('*')
             .eq('level_type', 'official')
             .order('sort_order', { ascending: true });
 
-        console.log('[CloudLevelService] Query result - data:', data?.length, 'rows, error:', error);
+        log.info('[CloudLevelService] Query result - data:', data?.length, 'rows, error:', error);
         if (data) {
-            console.log('[CloudLevelService] Raw rows:', JSON.stringify(data, null, 2));
+            log.info('[CloudLevelService] Raw rows:', JSON.stringify(data, null, 2));
         }
 
         if (error) {
-            console.error('[CloudLevelService] Failed to fetch official levels:', error);
+            log.error('[CloudLevelService] Failed to fetch official levels:', error);
             return [];
         }
 
@@ -160,7 +161,7 @@ export class CloudLevelService {
     public async getPublishedLevels(limit: number = 20, offset: number = 0): Promise<CloudLevelEntry[]> {
         const client = SupabaseService.getInstance().getClient();
         if (!client) {
-            console.warn('[CloudLevelService] Supabase not configured');
+            log.warn('[CloudLevelService] Supabase not configured');
             return [];
         }
 
@@ -172,7 +173,7 @@ export class CloudLevelService {
             .range(offset, offset + limit - 1);
 
         if (error) {
-            console.error('[CloudLevelService] Failed to fetch published levels:', error);
+            log.error('[CloudLevelService] Failed to fetch published levels:', error);
             return [];
         }
 
@@ -186,14 +187,14 @@ export class CloudLevelService {
         const supabaseService = SupabaseService.getInstance();
         const client = await supabaseService.getAuthenticatedClient();
         if (!client) {
-            console.warn('[CloudLevelService] Not authenticated');
+            log.warn('[CloudLevelService] Not authenticated');
             return [];
         }
 
         // Get internal user ID (UUID)
         const internalUserId = await supabaseService.ensureUserExists();
         if (!internalUserId) {
-            console.warn('[CloudLevelService] No internal user ID available');
+            log.warn('[CloudLevelService] No internal user ID available');
             return [];
         }
 
@@ -204,7 +205,7 @@ export class CloudLevelService {
             .order('updated_at', { ascending: false });
 
         if (error) {
-            console.error('[CloudLevelService] Failed to fetch user levels:', error);
+            log.error('[CloudLevelService] Failed to fetch user levels:', error);
             return [];
         }
 
@@ -217,7 +218,7 @@ export class CloudLevelService {
     public async getLevelById(id: string): Promise<CloudLevelEntry | null> {
         const client = SupabaseService.getInstance().getClient();
         if (!client) {
-            console.warn('[CloudLevelService] Supabase not configured');
+            log.warn('[CloudLevelService] Supabase not configured');
             return null;
         }
 
@@ -229,7 +230,7 @@ export class CloudLevelService {
 
         if (error) {
             if (error.code !== 'PGRST116') { // Not found is not an error
-                console.error('[CloudLevelService] Failed to fetch level:', error);
+                log.error('[CloudLevelService] Failed to fetch level:', error);
             }
             return null;
         }
@@ -243,7 +244,7 @@ export class CloudLevelService {
     public async getLevelBySlug(slug: string): Promise<CloudLevelEntry | null> {
         const client = SupabaseService.getInstance().getClient();
         if (!client) {
-            console.warn('[CloudLevelService] Supabase not configured');
+            log.warn('[CloudLevelService] Supabase not configured');
             return null;
         }
 
@@ -255,7 +256,7 @@ export class CloudLevelService {
 
         if (error) {
             if (error.code !== 'PGRST116') {
-                console.error('[CloudLevelService] Failed to fetch level by slug:', error);
+                log.error('[CloudLevelService] Failed to fetch level by slug:', error);
             }
             return null;
         }
@@ -279,7 +280,7 @@ export class CloudLevelService {
             });
 
         if (error) {
-            console.error('[CloudLevelService] Failed to check slug availability:', error);
+            log.error('[CloudLevelService] Failed to check slug availability:', error);
             return false;
         }
 
@@ -307,14 +308,14 @@ export class CloudLevelService {
         const supabaseService = SupabaseService.getInstance();
         const client = await supabaseService.getAuthenticatedClient();
         if (!client) {
-            console.warn('[CloudLevelService] Not authenticated');
+            log.warn('[CloudLevelService] Not authenticated');
             return null;
         }
 
         // Get internal user ID (UUID)
         const internalUserId = await supabaseService.ensureUserExists();
         if (!internalUserId) {
-            console.warn('[CloudLevelService] No internal user ID available');
+            log.warn('[CloudLevelService] No internal user ID available');
             return null;
         }
 
@@ -335,7 +336,7 @@ export class CloudLevelService {
             .single();
 
         if (error) {
-            console.error('[CloudLevelService] Failed to create level:', error);
+            log.error('[CloudLevelService] Failed to create level:', error);
             return null;
         }
 
@@ -359,7 +360,7 @@ export class CloudLevelService {
     ): Promise<CloudLevelEntry | null> {
         const client = await SupabaseService.getInstance().getAuthenticatedClient();
         if (!client) {
-            console.warn('[CloudLevelService] Not authenticated');
+            log.warn('[CloudLevelService] Not authenticated');
             return null;
         }
 
@@ -380,7 +381,7 @@ export class CloudLevelService {
             .single();
 
         if (error) {
-            console.error('[CloudLevelService] Failed to update level:', error);
+            log.error('[CloudLevelService] Failed to update level:', error);
             return null;
         }
 
@@ -393,7 +394,7 @@ export class CloudLevelService {
     public async deleteLevel(id: string): Promise<boolean> {
         const client = await SupabaseService.getInstance().getAuthenticatedClient();
         if (!client) {
-            console.warn('[CloudLevelService] Not authenticated');
+            log.warn('[CloudLevelService] Not authenticated');
             return false;
         }
 
@@ -403,7 +404,7 @@ export class CloudLevelService {
             .eq('id', id);
 
         if (error) {
-            console.error('[CloudLevelService] Failed to delete level:', error);
+            log.error('[CloudLevelService] Failed to delete level:', error);
             return false;
         }
 
@@ -420,7 +421,7 @@ export class CloudLevelService {
     public async submitForReview(id: string): Promise<boolean> {
         const client = await SupabaseService.getInstance().getAuthenticatedClient();
         if (!client) {
-            console.warn('[CloudLevelService] Not authenticated');
+            log.warn('[CloudLevelService] Not authenticated');
             return false;
         }
 
@@ -429,7 +430,7 @@ export class CloudLevelService {
         });
 
         if (error) {
-            console.error('[CloudLevelService] Failed to submit for review:', error);
+            log.error('[CloudLevelService] Failed to submit for review:', error);
             return false;
         }
 
@@ -442,7 +443,7 @@ export class CloudLevelService {
     public async withdrawSubmission(id: string): Promise<boolean> {
         const client = await SupabaseService.getInstance().getAuthenticatedClient();
         if (!client) {
-            console.warn('[CloudLevelService] Not authenticated');
+            log.warn('[CloudLevelService] Not authenticated');
             return false;
         }
 
@@ -453,7 +454,7 @@ export class CloudLevelService {
             .eq('level_type', 'pending_review');
 
         if (error) {
-            console.error('[CloudLevelService] Failed to withdraw submission:', error);
+            log.error('[CloudLevelService] Failed to withdraw submission:', error);
             return false;
         }
 
@@ -470,7 +471,7 @@ export class CloudLevelService {
     public async getPendingReviews(): Promise<CloudLevelEntry[]> {
         const client = await SupabaseService.getInstance().getAuthenticatedClient();
         if (!client) {
-            console.warn('[CloudLevelService] Not authenticated');
+            log.warn('[CloudLevelService] Not authenticated');
             return [];
         }
 
@@ -481,7 +482,7 @@ export class CloudLevelService {
             .order('submitted_at', { ascending: true });
 
         if (error) {
-            console.error('[CloudLevelService] Failed to fetch pending reviews:', error);
+            log.error('[CloudLevelService] Failed to fetch pending reviews:', error);
             return [];
         }
 
@@ -494,7 +495,7 @@ export class CloudLevelService {
     public async approveLevel(id: string, notes?: string): Promise<boolean> {
         const client = await SupabaseService.getInstance().getAuthenticatedClient();
         if (!client) {
-            console.warn('[CloudLevelService] Not authenticated');
+            log.warn('[CloudLevelService] Not authenticated');
             return false;
         }
 
@@ -504,7 +505,7 @@ export class CloudLevelService {
         });
 
         if (error) {
-            console.error('[CloudLevelService] Failed to approve level:', error);
+            log.error('[CloudLevelService] Failed to approve level:', error);
             return false;
         }
 
@@ -517,7 +518,7 @@ export class CloudLevelService {
     public async rejectLevel(id: string, notes: string): Promise<boolean> {
         const client = await SupabaseService.getInstance().getAuthenticatedClient();
         if (!client) {
-            console.warn('[CloudLevelService] Not authenticated');
+            log.warn('[CloudLevelService] Not authenticated');
             return false;
         }
 
@@ -527,7 +528,7 @@ export class CloudLevelService {
         });
 
         if (error) {
-            console.error('[CloudLevelService] Failed to reject level:', error);
+            log.error('[CloudLevelService] Failed to reject level:', error);
             return false;
         }
 
@@ -550,7 +551,7 @@ export class CloudLevelService {
         });
 
         if (error) {
-            console.error('[CloudLevelService] Failed to increment play count:', error);
+            log.error('[CloudLevelService] Failed to increment play count:', error);
         }
     }
 
@@ -566,7 +567,7 @@ export class CloudLevelService {
         });
 
         if (error) {
-            console.error('[CloudLevelService] Failed to increment completion count:', error);
+            log.error('[CloudLevelService] Failed to increment completion count:', error);
         }
     }
 
@@ -575,21 +576,21 @@ export class CloudLevelService {
      */
     public async rateLevel(levelId: string, rating: number): Promise<boolean> {
         if (rating < 1 || rating > 5) {
-            console.error('[CloudLevelService] Rating must be between 1 and 5');
+            log.error('[CloudLevelService] Rating must be between 1 and 5');
             return false;
         }
 
         const supabaseService = SupabaseService.getInstance();
         const client = await supabaseService.getAuthenticatedClient();
         if (!client) {
-            console.warn('[CloudLevelService] Not authenticated');
+            log.warn('[CloudLevelService] Not authenticated');
             return false;
         }
 
         // Get internal user ID (UUID)
         const internalUserId = await supabaseService.ensureUserExists();
         if (!internalUserId) {
-            console.warn('[CloudLevelService] No internal user ID available');
+            log.warn('[CloudLevelService] No internal user ID available');
             return false;
         }
 
@@ -604,7 +605,7 @@ export class CloudLevelService {
             });
 
         if (error) {
-            console.error('[CloudLevelService] Failed to rate level:', error);
+            log.error('[CloudLevelService] Failed to rate level:', error);
             return false;
         }
 

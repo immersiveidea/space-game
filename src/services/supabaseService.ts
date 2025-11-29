@@ -1,5 +1,6 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { AuthService } from './authService';
+import log from '../core/logger';
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_PROJECT;
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_KEY;
@@ -17,7 +18,7 @@ export class SupabaseService {
         if (SUPABASE_URL && SUPABASE_ANON_KEY) {
             this._client = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
         } else {
-            console.warn('[SupabaseService] Supabase not configured - cloud features disabled');
+            log.warn('[SupabaseService] Supabase not configured - cloud features disabled');
         }
     }
 
@@ -51,7 +52,7 @@ export class SupabaseService {
      */
     public async getAuthenticatedClient(): Promise<SupabaseClient | null> {
         if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
-            console.warn('[SupabaseService] Missing Supabase URL or key');
+            log.warn('[SupabaseService] Missing Supabase URL or key');
             return null;
         }
 
@@ -59,16 +60,16 @@ export class SupabaseService {
         const token = await authService.getAccessToken();
 
         if (!token) {
-            console.warn('[SupabaseService] No auth token available');
+            log.warn('[SupabaseService] No auth token available');
             return null;
         }
 
-        console.log('[SupabaseService] Got Auth0 token, length:', token.length);
+        log.info('[SupabaseService] Got Auth0 token, length:', token.length);
 
         // Debug: decode JWT to see claims (without verification)
         try {
             const payload = JSON.parse(atob(token.split('.')[1]));
-            console.log('[SupabaseService] Token claims:', {
+            log.info('[SupabaseService] Token claims:', {
                 iss: payload.iss,
                 sub: payload.sub,
                 aud: payload.aud,
@@ -76,7 +77,7 @@ export class SupabaseService {
                 role: payload.role
             });
         } catch (_e) {
-            console.warn('[SupabaseService] Could not decode token');
+            log.warn('[SupabaseService] Could not decode token');
         }
 
         // Create a new client with the Auth0 token for RLS
@@ -105,7 +106,7 @@ export class SupabaseService {
         const authService = AuthService.getInstance();
         const user = authService.getUser();
         if (!user?.sub) {
-            console.warn('[SupabaseService] No user sub available');
+            log.warn('[SupabaseService] No user sub available');
             return null;
         }
 
@@ -132,7 +133,7 @@ export class SupabaseService {
                 .single();
 
             if (insertError) {
-                console.error('[SupabaseService] Failed to create user:', insertError);
+                log.error('[SupabaseService] Failed to create user:', insertError);
                 return null;
             }
 
@@ -140,7 +141,7 @@ export class SupabaseService {
         }
 
         if (fetchError) {
-            console.error('[SupabaseService] Failed to fetch user:', fetchError);
+            log.error('[SupabaseService] Failed to fetch user:', fetchError);
         }
 
         return null;

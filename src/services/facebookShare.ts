@@ -1,3 +1,5 @@
+import log from '../core/logger';
+
 /**
  * Facebook Share Integration
  * Handles sharing game results to Facebook when user is authenticated via Facebook
@@ -37,7 +39,7 @@ export class FacebookShare {
         }
 
         if (!this._appId) {
-            console.warn('Facebook App ID not configured');
+            log.warn('Facebook App ID not configured');
             return false;
         }
 
@@ -82,7 +84,7 @@ export class FacebookShare {
             };
 
             script.onerror = () => {
-                console.error('Failed to load Facebook SDK');
+                log.error('Failed to load Facebook SDK');
                 resolve(false);
             };
 
@@ -103,13 +105,13 @@ export class FacebookShare {
      */
     public async shareResults(shareData: ShareData): Promise<boolean> {
         if (!this._fbInitialized) {
-            console.warn('Facebook SDK not initialized');
+            log.warn('Facebook SDK not initialized');
             return false;
         }
 
         const FB = (window as any).FB;
         if (!FB) {
-            console.error('Facebook SDK not available');
+            log.error('Facebook SDK not available');
             return false;
         }
 
@@ -126,10 +128,10 @@ export class FacebookShare {
                 hashtag: '#SpaceCombatVR'
             }, (response: any) => {
                 if (response && !response.error_message) {
-                    console.log('Successfully shared to Facebook');
+                    log.info('Successfully shared to Facebook');
                     resolve(true);
                 } else {
-                    console.error('Error sharing to Facebook:', response?.error_message || 'Unknown error');
+                    log.error('Error sharing to Facebook:', response?.error_message || 'Unknown error');
                     resolve(false);
                 }
             });
@@ -142,7 +144,7 @@ export class FacebookShare {
      */
     public async shareWithWebAPI(shareData: ShareData): Promise<boolean> {
         if (!navigator.share) {
-            console.warn('Web Share API not supported');
+            log.warn('Web Share API not supported');
             return false;
         }
 
@@ -158,7 +160,7 @@ export class FacebookShare {
             return true;
         } catch (error) {
             // User cancelled or error occurred
-            console.log('Share cancelled or failed:', error);
+            log.info('Share cancelled or failed:', error);
             return false;
         }
     }
@@ -200,7 +202,7 @@ export class FacebookShare {
             await navigator.clipboard.writeText(message);
             return true;
         } catch (error) {
-            console.error('Failed to copy to clipboard:', error);
+            log.error('Failed to copy to clipboard:', error);
             return false;
         }
     }

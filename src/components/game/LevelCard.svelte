@@ -5,12 +5,13 @@
   import { progressionStore } from '../../stores/progression';
   import { gameConfigStore } from '../../stores/gameConfig';
   import Button from '../shared/Button.svelte';
+  import log from '../../core/logger';
 
   export let levelId: string;
   export let levelEntry: CloudLevelEntry;
 
   async function handleLevelClick() {
-    console.log('[LevelCard] Level clicked:', {
+    log.info('[LevelCard] Level clicked:', {
       levelId,
       levelName: levelEntry.name,
       isUnlocked,
@@ -20,24 +21,24 @@
 
     // If level is locked and user not authenticated, prompt to sign in
     if (!isUnlocked && !$authStore.isAuthenticated) {
-      console.log('[LevelCard] Locked level clicked - prompting for sign in');
+      log.info('[LevelCard] Locked level clicked - prompting for sign in');
       try {
         await authStore.login();
-        console.log('[LevelCard] Login completed');
+        log.info('[LevelCard] Login completed');
       } catch (error) {
-        console.error('[LevelCard] Login failed:', error);
+        log.error('[LevelCard] Login failed:', error);
       }
       return;
     }
 
     // If level is still locked (progression), don't allow play
     if (!isUnlocked) {
-      console.log('[LevelCard] Level still locked after auth check (progression lock)');
+      log.info('[LevelCard] Level still locked after auth check (progression lock)');
       return;
     }
 
     // Navigate to level play route
-    console.log('[LevelCard] Level unlocked, navigating to /play/' + levelId);
+    log.info('[LevelCard] Level unlocked, navigating to /play/' + levelId);
     navigate(`/play/${levelId}`);
   }
 

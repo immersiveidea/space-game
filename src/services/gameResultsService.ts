@@ -1,7 +1,7 @@
 import { AuthService } from './authService';
 import { CloudLeaderboardService } from './cloudLeaderboardService';
 import { GameStats } from '../game/gameStats';
-import debugLog from '../core/debug';
+import log from '../core/logger';
 
 /**
  * Represents a completed game session result
@@ -53,13 +53,12 @@ export class GameResultsService {
      * Save a game result to storage (local + cloud)
      */
     public saveResult(result: GameResult): void {
-        console.log('[GameResultsService] saveResult called with:', result);
+        log.info('[GameResultsService] saveResult called with:', result);
         const results = this.getAllResults();
-        console.log('[GameResultsService] Existing results count:', results.length);
+        log.info('[GameResultsService] Existing results count:', results.length);
         results.push(result);
         this.saveToStorage(results);
-        console.log('[GameResultsService] Saved result:', result.id, result.finalScore);
-        debugLog('[GameResultsService] Saved result:', result.id, result.finalScore);
+        log.debug('[GameResultsService] Saved result:', result.id, result.finalScore);
 
         // Submit to cloud leaderboard (non-blocking)
         this.submitToCloud(result);
@@ -74,14 +73,14 @@ export class GameResultsService {
             if (cloudService.isAvailable()) {
                 const success = await cloudService.submitScore(result);
                 if (success) {
-                    console.log('[GameResultsService] Cloud submission successful');
+                    log.info('[GameResultsService] Cloud submission successful');
                 } else {
-                    console.log('[GameResultsService] Cloud submission skipped (not authenticated or failed)');
+                    log.info('[GameResultsService] Cloud submission skipped (not authenticated or failed)');
                 }
             }
         } catch (error) {
             // Don't let cloud failures affect local save
-            console.warn('[GameResultsService] Cloud submission error:', error);
+            log.warn('[GameResultsService] Cloud submission error:', error);
         }
     }
 
@@ -96,7 +95,7 @@ export class GameResultsService {
             }
             return JSON.parse(data) as GameResult[];
         } catch (error) {
-            debugLog('[GameResultsService] Error loading results:', error);
+            log.debug('[GameResultsService] Error loading results:', error);
             return [];
         }
     }
@@ -116,7 +115,7 @@ export class GameResultsService {
      */
     public clearAll(): void {
         localStorage.removeItem(STORAGE_KEY);
-        debugLog('[GameResultsService] Cleared all results');
+        log.debug('[GameResultsService] Cleared all results');
     }
 
     /**
@@ -125,15 +124,14 @@ export class GameResultsService {
     private saveToStorage(results: GameResult[]): void {
         try {
             const json = JSON.stringify(results);
-            console.log('[GameResultsService] Saving to localStorage, key:', STORAGE_KEY, 'size:', json.length);
+            log.info('[GameResultsService] Saving to localStorage, key:', STORAGE_KEY, 'size:', json.length);
             localStorage.setItem(STORAGE_KEY, json);
-            console.log('[GameResultsService] Successfully saved to localStorage');
+            log.info('[GameResultsService] Successfully saved to localStorage');
             // Verify it was saved
             const verify = localStorage.getItem(STORAGE_KEY);
-            console.log('[GameResultsService] Verification - stored data exists:', !!verify);
+            log.info('[GameResultsService] Verification - stored data exists:', !!verify);
         } catch (error) {
-            console.error('[GameResultsService] Error saving results:', error);
-            debugLog('[GameResultsService] Error saving results:', error);
+            log.error('[GameResultsService] Error saving results:', error);
         }
     }
 

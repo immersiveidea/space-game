@@ -1,3 +1,5 @@
+import log from './logger';
+
 /**
  * Default ship physics configuration
  */
@@ -93,7 +95,7 @@ export class GameConfig {
                 this.save();
             }
         } catch (error) {
-            console.warn('Failed to load game config from localStorage:', error);
+            log.warn('Failed to load game config from localStorage:', error);
         }
     }
 

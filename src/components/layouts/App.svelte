@@ -5,6 +5,7 @@
   import { navigationStore } from '../../stores/navigation';
   import { AuthService } from '../../services/authService';
   import { authStore } from '../../stores/auth';
+  import log from '../../core/logger';
 
   // Import game views
   import LevelSelect from '../game/LevelSelect.svelte';
@@ -16,21 +17,21 @@
 
   // Initialize Auth0 when component mounts
   onMount(async () => {
-    console.log('[App] ========== APP MOUNTED - INITIALIZING AUTH0 ==========');
+    log.info('[App] ========== APP MOUNTED - INITIALIZING AUTH0 ==========');
     try {
       const authService = AuthService.getInstance();
       await authService.initialize();
-      console.log('[App] Auth0 initialized successfully');
+      log.info('[App] Auth0 initialized successfully');
 
       // Refresh auth store to update UI with current auth state
-      console.log('[App] Refreshing auth store...');
+      log.info('[App] Refreshing auth store...');
       await authStore.refresh();
-      console.log('[App] Auth store refreshed');
+      log.info('[App] Auth store refreshed');
     } catch (error) {
-      console.error('[App] !!!!! AUTH0 INITIALIZATION FAILED !!!!!', error);
-      console.error('[App] Error details:', error?.message, error?.stack);
+      log.error('[App] !!!!! AUTH0 INITIALIZATION FAILED !!!!!', error);
+      log.error('[App] Error details:', error?.message, error?.stack);
     }
-    console.log('[App] ========== AUTH0 INITIALIZATION COMPLETE ==========');
+    log.info('[App] ========== AUTH0 INITIALIZATION COMPLETE ==========');
   });
 </script>
 

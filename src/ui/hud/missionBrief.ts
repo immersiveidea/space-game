@@ -8,7 +8,7 @@ import {
 } from "@babylonjs/gui";
 import { DefaultScene } from "../../core/defaultScene";
 import {MeshBuilder, Vector3, Observable, Observer} from "@babylonjs/core";
-import debugLog from '../../core/debug';
+import log from '../../core/logger';
 import { LevelConfig } from "../../levels/config/levelConfig";
 import { CloudLevelEntry } from "../../services/cloudLevelService";
 
@@ -27,20 +27,20 @@ export class MissionBrief {
      * Initialize the mission brief as a fullscreen overlay
      */
     public initialize(): void {
-        console.log('[MissionBrief] ========== INITIALIZE CALLED ==========');
+        log.info('[MissionBrief] ========== INITIALIZE CALLED ==========');
         const scene = DefaultScene.MainScene;
-        console.log('[MissionBrief] Scene exists:', !!scene);
+        log.info('[MissionBrief] Scene exists:', !!scene);
 
         try {
-            console.log('[MissionBrief] Initializing as fullscreen overlay');
+            log.info('[MissionBrief] Initializing as fullscreen overlay');
             const mesh = MeshBuilder.CreatePlane('brief', {size: 2});
-            console.log('[MissionBrief] Mesh created:', mesh.name, 'ID:', mesh.id);
+            log.info('[MissionBrief] Mesh created:', mesh.name, 'ID:', mesh.id);
 
             const ship = scene.getNodeById('Ship');
-            console.log('[MissionBrief] Ship node found:', !!ship);
+            log.info('[MissionBrief] Ship node found:', !!ship);
 
             if (!ship) {
-                console.error('[MissionBrief] ERROR: Ship node not found! Cannot parent mission brief mesh.');
+                log.error('[MissionBrief] ERROR: Ship node not found! Cannot parent mission brief mesh.');
                 return;
             }
 
@@ -49,18 +49,18 @@ export class MissionBrief {
             mesh.rotation = new Vector3(0, 0, 0);
             mesh.renderingGroupId = 3; // Same as status screen for consistent rendering
             mesh.metadata = { uiPickable: true }; // TAG: VR UI - allow pointer selection
-            console.log('[MissionBrief] Mesh parented to ship at position:', mesh.position);
-            console.log('[MissionBrief] Mesh absolute position:', mesh.getAbsolutePosition());
-            console.log('[MissionBrief] Mesh scaling:', mesh.scaling);
-            console.log('[MissionBrief] Mesh isEnabled:', mesh.isEnabled());
-            console.log('[MissionBrief] Mesh isVisible:', mesh.isVisible);
+            log.info('[MissionBrief] Mesh parented to ship at position:', mesh.position);
+            log.info('[MissionBrief] Mesh absolute position:', mesh.getAbsolutePosition());
+            log.info('[MissionBrief] Mesh scaling:', mesh.scaling);
+            log.info('[MissionBrief] Mesh isEnabled:', mesh.isEnabled());
+            log.info('[MissionBrief] Mesh isVisible:', mesh.isVisible);
 
             // Create fullscreen advanced texture (not attached to mesh)
             this._advancedTexture = AdvancedDynamicTexture.CreateForMesh(mesh);
-            console.log('[MissionBrief] AdvancedDynamicTexture created for mesh');
-            console.log('[MissionBrief] Texture dimensions:', this._advancedTexture.getSize());
+            log.info('[MissionBrief] AdvancedDynamicTexture created for mesh');
+            log.info('[MissionBrief] Texture dimensions:', this._advancedTexture.getSize());
 
-            console.log('[MissionBrief] Fullscreen UI created');
+            log.info('[MissionBrief] Fullscreen UI created');
 
             // Create main container - centered overlay
             this._container = new Rectangle("missionBriefContainer");
@@ -73,16 +73,16 @@ export class MissionBrief {
             this._container.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
             this._container.verticalAlignment = Control.VERTICAL_ALIGNMENT_CENTER;
             this._advancedTexture.addControl(this._container);
-            console.log('[MissionBrief] Container created and added to texture');
+            log.info('[MissionBrief] Container created and added to texture');
 
             // Initially hidden
             this._container.isVisible = false;
-            console.log('[MissionBrief] Container initially hidden');
+            log.info('[MissionBrief] Container initially hidden');
 
-            console.log('[MissionBrief] ========== INITIALIZATION COMPLETE ==========');
+            log.info('[MissionBrief] ========== INITIALIZATION COMPLETE ==========');
         } catch (error) {
-            console.error('[MissionBrief] !!!!! INITIALIZATION FAILED !!!!!', error);
-            console.error('[MissionBrief] Error stack:', error?.stack);
+            log.error('[MissionBrief] !!!!! INITIALIZATION FAILED !!!!!', error);
+            log.error('[MissionBrief] Error stack:', error?.stack);
         }
     }
 
@@ -94,18 +94,18 @@ export class MissionBrief {
      * @param onStart - Callback when start button is pressed
      */
     public show(levelConfig: LevelConfig, directoryEntry: CloudLevelEntry | null, triggerObservable: Observable<void>, onStart: () => void): void {
-        console.log('[MissionBrief] ========== SHOW() CALLED ==========');
-        console.log('[MissionBrief] Container exists:', !!this._container);
-        console.log('[MissionBrief] AdvancedTexture exists:', !!this._advancedTexture);
+        log.info('[MissionBrief] ========== SHOW() CALLED ==========');
+        log.info('[MissionBrief] Container exists:', !!this._container);
+        log.info('[MissionBrief] AdvancedTexture exists:', !!this._advancedTexture);
 
         if (!this._container || !this._advancedTexture) {
-            console.error('[MissionBrief] !!!!! CANNOT SHOW - NOT INITIALIZED !!!!!');
-            console.error('[MissionBrief] Container:', this._container);
-            console.error('[MissionBrief] AdvancedTexture:', this._advancedTexture);
+            log.error('[MissionBrief] !!!!! CANNOT SHOW - NOT INITIALIZED !!!!!');
+            log.error('[MissionBrief] Container:', this._container);
+            log.error('[MissionBrief] AdvancedTexture:', this._advancedTexture);
             return;
         }
 
-        console.log('[MissionBrief] Showing with config:', {
+        log.info('[MissionBrief] Showing with config:', {
             difficulty: levelConfig.difficulty,
             description: levelConfig.metadata?.description,
             asteroidCount: levelConfig.asteroids?.length,
@@ -117,7 +117,7 @@ export class MissionBrief {
 
         // Listen for trigger pulls to dismiss the mission brief
         this._triggerObserver = triggerObservable.add(() => {
-            debugLog('[MissionBrief] Trigger pulled - dismissing mission brief');
+            log.debug('[MissionBrief] Trigger pulled - dismissing mission brief');
             this.hide();
             if (this._onStartCallback) {
                 this._onStartCallback();
@@ -215,7 +215,7 @@ export class MissionBrief {
         startButton.fontWeight = "bold";
         startButton.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
         startButton.onPointerClickObservable.add(() => {
-            debugLog('[MissionBrief] START button clicked - dismissing mission brief');
+            log.debug('[MissionBrief] START button clicked - dismissing mission brief');
             this.hide();
             if (this._onStartCallback) {
                 this._onStartCallback();
@@ -232,12 +232,12 @@ export class MissionBrief {
         this._container.isVisible = true;
         this._isVisible = true;
 
-        console.log('[MissionBrief] ========== CONTAINER NOW VISIBLE ==========');
-        console.log('[MissionBrief] Container.isVisible:', this._container.isVisible);
-        console.log('[MissionBrief] _isVisible flag:', this._isVisible);
-        console.log('[MissionBrief] Container children count:', this._container.children.length);
-        console.log('[MissionBrief] AdvancedTexture control count:', this._advancedTexture.rootContainer.children.length);
-        console.log('[MissionBrief] ========== MISSION BRIEF DISPLAY COMPLETE ==========');
+        log.info('[MissionBrief] ========== CONTAINER NOW VISIBLE ==========');
+        log.info('[MissionBrief] Container.isVisible:', this._container.isVisible);
+        log.info('[MissionBrief] _isVisible flag:', this._isVisible);
+        log.info('[MissionBrief] Container children count:', this._container.children.length);
+        log.info('[MissionBrief] AdvancedTexture control count:', this._advancedTexture.rootContainer.children.length);
+        log.info('[MissionBrief] ========== MISSION BRIEF DISPLAY COMPLETE ==========');
     }
 
     /**
@@ -247,7 +247,7 @@ export class MissionBrief {
         if (this._container) {
             this._container.isVisible = false;
             this._isVisible = false;
-            debugLog('[MissionBrief] Mission brief hidden');
+            log.debug('[MissionBrief] Mission brief hidden');
         }
     }
 
@@ -306,6 +306,6 @@ export class MissionBrief {
         this._onStartCallback = null;
         this._triggerObserver = null;
         this._isVisible = false;
-        debugLog('[MissionBrief] Disposed');
+        log.debug('[MissionBrief] Disposed');
     }
 }

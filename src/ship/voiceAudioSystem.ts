@@ -1,5 +1,5 @@
 import { AudioEngineV2, StaticSound, SoundState } from "@babylonjs/core";
-import debugLog from "../core/debug";
+import log from "../core/logger";
 import { ShipStatus, ShipStatusChangeEvent } from "./shipStatus";
 
 /**
@@ -66,7 +66,7 @@ export class VoiceAudioSystem {
     public async initialize(audioEngine: AudioEngineV2): Promise<void> {
         this._audioEngine = audioEngine;
 
-        debugLog('VoiceAudioSystem: Loading voice clips...');
+        log.debug('VoiceAudioSystem: Loading voice clips...');
 
         // Load all voice files as non-spatial sounds
         for (const fileName of this.VOICE_FILES) {
@@ -82,11 +82,11 @@ export class VoiceAudioSystem {
                 );
                 this._sounds.set(fileName, sound);
             } catch (error) {
-                debugLog(`VoiceAudioSystem: Failed to load ${fileName}.mp3`, error);
+                log.debug(`VoiceAudioSystem: Failed to load ${fileName}.mp3`, error);
             }
         }
 
-        debugLog(`VoiceAudioSystem: Loaded ${this._sounds.size}/${this.VOICE_FILES.length} voice clips`);
+        log.debug(`VoiceAudioSystem: Loaded ${this._sounds.size}/${this.VOICE_FILES.length} voice clips`);
     }
 
     /**
@@ -98,7 +98,7 @@ export class VoiceAudioSystem {
             this.handleStatusChange(event);
         });
 
-        debugLog('VoiceAudioSystem: Subscribed to game events');
+        log.debug('VoiceAudioSystem: Subscribed to game events');
     }
 
     /**
@@ -108,7 +108,7 @@ export class VoiceAudioSystem {
         const { statusType, newValue, delta } = event;
         const maxValue = 1;
         const percentage = maxValue > 0 ? newValue / maxValue : 0;
-        debugLog(event);
+        log.debug(event);
 
         // Clear warning states if resources increase above thresholds
         if (delta > 0) {
@@ -126,7 +126,7 @@ export class VoiceAudioSystem {
 
 
         if (percentage < 0.2 && !this._warningStates.has(`danger_${statusType}`)) {
-            debugLog(`VoiceAudioSystem: DANGER warning triggered for ${statusType} (${(percentage * 100).toFixed(1)}%)`);
+            log.debug(`VoiceAudioSystem: DANGER warning triggered for ${statusType} (${(percentage * 100).toFixed(1)}%)`);
             this._warningStates.add(`danger_${statusType}`);
             // Clear warning state if it exists (danger supersedes warning)
             this.clearWarningState(`warning_${statusType}`);
@@ -134,13 +134,13 @@ export class VoiceAudioSystem {
         }
         // Warning (10% <= x < 30%) - repeat every 4 seconds ONLY if not in danger
         else if (percentage >= 0.2 && percentage < 0.5 && !this._warningStates.has(`warning_${statusType}`) && !this._warningStates.has(`danger_${statusType}`)) {
-            debugLog(`VoiceAudioSystem: Warning triggered for ${statusType} (${(percentage * 100).toFixed(1)}%)`);
+            log.debug(`VoiceAudioSystem: Warning triggered for ${statusType} (${(percentage * 100).toFixed(1)}%)`);
             this._warningStates.add(`warning_${statusType}`);
             this.queueMessage(['warning', statusType], VoiceMessagePriority.NORMAL, false, 4000, `warning_${statusType}`);
         }
         // Empty (= 0) - no repeat
         else if (newValue === 0 && !this._warningStates.has(`empty_${statusType}`)) {
-            debugLog(`VoiceAudioSystem: EMPTY warning triggered for ${statusType}`);
+            log.debug(`VoiceAudioSystem: EMPTY warning triggered for ${statusType}`);
             this._warningStates.add(`empty_${statusType}`);
             this.queueMessage([statusType, 'empty'], VoiceMessagePriority.HIGH, false, 0, `empty_${statusType}`);
         }
@@ -158,7 +158,7 @@ export class VoiceAudioSystem {
         stateKey?: string
     ): void {
         if (!this._audioEngine) {
-            debugLog('VoiceAudioSystem: Cannot queue message - audio not initialized');
+            log.debug('VoiceAudioSystem: Cannot queue message - audio not initialized');
             return;
         }
 
@@ -185,7 +185,7 @@ export class VoiceAudioSystem {
         }
 
         const repeatInfo = repeatInterval > 0 ? ` (repeat every ${repeatInterval}ms)` : '';
-        debugLog(`VoiceAudioSystem: Queued message [${sounds.join(', ')}] with priority ${priority}${repeatInfo}`);
+        log.debug(`VoiceAudioSystem: Queued message [${sounds.join(', ')}] with priority ${priority}${repeatInfo}`);
     }
 
     /**
@@ -222,7 +222,7 @@ export class VoiceAudioSystem {
                         this.playCurrentSound();
                     } else {
                         // Sequence complete
-                        debugLog('VoiceAudioSystem: Sequence complete');
+                        log.debug('VoiceAudioSystem: Sequence complete');
 
                         // Check if this message should repeat
                         if (this._currentMessage.repeatInterval && this._currentMessage.repeatInterval > 0) {
@@ -233,9 +233,9 @@ export class VoiceAudioSystem {
 
                                 // Re-queue the message for repeat
                                 this._queue.push({ ...this._currentMessage });
-                                debugLog(`VoiceAudioSystem: Message re-queued for repeat in ${this._currentMessage.repeatInterval}ms`);
+                                log.debug(`VoiceAudioSystem: Message re-queued for repeat in ${this._currentMessage.repeatInterval}ms`);
                             } else {
-                                debugLog(`VoiceAudioSystem: Message NOT re-queued - warning state '${this._currentMessage.stateKey}' cleared`);
+                                log.debug(`VoiceAudioSystem: Message NOT re-queued - warning state '${this._currentMessage.stateKey}' cleared`);
                             }
                         }
 
@@ -265,7 +265,7 @@ export class VoiceAudioSystem {
             this._currentMessage = this._queue.shift()!;
             this._currentSoundIndex = 0;
             this._isPlaying = true;
-            debugLog(`VoiceAudioSystem: Starting sequence [${this._currentMessage.sounds.join(' → ')}]`);
+            log.debug(`VoiceAudioSystem: Starting sequence [${this._currentMessage.sounds.join(' → ')}]`);
             this.playCurrentSound();
         }
     }
@@ -283,9 +283,9 @@ export class VoiceAudioSystem {
 
         if (sound) {
             sound.play();
-            debugLog(`VoiceAudioSystem: Playing ${soundName} (${this._currentSoundIndex + 1}/${this._currentMessage.sounds.length})`);
+            log.debug(`VoiceAudioSystem: Playing ${soundName} (${this._currentSoundIndex + 1}/${this._currentMessage.sounds.length})`);
         } else {
-            debugLog(`VoiceAudioSystem: Sound ${soundName} not found, skipping`);
+            log.debug(`VoiceAudioSystem: Sound ${soundName} not found, skipping`);
             // Skip to next sound
             this._currentSoundIndex++;
         }
@@ -314,7 +314,7 @@ export class VoiceAudioSystem {
      */
     public clearQueue(): void {
         this._queue = [];
-        debugLog('VoiceAudioSystem: Queue cleared');
+        log.debug('VoiceAudioSystem: Queue cleared');
     }
 
     /**
@@ -330,9 +330,9 @@ export class VoiceAudioSystem {
 
             const removed = originalLength - this._queue.length;
             if (removed > 0) {
-                debugLog(`VoiceAudioSystem: Cleared warning state '${key}' and purged ${removed} queued message(s)`);
+                log.debug(`VoiceAudioSystem: Cleared warning state '${key}' and purged ${removed} queued message(s)`);
             } else {
-                debugLog(`VoiceAudioSystem: Cleared warning state '${key}'`);
+                log.debug(`VoiceAudioSystem: Cleared warning state '${key}'`);
             }
         }
     }
@@ -342,7 +342,7 @@ export class VoiceAudioSystem {
      */
     public resetWarningStates(): void {
         this._warningStates.clear();
-        debugLog('VoiceAudioSystem: Warning states reset');
+        log.debug('VoiceAudioSystem: Warning states reset');
     }
 
     /**
@@ -353,6 +353,6 @@ export class VoiceAudioSystem {
         this.clearQueue();
         this._sounds.clear();
         this._warningStates.clear();
-        debugLog('VoiceAudioSystem: Disposed');
+        log.debug('VoiceAudioSystem: Disposed');
     }
 }
