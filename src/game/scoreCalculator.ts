@@ -177,7 +177,7 @@ export function calculateScore(
  * @param par - Par time in seconds
  * @returns 0-3 stars
  */
-export function getTimeStars(seconds: number, par: number): number {
+function getTimeStars(seconds: number, par: number): number {
     const ratio = seconds / par;
     if (ratio <= 0.5) return 3;  // Finished in half the par time
     if (ratio <= 1.0) return 2;  // Finished at or under par
@@ -191,7 +191,7 @@ export function getTimeStars(seconds: number, par: number): number {
  * @param accuracy - Shot accuracy percentage (0-100)
  * @returns 0-3 stars
  */
-export function getAccuracyStars(accuracy: number): number {
+function getAccuracyStars(accuracy: number): number {
     if (accuracy >= 75) return 3;  // Excellent accuracy
     if (accuracy >= 50) return 2;  // Good accuracy
     if (accuracy >= 25) return 1;  // Fair accuracy
@@ -204,7 +204,7 @@ export function getAccuracyStars(accuracy: number): number {
  * @param fuelConsumed - Fuel consumed percentage (0-∞)
  * @returns 0-3 stars
  */
-export function getFuelStars(fuelConsumed: number): number {
+function getFuelStars(fuelConsumed: number): number {
     // Stars only consider first 100% of fuel
     // Refueling doesn't earn extra stars
     if (fuelConsumed <= 30) return 3;  // Used ≤30% fuel
@@ -219,7 +219,7 @@ export function getFuelStars(fuelConsumed: number): number {
  * @param hullDamage - Hull damage percentage (0-∞)
  * @returns 0-3 stars
  */
-export function getHullStars(hullDamage: number): number {
+function getHullStars(hullDamage: number): number {
     // Stars only consider first 100% of damage
     // Dying and respawning = 0 stars
     if (hullDamage <= 10) return 3;  // Took ≤10% damage

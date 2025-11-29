@@ -4,11 +4,10 @@
  */
 
 // Core service
-export { AnalyticsService, getAnalytics } from './analyticsService';
+export { getAnalytics } from './analyticsService';
 
 // Adapters (interfaces exported as types)
 export type { AnalyticsAdapter, EventOptions, AnalyticsConfig } from './adapters/analyticsAdapter';
-export { NewRelicAdapter } from './adapters/newRelicAdapter';
 export type { NewRelicAdapterConfig } from './adapters/newRelicAdapter';
 
 // Event types
