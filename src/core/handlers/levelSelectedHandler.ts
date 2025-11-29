@@ -1,4 +1,4 @@
-import { AudioEngineV2, Engine, ParticleHelper } from "@babylonjs/core";
+import { AudioEngineV2, Engine, FreeCamera, ParticleHelper, Vector3 } from "@babylonjs/core";
 import { DefaultScene } from "../defaultScene";
 import { Level1 } from "../../levels/level1";
 import Level from "../../levels/level";
@@ -87,6 +87,16 @@ export function createLevelSelectedHandler(context: LevelSelectedContext): (e: C
             if (DefaultScene.XR) {
                 try {
                     preloader.updateProgress(75, 'Entering VR...');
+
+                    // Pre-position XR camera at ship cockpit before entering VR
+                    // This prevents camera jump on Quest when immersive mode starts
+                    const spawnPos = config.ship?.position || [0, 0, 0];
+                    const cockpitPosition = new Vector3(spawnPos[0], spawnPos[1] + 1.2, spawnPos[2]);
+                    const tempCamera = new FreeCamera("tempCockpit", cockpitPosition, DefaultScene.MainScene);
+                    DefaultScene.XR.baseExperience.camera.setTransformationFromNonVRCamera(tempCamera, true);
+                    tempCamera.dispose();
+                    log.debug('[Main] XR camera pre-positioned at cockpit:', cockpitPosition.toString());
+
                     xrSession = await DefaultScene.XR.baseExperience.enterXRAsync('immersive-vr', 'local-floor');
                     log.debug('XR session started successfully (render loop paused until camera is ready)');
                 } catch (error) {
@@ -171,11 +181,9 @@ export function createLevelSelectedHandler(context: LevelSelectedContext): (e: C
                     });
                 }
 
-                // Hide preloader
+                // Hide preloader immediately - SceneFader handles visual transition
                 preloader.updateProgress(100, 'Ready!');
-                setTimeout(() => {
-                    preloader.hide();
-                }, 500);
+                preloader.hide();
 
                 // Hide UI (no longer remove from DOM - let Svelte routing handle it)
                 log.info('[Main] ========== HIDING UI FOR GAMEPLAY ==========');

@@ -60,7 +60,6 @@ export class ShipPhysics {
         const currentSpeed = currentLinearVelocity.length();
 
         let linearMagnitude = 0;
-        let angularMagnitude = 0;
 
         // Apply linear force from left stick Y (forward/backward)
         if (Math.abs(leftStick.y) > 0.15) {
@@ -81,7 +80,7 @@ export class ShipPhysics {
                     );
 
                     // Apply reverse thrust factor: forward at full power, reverse at reduced power
-                    const thrustMultiplier = thrustDirection < 0
+                    const thrustMultiplier = thrustDirection > 0
                         ? 1.0  // Forward thrust at full power
                         : this._config.reverseThrustFactor;  // Reverse thrust scaled down
 
@@ -109,7 +108,7 @@ export class ShipPhysics {
         }
 
         // Calculate rotation magnitude for torque
-        angularMagnitude =
+        let angularMagnitude =
             Math.abs(rightStick.y) +
             Math.abs(rightStick.x) +
             Math.abs(leftStick.x);
