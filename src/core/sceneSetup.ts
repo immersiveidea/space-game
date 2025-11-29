@@ -37,6 +37,8 @@ export async function setupScene(
     const audioEngine = await createAudioEngine();
     reporter.reportProgress(30, 'Audio engine ready');
 
+    // Stop any existing render loop before starting new one (prevents doubling on reload)
+    engine.stopRenderLoop();
     engine.runRenderLoop(() => DefaultScene.MainScene.render());
 
     return { engine, audioEngine };
@@ -50,6 +52,10 @@ function createEngine(canvas: HTMLCanvasElement): Engine {
 }
 
 function createMainScene(engine: Engine): void {
+    // Dispose old scene if it exists (prevents doubling on reload)
+    if (DefaultScene.MainScene && !DefaultScene.MainScene.isDisposed) {
+        DefaultScene.MainScene.dispose();
+    }
     DefaultScene.MainScene = new Scene(engine);
     DefaultScene.MainScene.ambientColor = new Color3(.2, .2, .2);
     DefaultScene.MainScene.clearColor = new Color3(0, 0, 0).toColor4();

@@ -100,15 +100,17 @@ export class KeyboardInput {
         document.onkeydown = (ev) => {
             // Always allow inspector and camera toggle, even when disabled
             if (ev.key === 'i') {
-                // Toggle Babylon Inspector
-                if (this._scene.debugLayer.isVisible()) {
-                    this._scene.debugLayer.hide();
-                } else {
-                    this._scene.debugLayer.show({
-                        overlay: true,
-                        showExplorer: true,
-                    });
-                }
+                // Dynamically import inspector on first use (keeps it out of main bundle)
+                import('@babylonjs/inspector').then(() => {
+                    if (this._scene.debugLayer.isVisible()) {
+                        this._scene.debugLayer.hide();
+                    } else {
+                        this._scene.debugLayer.show({
+                            overlay: true,
+                            showExplorer: true,
+                        });
+                    }
+                });
                 return;
             }
 
