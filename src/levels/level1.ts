@@ -15,7 +15,6 @@ import {LevelConfig} from "./config/levelConfig";
 import {LevelDeserializer} from "./config/levelDeserializer";
 import {BackgroundStars} from "../environment/background/backgroundStars";
 import debugLog from '../core/debug';
-import {PhysicsRecorder} from "../replay/recording/physicsRecorder";
 import {getAnalytics} from "../analytics";
 import {MissionBrief} from "../ui/hud/missionBrief";
 import {LevelRegistry} from "./storage/levelRegistry";
@@ -34,7 +33,6 @@ export class Level1 implements Level {
     private _audioEngine: AudioEngineV2;
     private _deserializer: LevelDeserializer;
     private _backgroundStars: BackgroundStars;
-    private _physicsRecorder: PhysicsRecorder | null = null;
     private _isReplayMode: boolean;
     private _backgroundMusic: StaticSound;
     private _missionBrief: MissionBrief;
@@ -252,12 +250,6 @@ export class Level1 implements Level {
         // Start game timer
         this._ship.gameStats.startTimer();
         debugLog('Game timer started');
-
-        // Start physics recording
-        if (this._physicsRecorder) {
-            this._physicsRecorder.startRingBuffer();
-            debugLog('Physics recorder started');
-        }
     }
 
     public async play() {
@@ -336,9 +328,6 @@ export class Level1 implements Level {
         }
         if (this._backgroundStars) {
             this._backgroundStars.dispose();
-        }
-        if (this._physicsRecorder) {
-            this._physicsRecorder.dispose();
         }
         if (this._missionBrief) {
             this._missionBrief.dispose();
@@ -487,12 +476,5 @@ export class Level1 implements Level {
         };
 
         return difficultyMap[difficulty.toLowerCase()] || 120; // Default to 2 minutes
-    }
-
-    /**
-     * Get the physics recorder instance
-     */
-    public get physicsRecorder(): PhysicsRecorder {
-        return this._physicsRecorder;
     }
 }

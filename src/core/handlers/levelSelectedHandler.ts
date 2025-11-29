@@ -5,7 +5,6 @@ import Level from "../../levels/level";
 import { RockFactory } from "../../environment/asteroids/rockFactory";
 import { LevelConfig } from "../../levels/config/levelConfig";
 import { Preloader } from "../../ui/screens/preloader";
-import { DiscordWidget } from "../../ui/widgets/discordWidget";
 import debugLog from '../debug';
 
 /**
@@ -47,13 +46,6 @@ export function createLevelSelectedHandler(context: LevelSelectedContext): (e: C
         }
         if (appHeader) {
             appHeader.style.display = 'none';
-        }
-
-        // Hide Discord widget during gameplay
-        const discord = (window as any).__discordWidget as DiscordWidget;
-        if (discord) {
-            debugLog('[Main] Hiding Discord widget for gameplay');
-            discord.hide();
         }
 
         // Show preloader for initialization

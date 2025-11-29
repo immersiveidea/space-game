@@ -15,14 +15,11 @@ import HavokPhysics from "@babylonjs/havok";
 import { DefaultScene } from "./core/defaultScene";
 import Level from "./levels/level";
 import { RockFactory } from "./environment/asteroids/rockFactory";
-import { DiscordWidget } from "./ui/widgets/discordWidget";
 import debugLog from './core/debug';
-import { ReplayManager } from "./replay/ReplayManager";
 import { InputControlManager } from './ship/input/inputControlManager';
 
 import { initializeAnalytics } from './analytics/initAnalytics';
 import { createLevelSelectedHandler, LevelSelectedContext } from './core/handlers/levelSelectedHandler';
-import { createViewReplaysHandler, ViewReplaysContext } from './core/handlers/viewReplaysHandler';
 import { initializeApp, setupErrorHandler } from './core/appInitializer';
 
 // Initialize analytics
@@ -38,12 +35,11 @@ enum GameState {
     DEMO
 }
 
-export class Main implements LevelSelectedContext, ViewReplaysContext {
+export class Main implements LevelSelectedContext {
     private _currentLevel: Level | null = null;
     private _gameState: GameState = GameState.DEMO;
     private _engine: Engine;
     private _audioEngine: AudioEngineV2;
-    private _replayManager: ReplayManager | null = null;
     private _initialized: boolean = false;
     private _assetsLoaded: boolean = false;
     private _started: boolean = false;
@@ -58,11 +54,6 @@ export class Main implements LevelSelectedContext, ViewReplaysContext {
         window.addEventListener('DOMContentLoaded', () => {
             const levelSelect = document.querySelector('#levelSelect');
             if (levelSelect) levelSelect.classList.add('ready');
-
-            const viewReplaysBtn = document.querySelector('#viewReplaysBtn');
-            if (viewReplaysBtn) {
-                viewReplaysBtn.addEventListener('click', createViewReplaysHandler(this));
-            }
         });
     }
 
@@ -78,10 +69,6 @@ export class Main implements LevelSelectedContext, ViewReplaysContext {
     setProgressCallback(callback: (percent: number, message: string) => void): void {
         this._progressCallback = callback;
     }
-
-    // ViewReplaysContext interface implementation
-    getReplayManager(): ReplayManager | null { return this._replayManager; }
-    setReplayManager(manager: ReplayManager): void { this._replayManager = manager; }
 
     public async initializeEngine(): Promise<void> {
         if (this._initialized) return;
@@ -125,9 +112,6 @@ export class Main implements LevelSelectedContext, ViewReplaysContext {
 
             const gl = canvas?.getContext('webgl2') || canvas?.getContext('webgl');
             if (gl) { gl.clearColor(0,0,0,1); gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT); }
-
-            const discord = (window as any).__discordWidget as DiscordWidget;
-            if (discord) discord.show();
         } catch (error) {
             console.error('[Main] Cleanup failed:', error);
             window.location.reload();
@@ -155,9 +139,6 @@ export class Main implements LevelSelectedContext, ViewReplaysContext {
                     if (state === 2) {
                         const pointerFeature = DefaultScene.XR!.baseExperience.featuresManager.getEnabledFeature("xr-controller-pointer-selection");
                         if (pointerFeature) InputControlManager.getInstance().registerPointerFeature(pointerFeature);
-                        ((window as any).__discordWidget as DiscordWidget)?.hide();
-                    } else if (state === 0) {
-                        ((window as any).__discordWidget as DiscordWidget)?.show();
                     }
                 });
                 this.reportProgress(40, 'VR support enabled');
