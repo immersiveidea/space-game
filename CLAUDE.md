@@ -29,7 +29,6 @@ npm run speech
 ### Scene Management Pattern
 The project uses a singleton pattern for scene access via `DefaultScene`:
 - `DefaultScene.MainScene` - Primary game scene
-- `DefaultScene.DemoScene` - Demo/attract mode scene
 - `DefaultScene.XR` - WebXR experience instance
 
 All game objects reference these static properties rather than passing scene instances.
@@ -124,7 +123,6 @@ src/
   createSun.ts         - Sun mesh generation
   createPlanets.ts     - Procedural planet generation
   planetTextures.ts    - Planet texture library
-  demo.ts              - Attract mode implementation
 
 public/
   systems/             - Particle system definitions

@@ -11,8 +11,6 @@ export default defineConfig({
         rollupOptions: {
             output: {
                 manualChunks: {
-                    'babylon': ['@babylonjs/core'],
-                    'babylon-procedural': ['@babylonjs/procedural-textures'],
                     'babylon-inspector': ['@babylonjs/inspector'],
                 }
             }
@@ -25,13 +23,35 @@ export default defineConfig({
             }
         },
         // Include BabylonJS modules - force pre-bundle to prevent dynamic import issues
+        // Shaders must be explicitly included to avoid dynamic import failures through CloudFlare proxy
         include: [
             '@babylonjs/core',
+            // Core shaders
+            '@babylonjs/core/Shaders/default.vertex',
+            '@babylonjs/core/Shaders/default.fragment',
+            '@babylonjs/core/Shaders/rgbdDecode.fragment',
+            '@babylonjs/core/Shaders/procedural.vertex',
+            // PBR shaders
+            '@babylonjs/core/Shaders/pbr.vertex',
+            '@babylonjs/core/Shaders/pbr.fragment',
+            '@babylonjs/core/Shaders/pbrDebug.fragment',
+            // Particle shaders
+            '@babylonjs/core/Shaders/particles.vertex',
+            '@babylonjs/core/Shaders/particles.fragment',
+            '@babylonjs/core/Shaders/gpuRenderParticles.vertex',
+            '@babylonjs/core/Shaders/gpuRenderParticles.fragment',
+            // Other common shaders
+            '@babylonjs/core/Shaders/standard.fragment',
+            '@babylonjs/core/Shaders/postprocess.vertex',
+            '@babylonjs/core/Shaders/pass.fragment',
+            '@babylonjs/core/Shaders/shadowMap.vertex',
+            '@babylonjs/core/Shaders/shadowMap.fragment',
+            '@babylonjs/core/Shaders/depth.vertex',
+            '@babylonjs/core/Shaders/depth.fragment',
             '@babylonjs/loaders',
             '@babylonjs/havok',
             '@babylonjs/materials',
-            '@babylonjs/procedural-textures',
-            '@babylonjs/procedural-textures/fireProceduralTexture'
+            '@babylonjs/procedural-textures'
         ],
         // Prevent cache invalidation issues with CloudFlare proxy
         force: false,
