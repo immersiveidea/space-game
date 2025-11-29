@@ -58,6 +58,7 @@ export class ControllerInput {
     private _onCameraAdjustObservable: Observable<CameraAdjustment> =
         new Observable<CameraAdjustment>();
     private _onStatusScreenToggleObservable: Observable<void> = new Observable<void>();
+    private _onInspectorToggleObservable: Observable<void> = new Observable<void>();
     private _enabled: boolean = true;
     private _mappingConfig: ControllerMappingConfig;
 
@@ -85,6 +86,13 @@ export class ControllerInput {
      */
     public get onStatusScreenToggleObservable(): Observable<void> {
         return this._onStatusScreenToggleObservable;
+    }
+
+    /**
+     * Get observable that fires when Y button is pressed on left controller
+     */
+    public get onInspectorToggleObservable(): Observable<void> {
+        return this._onInspectorToggleObservable;
     }
 
     /**
@@ -329,6 +337,12 @@ export class ControllerInput {
                         this._onStatusScreenToggleObservable.notifyObservers();
                     }
                 }
+                if (controllerEvent.component.id === "y-button" && controllerEvent.hand === "left") {
+                    // Only trigger on button press, not release
+                    if (controllerEvent.pressed) {
+                        this._onInspectorToggleObservable.notifyObservers();
+                    }
+                }
                 log.info(controllerEvent);
             }
         }
@@ -341,5 +355,6 @@ export class ControllerInput {
         this._controllerObservable.clear();
         this._onShootObservable.clear();
         this._onCameraAdjustObservable.clear();
+        this._onInspectorToggleObservable.clear();
     }
 }

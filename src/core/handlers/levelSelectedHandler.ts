@@ -97,6 +97,7 @@ export function createLevelSelectedHandler(context: LevelSelectedContext): (e: C
                     if (canvas) {
                         canvas.style.display = 'block';
                     }
+                    engine.stopRenderLoop();
                     engine.runRenderLoop(() => {
                         DefaultScene.MainScene.render();
                     });
@@ -164,6 +165,7 @@ export function createLevelSelectedHandler(context: LevelSelectedContext): (e: C
                     if (canvas) {
                         canvas.style.display = 'block';
                     }
+                    engine.stopRenderLoop();
                     engine.runRenderLoop(() => {
                         DefaultScene.MainScene.render();
                     });

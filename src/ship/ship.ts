@@ -309,6 +309,18 @@ export class Ship {
                 }
             });
 
+            // Wire up inspector toggle event (Y button)
+            this._controllerInput.onInspectorToggleObservable.add(() => {
+                import('@babylonjs/inspector').then(() => {
+                    const scene = DefaultScene.MainScene;
+                    if (scene.debugLayer.isVisible()) {
+                        scene.debugLayer.hide();
+                    } else {
+                        scene.debugLayer.show({ overlay: true, showExplorer: true });
+                    }
+                });
+            });
+
             // Wire up camera adjustment events
             this._keyboardInput.onCameraChangeObservable.add((cameraKey) => {
                 if (cameraKey === 1) {
@@ -335,16 +347,22 @@ export class Ship {
         this._physics.setGameStats(this._gameStats);
 
         // Setup physics update loop (every 10 frames)
+        let p = 0;
         this._physicsObserver = DefaultScene.MainScene.onAfterPhysicsObservable.add(() => {
-            this.updatePhysics();
+
+                this.updatePhysics();
+
         });
+        let renderFrameCount = 0;
         this._renderObserver = DefaultScene.MainScene.onAfterRenderObservable.add(() => {
             // Update voice audio system (checks for completed sounds and plays next in queue)
             if (this._voiceAudio) {
                 this._voiceAudio.update();
             }
-            // Check game end conditions every frame (but only acts once)
-            this.checkGameEndConditions();
+            // Check game end conditions every 30 frames (~0.5 sec at 60fps)
+            if (renderFrameCount++ % 30 === 0) {
+                this.checkGameEndConditions();
+            }
         });
 
         // Setup camera

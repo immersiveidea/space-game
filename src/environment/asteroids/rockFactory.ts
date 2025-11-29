@@ -93,6 +93,8 @@ export class RockFactory {
         log.debug('loading mesh');
         const asset = await loadAsset("asteroid.glb");
         this._asteroidMesh = asset.meshes.get('Asteroid') || null;
+        this._asteroidMesh.material.backFaceCulling = true;
+        this._asteroidMesh.material.freeze();
         if (this._asteroidMesh) {
             this._asteroidMesh.setEnabled(false);
         }

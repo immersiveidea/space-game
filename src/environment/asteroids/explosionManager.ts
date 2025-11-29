@@ -299,17 +299,6 @@ export class ExplosionManager {
 
                 frameCount++;
 
-                // Log every 15 frames (approximately every 250ms at 60fps)
-                if (frameCount % 15 === 0 || frameCount === 1) {
-                    log.debug(`[ExplosionManager] Animation frame ${frameCount}:`, {
-                        elapsed: `${elapsed}ms`,
-                        progress: progress.toFixed(3),
-                        currentValue: currentValue.toFixed(2),
-                        scale: scale.toFixed(3),
-                        piecesAlive: meshPieces.filter(p => !p.isDisposed()).length
-                    });
-                }
-
                 // Continue animation if not complete
                 if (progress >= 1.0) {
                     // Animation complete - remove observer and clean up

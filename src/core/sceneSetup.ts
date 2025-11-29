@@ -59,6 +59,11 @@ function createMainScene(engine: Engine): void {
     DefaultScene.MainScene = new Scene(engine);
     DefaultScene.MainScene.ambientColor = new Color3(.2, .2, .2);
     DefaultScene.MainScene.clearColor = new Color3(0, 0, 0).toColor4();
+
+    // Performance optimizations for Quest 2
+    //DefaultScene.MainScene.performancePriority = ScenePerformancePriority.Intermediate;
+    DefaultScene.MainScene.autoClear = false;
+    DefaultScene.MainScene.autoClearDepthAndStencil = false;
 }
 
 async function setupPhysics(): Promise<void> {
@@ -66,7 +71,7 @@ async function setupPhysics(): Promise<void> {
     const havokPlugin = new HavokPlugin(true, havok);
     DefaultScene.MainScene.enablePhysics(new Vector3(0, 0, 0), havokPlugin);
     DefaultScene.MainScene.getPhysicsEngine()!.setTimeStep(1/60);
-    DefaultScene.MainScene.getPhysicsEngine()!.setSubTimeStep(5);
+    DefaultScene.MainScene.getPhysicsEngine()!.setSubTimeStep(2);
     DefaultScene.MainScene.collisionsEnabled = true;
 }
 

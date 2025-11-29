@@ -112,8 +112,9 @@ export class Level1 implements Level {
             canvas.style.display = 'block';
         }
 
-        // Ensure render loop is running
+        // Ensure render loop is running (stop first to prevent duplicates)
         const engine = DefaultScene.MainScene.getEngine();
+        engine.stopRenderLoop();
         engine.runRenderLoop(() => {
             DefaultScene.MainScene.render();
         });
