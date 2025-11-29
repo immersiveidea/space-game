@@ -103,7 +103,7 @@ export class Level1 implements Level {
 
         // Parent XR camera to the rig
         xr.baseExperience.camera.parent = cameraRig;
-        xr.baseExperience.camera.position = new Vector3(0, .8, 0);
+        xr.baseExperience.camera.position = new Vector3(0, 1.2, 0);
         log.debug('[Level1] XR camera parented to cameraRig at position (0, 1.2, 0)');
 
         // Ensure render loop is running
