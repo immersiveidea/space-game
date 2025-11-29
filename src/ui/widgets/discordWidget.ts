@@ -3,7 +3,7 @@
  * Dynamically loads the widget script to avoid npm bundling issues
  */
 
-export interface DiscordWidgetOptions {
+interface DiscordWidgetOptions {
   server: string;
   channel: string;
   location?: string[];

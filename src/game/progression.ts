@@ -11,7 +11,7 @@ export interface LevelProgress {
     playCount: number;
 }
 
-export interface ProgressionData {
+interface ProgressionData {
     version: string;
     completedLevels: Map<string, LevelProgress>;
     editorUnlocked: boolean;

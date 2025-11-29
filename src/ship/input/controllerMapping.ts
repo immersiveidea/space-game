@@ -15,7 +15,7 @@ export type StickAction =
 /**
  * Available button actions
  */
-export type ButtonAction =
+type ButtonAction =
     | 'fire'          // Fire weapon
     | 'cameraUp'      // Adjust camera up
     | 'cameraDown'    // Adjust camera down

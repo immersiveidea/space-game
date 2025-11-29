@@ -2,7 +2,7 @@ import { writable, get } from 'svelte/store';
 
 const STORAGE_KEY = 'game-config';
 
-export interface GameConfigData {
+interface GameConfigData {
   physicsEnabled: boolean;
   debugEnabled: boolean;
   progressionEnabled: boolean;

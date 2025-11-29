@@ -6,7 +6,7 @@ import debugLog from "../../core/debug";
 /**
  * State change event emitted when ship controls or pointer selection state changes
  */
-export interface InputControlStateChange {
+interface InputControlStateChange {
     shipControlsEnabled: boolean;
     pointerSelectionEnabled: boolean;
     requester: string;  // e.g., "StatusScreen", "MissionBrief", "Level1"

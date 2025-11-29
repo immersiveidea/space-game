@@ -3,7 +3,7 @@ import { LevelRegistry } from '../levels/storage/levelRegistry';
 import type { LevelConfig } from '../levels/config/levelConfig';
 import type { CloudLevelEntry } from '../services/cloudLevelService';
 
-export interface LevelRegistryState {
+interface LevelRegistryState {
   isInitialized: boolean;
   levels: Map<string, CloudLevelEntry>;
 }

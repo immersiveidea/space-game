@@ -4,7 +4,7 @@ import debugLog from '../../core/debug';
 /**
  * Configuration options for background stars
  */
-export interface BackgroundStarsConfig {
+interface BackgroundStarsConfig {
     /** Number of stars to generate */
     count?: number;
     /** Radius of the sphere containing the stars */

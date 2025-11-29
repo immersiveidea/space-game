@@ -7,25 +7,25 @@
 // Session Events
 // ============================================================================
 
-export interface SessionStartEvent {
+interface SessionStartEvent {
     platform: 'desktop' | 'mobile' | 'vr';
     userAgent: string;
     screenWidth: number;
     screenHeight: number;
 }
 
-export interface SessionEndEvent {
+interface SessionEndEvent {
     duration: number; // seconds
     totalLevelsPlayed: number;
     totalAsteroidsDestroyed: number;
 }
 
-export interface WebXRSessionStartEvent {
+interface WebXRSessionStartEvent {
     deviceName: string;
     isImmersive: boolean;
 }
 
-export interface WebXRSessionEndEvent {
+interface WebXRSessionEndEvent {
     duration: number; // seconds
     reason: 'user_exit' | 'error' | 'browser_tab_close';
 }
@@ -34,13 +34,13 @@ export interface WebXRSessionEndEvent {
 // Level Events
 // ============================================================================
 
-export interface LevelStartEvent {
+interface LevelStartEvent {
     levelName: string;
     difficulty: 'recruit' | 'pilot' | 'captain' | 'commander' | 'test';
     playCount: number; // nth time playing this level/difficulty
 }
 
-export interface LevelCompleteEvent {
+interface LevelCompleteEvent {
     levelName: string;
     difficulty: string;
     completionTime: number; // seconds
@@ -54,7 +54,7 @@ export interface LevelCompleteEvent {
     isNewBestAccuracy: boolean;
 }
 
-export interface LevelFailedEvent {
+interface LevelFailedEvent {
     levelName: string;
     difficulty: string;
     survivalTime: number; // seconds
@@ -68,26 +68,26 @@ export interface LevelFailedEvent {
 // Gameplay Events
 // ============================================================================
 
-export interface AsteroidDestroyedEvent {
+interface AsteroidDestroyedEvent {
     weaponType: string;
     distance: number;
     asteroidSize: number;
     remainingCount: number;
 }
 
-export interface ShotFiredEvent {
+interface ShotFiredEvent {
     weaponType: string;
     consecutiveShotsCount: number;
 }
 
-export interface HullDamageEvent {
+interface HullDamageEvent {
     damageAmount: number;
     remainingHull: number;
     damagePercent: number; // 0-1
     source: 'asteroid_collision' | 'environmental';
 }
 
-export interface ShipCollisionEvent {
+interface ShipCollisionEvent {
     impactVelocity: number;
     damageDealt: number;
     objectType: 'asteroid' | 'station' | 'boundary';
@@ -97,7 +97,7 @@ export interface ShipCollisionEvent {
 // Performance Events
 // ============================================================================
 
-export interface PerformanceSnapshotEvent {
+interface PerformanceSnapshotEvent {
     fps: number;
     drawCalls: number;
     activeMeshes: number;
@@ -106,7 +106,7 @@ export interface PerformanceSnapshotEvent {
     renderTime: number; // ms
 }
 
-export interface AssetLoadingEvent {
+interface AssetLoadingEvent {
     assetType: 'mesh' | 'texture' | 'audio' | 'system';
     assetName: string;
     loadTimeMs: number;
@@ -118,14 +118,14 @@ export interface AssetLoadingEvent {
 // Error Events
 // ============================================================================
 
-export interface JavaScriptErrorEvent {
+interface JavaScriptErrorEvent {
     errorMessage: string;
     errorStack?: string;
     componentName: string;
     isCritical: boolean;
 }
 
-export interface WebXRErrorEvent {
+interface WebXRErrorEvent {
     errorType: 'initialization' | 'controller' | 'session' | 'feature';
     errorMessage: string;
     recoverable: boolean;
@@ -135,7 +135,7 @@ export interface WebXRErrorEvent {
 // Progression Events
 // ============================================================================
 
-export interface ProgressionUpdateEvent {
+interface ProgressionUpdateEvent {
     levelName: string;
     difficulty: string;
     bestTime?: number;
@@ -144,7 +144,7 @@ export interface ProgressionUpdateEvent {
     firstPlayDate: string;
 }
 
-export interface EditorUnlockedEvent {
+interface EditorUnlockedEvent {
     timestamp: string;
     levelsCompleted: number;
 }

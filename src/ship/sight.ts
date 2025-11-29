@@ -12,7 +12,7 @@ import {
 /**
  * Configuration options for the sight reticle
  */
-export interface SightConfig {
+interface SightConfig {
     /** Position relative to parent */
     position?: Vector3;
     /** Circle radius */

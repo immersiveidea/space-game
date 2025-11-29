@@ -3,12 +3,12 @@ import { GameConfig } from "../core/gameConfig";
 import { ShipStatus } from "./shipStatus";
 import { GameStats } from "../game/gameStats";
 
-export interface InputState {
+interface InputState {
     leftStick: Vector2;
     rightStick: Vector2;
 }
 
-export interface ForceApplicationResult {
+interface ForceApplicationResult {
     linearMagnitude: number;
     angularMagnitude: number;
 }

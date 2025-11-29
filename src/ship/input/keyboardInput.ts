@@ -7,7 +7,7 @@ import { FreeCamera, Observable, Scene, Vector2 } from "@babylonjs/core";
 /**
  * Recording control action types
  */
-export type RecordingAction =
+type RecordingAction =
     | "exportRingBuffer"      // R key
     | "toggleLongRecording"    // Ctrl+R
     | "exportLongRecording";   // Shift+R

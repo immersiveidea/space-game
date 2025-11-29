@@ -10,17 +10,17 @@ export type Vector3Array = [number, number, number];
 /**
  * 4D quaternion stored as array [x, y, z, w]
  */
-export type QuaternionArray = [number, number, number, number];
+type QuaternionArray = [number, number, number, number];
 
 /**
  * 4D color stored as array [r, g, b, a] (0-1 range)
  */
-export type Color4Array = [number, number, number, number];
+type Color4Array = [number, number, number, number];
 
 /**
  * Material configuration for PBR materials
  */
-export interface MaterialConfig {
+interface MaterialConfig {
     id: string;
     name: string;
     type: "PBR" | "Standard" | "Basic";
@@ -43,7 +43,7 @@ export interface MaterialConfig {
 /**
  * Scene hierarchy node (TransformNode or Mesh)
  */
-export interface SceneNodeConfig {
+interface SceneNodeConfig {
     id: string;
     name: string;
     type: "TransformNode" | "Mesh" | "InstancedMesh";
@@ -73,7 +73,7 @@ export interface ShipConfig {
  * Start base configuration (yellow cylinder where asteroids are constrained to)
  * All fields optional to allow levels without start bases
  */
-export interface StartBaseConfig {
+interface StartBaseConfig {
     position?: Vector3Array;  // Defaults to [0, 0, 0] if not specified
     baseGlbPath?: string;     // Path to base GLB model (defaults to 'base.glb')
     landingGlbPath?: string;  // Path to landing zone GLB model (uses same file as base, different mesh name)
@@ -82,7 +82,7 @@ export interface StartBaseConfig {
 /**
  * Sun configuration
  */
-export interface SunConfig {
+interface SunConfig {
     position: Vector3Array;
     diameter: number;
     intensity?: number; // Light intensity
@@ -91,7 +91,7 @@ export interface SunConfig {
 /**
  * Individual planet configuration
  */
-export interface PlanetConfig {
+interface PlanetConfig {
     name: string;
     position: Vector3Array;
     diameter: number;
@@ -102,7 +102,7 @@ export interface PlanetConfig {
 /**
  * Individual asteroid configuration
  */
-export interface AsteroidConfig {
+interface AsteroidConfig {
     id: string;
     position: Vector3Array;
     scale: number;  // Uniform scale applied to all axes
@@ -114,7 +114,7 @@ export interface AsteroidConfig {
 /**
  * Difficulty configuration settings
  */
-export interface DifficultyConfig {
+interface DifficultyConfig {
     rockCount: number;
     forceMultiplier: number;
     rockSizeMin: number;
@@ -160,7 +160,7 @@ export interface LevelConfig {
 /**
  * Validation result
  */
-export interface ValidationResult {
+interface ValidationResult {
     valid: boolean;
     errors: string[];
 }

@@ -1,6 +1,6 @@
 import { writable } from 'svelte/store';
 
-export interface NavigationState {
+interface NavigationState {
   currentRoute: string;
   isLoading: boolean;
   loadingMessage: string;

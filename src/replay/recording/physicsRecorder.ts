@@ -6,7 +6,7 @@ import { LevelConfig } from "../../levels/config/levelConfig";
 /**
  * Represents the physics state of a single object at a point in time
  */
-export interface PhysicsObjectState {
+interface PhysicsObjectState {
     id: string;
     position: [number, number, number];
     rotation: [number, number, number, number]; // Quaternion (x, y, z, w)
@@ -28,7 +28,7 @@ export interface PhysicsSnapshot {
 /**
  * Recording metadata
  */
-export interface RecordingMetadata {
+interface RecordingMetadata {
     startTime: number;
     endTime: number;
     frameCount: number;

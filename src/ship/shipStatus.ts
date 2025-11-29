@@ -13,7 +13,7 @@ export interface ShipStatusChangeEvent {
 /**
  * Ship status values container
  */
-export interface ShipStatusValues {
+interface ShipStatusValues {
     fuel: number;
     hull: number;
     ammo: number;

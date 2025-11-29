@@ -6,7 +6,7 @@ import { ScoreEvent } from "../ui/hud/scoreboard";
 /**
  * Priority levels for voice messages
  */
-export enum VoiceMessagePriority {
+enum VoiceMessagePriority {
     HIGH = 0,    // Critical warnings (danger, immediate action needed)
     NORMAL = 1,  // Standard warnings and status updates
     LOW = 2      // Informational messages

@@ -3,7 +3,6 @@ import {
     Color3,
     CreateAudioEngineAsync,
     Engine,
-    FreeCamera,
     HavokPlugin,
     ParticleHelper,
     Scene,
@@ -29,12 +28,9 @@ import {LevelRegistry} from "./levels/storage/levelRegistry";
 import debugLog from './core/debug';
 import {ReplaySelectionScreen} from "./replay/ReplaySelectionScreen";
 import {ReplayManager} from "./replay/ReplayManager";
-import {AuthService} from "./services/authService";
-import {updateUserProfile} from "./ui/screens/loginScreen";
 import {Preloader} from "./ui/screens/preloader";
 import {DiscordWidget} from "./ui/widgets/discordWidget";
 
-// Svelte App
 import { mount } from 'svelte';
 import App from './components/layouts/App.svelte';
 

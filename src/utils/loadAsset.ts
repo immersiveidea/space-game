@@ -2,7 +2,7 @@ import {DefaultScene} from "../core/defaultScene";
 import {AbstractMesh, AssetContainer, LoadAssetContainerAsync} from "@babylonjs/core";
 import debugLog from "../core/debug";
 
-export type  LoadedAsset = {
+type LoadedAsset = {
     container: AssetContainer,
     meshes: Map<string, AbstractMesh>,
 }

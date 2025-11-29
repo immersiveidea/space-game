@@ -8,7 +8,7 @@ const MIGRATION_STATUS_KEY = 'space-game-migration-status';
 /**
  * Migration status information
  */
-export interface MigrationStatus {
+interface MigrationStatus {
     migrated: boolean;
     migratedAt?: Date;
     version: string;
@@ -19,7 +19,7 @@ export interface MigrationStatus {
 /**
  * Result of migration operation
  */
-export interface MigrationResult {
+interface MigrationResult {
     success: boolean;
     customLevelsMigrated: number;
     defaultLevelsFound: number;

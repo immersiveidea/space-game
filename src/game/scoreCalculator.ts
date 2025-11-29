@@ -7,7 +7,7 @@
 /**
  * Star rating levels (0-3 stars per category)
  */
-export interface StarRatings {
+interface StarRatings {
     time: number;        // 0-3 stars based on completion time
     accuracy: number;    // 0-3 stars based on shot accuracy
     fuel: number;        // 0-3 stars based on fuel efficiency
@@ -18,7 +18,7 @@ export interface StarRatings {
 /**
  * Debug information for score calculation
  */
-export interface ScoreDebugInfo {
+interface ScoreDebugInfo {
     rawFuelConsumed: number;    // Actual fuel consumed (can be >100%)
     rawHullDamage: number;      // Actual hull damage (can be >100%)
     fuelEfficiency: number;     // 0-100 display value (clamped)
@@ -42,7 +42,7 @@ export interface ScoreCalculation {
 /**
  * Configuration for score calculation
  */
-export interface ScoreConfig {
+interface ScoreConfig {
     baseScore?: number;     // Default: 10000
     minMultiplier?: number; // Minimum multiplier floor (default: 0.5)
     maxTimeMultiplier?: number; // Maximum time bonus (default: 3.0)

@@ -12,7 +12,7 @@ import debugLog from '../../core/debug';
 /**
  * Configuration for explosion effects
  */
-export interface ExplosionConfig {
+interface ExplosionConfig {
     /** Duration of explosion in milliseconds */
     duration?: number;
     /** Maximum explosion force (how far pieces spread) */

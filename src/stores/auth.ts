@@ -1,7 +1,7 @@
 import { writable } from 'svelte/store';
 import { AuthService } from '../services/authService';
 
-export interface AuthState {
+interface AuthState {
   isAuthenticated: boolean;
   user: any | null;
   isLoading: boolean;

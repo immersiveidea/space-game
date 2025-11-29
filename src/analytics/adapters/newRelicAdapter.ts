@@ -1,7 +1,7 @@
 import { AnalyticsAdapter, AnalyticsEvent } from './analyticsAdapter';
 import { BrowserAgent } from '@newrelic/browser-agent/loaders/browser-agent';
 
-export interface NewRelicAdapterConfig {
+interface NewRelicAdapterConfig {
     /** Maximum events to batch before auto-flush */
     batchSize?: number;
     /** Maximum time (ms) to wait before auto-flush */

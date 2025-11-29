@@ -11,7 +11,7 @@ import debugLog from "../../core/debug";
 import loadAsset from "../../utils/loadAsset";
 import {Vector3Array} from "../../levels/config/levelConfig";
 
-export interface StarBaseResult {
+interface StarBaseResult {
     baseMesh: AbstractMesh;
     landingAggregate: PhysicsAggregate | null;
 }
