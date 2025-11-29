@@ -306,7 +306,7 @@ export class Level1 implements Level {
         } else if (DefaultScene.XR) {
             // XR available but not entered yet, try to enter
             try {
-                const xr = await DefaultScene.XR.baseExperience.enterXRAsync('immersive-vr', 'local-floor');
+                const _xr = await DefaultScene.XR.baseExperience.enterXRAsync('immersive-vr', 'local-floor');
                 debugLog('Entered XR mode from play()');
                 // Check for controllers
                 DefaultScene.XR.input.controllers.forEach((controller, index) => {

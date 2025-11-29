@@ -15,7 +15,7 @@ type QuaternionArray = [number, number, number, number];
 /**
  * 4D color stored as array [r, g, b, a] (0-1 range)
  */
-type Color4Array = [number, number, number, number];
+type _Color4Array = [number, number, number, number];
 
 /**
  * Material configuration for PBR materials

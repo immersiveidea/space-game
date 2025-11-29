@@ -16,7 +16,7 @@ function createLevelRegistryStore() {
     levels: new Map(),
   };
 
-  const { subscribe, set, update } = writable<LevelRegistryState>(initial);
+  const { subscribe, set: _set, update } = writable<LevelRegistryState>(initial);
 
   // Initialize registry
   (async () => {

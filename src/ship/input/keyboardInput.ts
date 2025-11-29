@@ -1,4 +1,4 @@
-import { FreeCamera, Observable, Scene, Vector2 } from "@babylonjs/core";
+import { Observable, Scene, Vector2 } from "@babylonjs/core";
 
 /**
  * Handles keyboard and mouse input for ship control

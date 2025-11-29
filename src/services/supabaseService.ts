@@ -75,7 +75,7 @@ export class SupabaseService {
                 exp: payload.exp,
                 role: payload.role
             });
-        } catch (e) {
+        } catch (_e) {
             console.warn('[SupabaseService] Could not decode token');
         }
 

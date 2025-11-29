@@ -184,7 +184,7 @@ export class LevelDeserializer {
             debugLog(`[LevelDeserializer]   Use orbit constraints: ${useOrbitConstraints}`);
 
             // Use RockFactory to create the asteroid
-            const rock = await RockFactory.createRock(
+            const _rock = await RockFactory.createRock(
                 i,
                 this.arrayToVector3(asteroidConfig.position),
                 asteroidConfig.scale,

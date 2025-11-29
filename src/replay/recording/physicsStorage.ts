@@ -226,7 +226,7 @@ export class PhysicsStorage {
                     session.segments.sort((a, b) => a.segmentIndex - b.segmentIndex);
 
                     const firstSegment = session.segments[0];
-                    const lastSegment = session.segments[session.segments.length - 1];
+                    const _lastSegment = session.segments[session.segments.length - 1];
 
                     // Calculate total frame count across all segments
                     const totalFrames = session.segments.reduce((sum, seg) => sum + seg.snapshots.length, 0);

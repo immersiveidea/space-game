@@ -1,7 +1,6 @@
 import { AudioEngineV2, StaticSound, SoundState } from "@babylonjs/core";
 import debugLog from "../core/debug";
 import { ShipStatus, ShipStatusChangeEvent } from "./shipStatus";
-import { ScoreEvent } from "../ui/hud/scoreboard";
 
 /**
  * Priority levels for voice messages

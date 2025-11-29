@@ -20,7 +20,7 @@ import { ProgressionManager } from "../../game/progression";
 import { AuthService } from "../../services/authService";
 import { FacebookShare, ShareData } from "../../services/facebookShare";
 import { InputControlManager } from "../../ship/input/inputControlManager";
-import { formatStars, getStarColor } from "../../game/scoreCalculator";
+import { formatStars } from "../../game/scoreCalculator";
 import { GameResultsService } from "../../services/gameResultsService";
 import debugLog from "../../core/debug";
 

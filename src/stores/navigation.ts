@@ -13,7 +13,7 @@ function createNavigationStore() {
     loadingMessage: '',
   };
 
-  const { subscribe, set, update } = writable<NavigationState>(initial);
+  const { subscribe, set: _set, update } = writable<NavigationState>(initial);
 
   return {
     subscribe,

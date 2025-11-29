@@ -22,7 +22,7 @@ function createProgressionStore() {
     completionPercentage: progression.getCompletionPercentage(),
   };
 
-  const { subscribe, set, update } = writable<ProgressionState>(initialState);
+  const { subscribe, set: _set, update } = writable<ProgressionState>(initialState);
 
   return {
     subscribe,

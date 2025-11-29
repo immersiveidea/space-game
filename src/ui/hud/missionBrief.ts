@@ -7,7 +7,7 @@ import {
     TextBlock
 } from "@babylonjs/gui";
 import { DefaultScene } from "../../core/defaultScene";
-import {Mesh, MeshBuilder, Vector3, Observable, Observer} from "@babylonjs/core";
+import {MeshBuilder, Vector3, Observable, Observer} from "@babylonjs/core";
 import debugLog from '../../core/debug';
 import { LevelConfig } from "../../levels/config/levelConfig";
 import { CloudLevelEntry } from "../../services/cloudLevelService";

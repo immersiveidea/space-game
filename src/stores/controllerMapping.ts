@@ -2,7 +2,7 @@ import { writable, get } from 'svelte/store';
 import type { ControllerMapping } from '../ship/input/controllerMapping';
 import { ControllerMappingConfig } from '../ship/input/controllerMapping';
 
-const STORAGE_KEY = 'space-game-controller-mapping';
+const _STORAGE_KEY = 'space-game-controller-mapping';
 
 function createControllerMappingStore() {
   const config = ControllerMappingConfig.getInstance();

@@ -1,5 +1,4 @@
 import {
-    AbstractMesh,
     Color3,
     FreeCamera,
     HavokPlugin,
@@ -21,7 +20,6 @@ import { Sight } from "./sight";
 import debugLog from "../core/debug";
 import { Scoreboard } from "../ui/hud/scoreboard";
 import loadAsset from "../utils/loadAsset";
-import { Debug } from "@babylonjs/core/Legacy/legacy";
 import { KeyboardInput } from "./input/keyboardInput";
 import { ControllerInput } from "./input/controllerInput";
 import { ShipPhysics } from "./shipPhysics";

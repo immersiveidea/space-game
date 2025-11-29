@@ -188,7 +188,7 @@ export class Scoreboard {
         panel.addControl(velocityText);
         advancedTexture.addControl(panel);
         let i = 0;
-        const afterRender = scene.onAfterRenderObservable.add(() => {
+        const _afterRender = scene.onAfterRenderObservable.add(() => {
             scoreText.text = `Score: ${this.calculateScore()}`;
             remainingText.text = `Remaining: ${this._remaining}`;
 
@@ -265,7 +265,7 @@ export class Scoreboard {
 
         gaugesTexture.addControl(panel);
 
-        let i = 0;
+        let _i = 0;
         // Force the texture to update
         //gaugesTexture.markAsDirty();
 

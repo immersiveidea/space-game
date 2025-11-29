@@ -133,7 +133,7 @@ export class WeaponSystem {
                 if (collisionObserver && ammoAggregate.body) {
                     try {
                         ammoAggregate.body.getCollisionObservable().remove(collisionObserver);
-                    } catch (e) {
+                    } catch (_e) {
                         // Body may have been disposed during collision handling, ignore
                     }
                 }
@@ -146,7 +146,7 @@ export class WeaponSystem {
             if (collisionObserver && ammoAggregate.body) {
                 try {
                     ammoAggregate.body.getCollisionObservable().remove(collisionObserver);
-                } catch (e) {
+                } catch (_e) {
                     // Body may have already been disposed, ignore error
                 }
             }
@@ -155,7 +155,7 @@ export class WeaponSystem {
             try {
                 ammoAggregate.dispose();
                 ammo.dispose();
-            } catch (e) {
+            } catch (_e) {
                 // Already disposed, ignore
             }
         }, 2000);

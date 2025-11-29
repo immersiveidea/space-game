@@ -779,7 +779,7 @@ async function initializeApp() {
                             (window as any).__mainInstance = main;
 
                             // Initialize demo mode without engine (just for UI purposes)
-                            const demo = new Demo(main);
+                            const _demo = new Demo(main);
                         }
                     } else {
                         console.error('[Main] Failed to mount Svelte app - #app element not found [AFTER MIGRATION]');
@@ -835,7 +835,7 @@ async function initializeApp() {
             (window as any).__mainInstance = main;
 
             // Initialize demo mode without engine (just for UI purposes)
-            const demo = new Demo(main);
+            const _demo = new Demo(main);
         }
     } else {
         console.error('[Main] Failed to mount Svelte app - #app element not found');

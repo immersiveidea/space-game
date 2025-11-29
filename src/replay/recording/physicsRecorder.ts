@@ -1,4 +1,4 @@
-import { Scene, Vector3, Quaternion, AbstractMesh } from "@babylonjs/core";
+import { Scene, Quaternion } from "@babylonjs/core";
 import debugLog from "../../core/debug";
 import { PhysicsStorage } from "./physicsStorage";
 import { LevelConfig } from "../../levels/config/levelConfig";
@@ -236,7 +236,7 @@ export class PhysicsRecorder {
                     mass: parseFloat(mass.toFixed(2)),
                     restitution: parseFloat(restitution.toFixed(2))
                 });
-            } catch (error) {
+            } catch (_error) {
                 // Physics body was disposed during capture, skip this object
                 continue;
             }

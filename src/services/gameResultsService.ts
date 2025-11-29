@@ -1,7 +1,6 @@
 import { AuthService } from './authService';
 import { CloudLeaderboardService } from './cloudLeaderboardService';
 import { GameStats } from '../game/gameStats';
-import { Scoreboard } from '../ui/hud/scoreboard';
 import debugLog from '../core/debug';
 
 /**

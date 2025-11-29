@@ -114,7 +114,7 @@ export class FacebookShare {
         }
 
         // Create share message
-        const message = this.generateShareMessage(shareData);
+        const _message = this.generateShareMessage(shareData);
         const quote = this.generateShareQuote(shareData);
 
         return new Promise((resolve) => {

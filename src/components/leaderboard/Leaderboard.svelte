@@ -3,7 +3,7 @@
   import { Link } from 'svelte-routing';
   import { gameResultsStore } from '../../stores/gameResults';
   import type { GameResult } from '../../services/gameResultsService';
-  import { CloudLeaderboardService, type CloudLeaderboardEntry } from '../../services/cloudLeaderboardService';
+  import { CloudLeaderboardService, type CloudLeaderboardEntry, getDisplayName } from '../../services/cloudLeaderboardService';
   import { formatStars } from '../../game/scoreCalculator';
 
   // View toggle: 'local' or 'cloud'
@@ -136,7 +136,7 @@
     return {
       id: entry.id,
       timestamp: new Date(entry.created_at).getTime(),
-      playerName: entry.player_name,
+      playerName: getDisplayName(entry),
       levelId: entry.level_id,
       levelName: entry.level_name,
       completed: entry.completed,

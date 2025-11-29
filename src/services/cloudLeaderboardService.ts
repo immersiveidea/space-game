@@ -8,7 +8,6 @@ import type { GameResult } from './gameResultsService';
 export interface CloudLeaderboardEntry {
     id: string;
     user_id: string;
-    player_name: string;
     level_id: string;
     level_name: string;
     completed: boolean;
@@ -23,6 +22,17 @@ export interface CloudLeaderboardEntry {
     star_rating: number;
     created_at: string;
     is_test_data?: boolean;  // Flag for seed/test data - allows cleanup
+    // Joined from users table
+    users?: {
+        display_name: string;
+    };
+}
+
+/**
+ * Helper to get display name from a leaderboard entry
+ */
+export function getDisplayName(entry: CloudLeaderboardEntry): string {
+    return entry.users?.display_name || 'Anonymous';
 }
 
 /**
@@ -48,6 +58,38 @@ export class CloudLeaderboardService {
      */
     public isAvailable(): boolean {
         return SupabaseService.getInstance().isConfigured();
+    }
+
+    /**
+     * Ensure user exists in the users table with current display name
+     * Called before submitting scores
+     */
+    private async ensureUserProfile(userId: string, displayName: string): Promise<boolean> {
+        const supabase = SupabaseService.getInstance();
+        const client = await supabase.getAuthenticatedClient();
+
+        if (!client) {
+            console.warn('[CloudLeaderboardService] Not authenticated - cannot sync user');
+            return false;
+        }
+
+        // Upsert the user (insert or update if exists)
+        const { error } = await client
+            .from('users')
+            .upsert({
+                user_id: userId,
+                display_name: displayName
+            }, {
+                onConflict: 'user_id'
+            });
+
+        if (error) {
+            console.error('[CloudLeaderboardService] Failed to sync user:', error);
+            return false;
+        }
+
+        console.log('[CloudLeaderboardService] User synced:', userId);
+        return true;
     }
 
     /**
@@ -80,9 +122,11 @@ export class CloudLeaderboardService {
             return false;
         }
 
+        // Ensure user profile exists with current display name
+        await this.ensureUserProfile(user.sub, result.playerName);
+
         const entry = {
             user_id: user.sub,
-            player_name: result.playerName,
             level_id: result.levelId,
             level_name: result.levelName,
             completed: result.completed,
@@ -129,7 +173,7 @@ export class CloudLeaderboardService {
 
         const { data, error } = await client
             .from('leaderboard')
-            .select('*')
+            .select('*, users(display_name)')
             .order('final_score', { ascending: false })
             .range(offset, offset + limit - 1);
 
@@ -155,7 +199,7 @@ export class CloudLeaderboardService {
 
         const { data, error } = await client
             .from('leaderboard')
-            .select('*')
+            .select('*, users(display_name)')
             .eq('user_id', userId)
             .order('final_score', { ascending: false })
             .limit(limit);
@@ -182,7 +226,7 @@ export class CloudLeaderboardService {
 
         const { data, error } = await client
             .from('leaderboard')
-            .select('*')
+            .select('*, users(display_name)')
             .eq('level_id', levelId)
             .order('final_score', { ascending: false })
             .limit(limit);

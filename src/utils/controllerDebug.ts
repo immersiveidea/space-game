@@ -1,11 +1,9 @@
 import {
     Engine,
     Scene,
-    HemisphericLight,
-    Vector3,
     MeshBuilder,
-    WebXRDefaultExperience,
-    Color3
+    Color3,
+    WebXRDefaultExperience
 } from "@babylonjs/core";
 import debugLog from '../core/debug';
 
@@ -39,7 +37,7 @@ export class ControllerDebug {
         //const light = new HemisphericLight("light", new Vector3(0, 1, 0), this.scene);
 
         // Add ground for reference
-        const ground = MeshBuilder.CreateGround("ground", { width: 10, height: 10 }, this.scene);
+        const _ground = MeshBuilder.CreateGround("ground", { width: 10, height: 10 }, this.scene);
 
         // Create WebXR
         //consol e.log('🔍 Creating WebXR...');
