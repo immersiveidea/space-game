@@ -274,6 +274,10 @@ export class Ship {
         this._weapons.initialize();
         this._weapons.setShipStatus(this._scoreboard.shipStatus);
         this._weapons.setGameStats(this._gameStats);
+        this._weapons.setScoreObservable(this._scoreboard.onScoreObservable);
+        if (this._ship.physicsBody) {
+            this._weapons.setShipBody(this._ship.physicsBody);
+        }
 
         // Initialize input systems (skip in replay mode)
         if (!this._isReplayMode) {
@@ -359,6 +363,11 @@ export class Ship {
             if (this._voiceAudio) {
                 this._voiceAudio.update();
             }
+            // Update projectiles (shape casting collision detection)
+            if (this._weapons) {
+                const deltaTime = DefaultScene.MainScene.getEngine().getDeltaTime() / 1000;
+                this._weapons.update(deltaTime);
+            }
             // Check game end conditions every 30 frames (~0.5 sec at 60fps)
             if (renderFrameCount++ % 30 === 0) {
                 this.checkGameEndConditions();
@@ -441,6 +450,7 @@ export class Ship {
         // Initialize status screen with callbacks
         this._statusScreen = new StatusScreen(
             DefaultScene.MainScene,
+            this._ship,
             this._gameStats,
             () => this.handleReplayRequest(),
             () => this.handleExitVR(),
@@ -557,7 +567,7 @@ export class Ship {
 
         // Check condition 3: Victory (all asteroids destroyed, inside landing zone)
         // Must have had asteroids to destroy in the first place (prevents false victory on init)
-        if (asteroidsRemaining <= 0 && this._isInLandingZone && this._scoreboard.hasAsteroidsToDestroy) {
+        if (asteroidsRemaining <= 0 && this._isInLandingZone && this._scoreboard.hasAsteroidsToDestroy  && this._ship.physicsBody.getLinearVelocity().length() < 5) {
             log.debug('Game end condition met: Victory (all asteroids destroyed)');
             this._statusScreen.show(true, true, 'victory'); // Game ended, VICTORY!
             // InputControlManager will handle disabling controls when status screen shows
@@ -660,7 +670,7 @@ export class Ship {
         if (this._isInLandingZone && this._scoreboard?.shipStatus) {
             // Physics update runs every 10 frames at 60fps = 6 times per second
             // 0.1 per second / 6 updates per second = 0.01666... per update
-            const resupplyRate = 0.1 / 6;
+            const resupplyRate = 1 / 600;
 
             const status = this._scoreboard.shipStatus;
 
@@ -697,31 +707,34 @@ export class Ship {
         }
 
         if (this._weapons && this._ship && this._ship.physicsBody) {
+            // Clone world matrix to ensure consistent calculations
+            const worldMatrix = this._ship.getWorldMatrix().clone();
+
             // Get ship velocities
-            const linearVelocity = this._ship.physicsBody.getLinearVelocity();
+            const linearVelocity = this._ship.physicsBody.getLinearVelocity().clone();
             const angularVelocity = this._ship.physicsBody.getAngularVelocity();
 
             // Spawn offset in local space (must match weaponSystem.ts)
-            const localSpawnOffset = new Vector3(0, 0.5, 8.4);
+            const localSpawnOffset = new Vector3(0, 0.5, 9.4);
 
-            // Transform spawn offset to world space (direction only)
-            const worldSpawnOffset = Vector3.TransformNormal(
-                localSpawnOffset,
-                this._ship.getWorldMatrix()
-            );
+            // Transform spawn offset to world space
+            const worldSpawnOffset = Vector3.TransformCoordinates(localSpawnOffset, worldMatrix);
 
             // Calculate tangential velocity at spawn point: ω × r
-            const tangentialVelocity = angularVelocity.cross(worldSpawnOffset);
+            //const tangentialVelocity = angularVelocity.cross(worldSpawnOffset);
 
-            // Velocity at spawn point = linear + tangential
-            const velocityAtSpawn = linearVelocity.add(tangentialVelocity);
+            // Velocity at spawn point = ship velocity + tangential from rotation
+            //const velocityAtSpawn = linearVelocity.add(tangentialVelocity);
 
-            // Final projectile velocity: forward direction + spawn point velocity
-            const projectileVelocity = this._ship.forward
-                .scale(200000)
-                .add(velocityAtSpawn);
+            // Get forward direction using world matrix (same method as thrust)
+            const localForward = new Vector3(0, 0, 1);
+            const worldForward = Vector3.TransformNormal(localForward, worldMatrix);
+            log.debug(worldForward);
+            // Final projectile velocity: muzzle velocity in forward direction + ship velocity
+            const projectileVelocity = worldForward.scale(1000).add(linearVelocity);
+            log.debug(`Velocity  - ${projectileVelocity}`);
 
-            this._weapons.fire(this._ship, projectileVelocity);
+            this._weapons.fire(worldSpawnOffset, projectileVelocity);
         }
     }
 

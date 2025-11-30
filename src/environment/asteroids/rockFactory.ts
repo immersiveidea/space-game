@@ -39,6 +39,11 @@ export class RockFactory {
     private static _explosionManager: ExplosionManager | null = null;
     private static _orbitCenter: PhysicsAggregate | null = null;
 
+    /** Public getter for explosion manager (used by WeaponSystem for shape-cast hits) */
+    public static get explosionManager(): ExplosionManager | null {
+        return this._explosionManager;
+    }
+
     /**
      * Initialize non-audio assets (meshes, explosion manager)
      * Call this before audio engine is unlocked

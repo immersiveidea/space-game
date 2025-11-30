@@ -7,11 +7,11 @@ import {
     TextBlock
 } from "@babylonjs/gui";
 import {
-    Camera,
     Mesh,
     MeshBuilder,
     Scene,
     StandardMaterial,
+    TransformNode,
     Vector3
 } from "@babylonjs/core";
 import { GameStats } from "../../game/gameStats";
@@ -34,7 +34,7 @@ export class StatusScreen {
     private _screenMesh: Mesh | null = null;
     private _texture: AdvancedDynamicTexture | null = null;
     private _isVisible: boolean = false;
-    private _camera: Camera | null = null;
+    private _shipNode: TransformNode;
     private _parTime: number = 120; // Default par time in seconds
 
     // Text blocks for statistics
@@ -74,8 +74,9 @@ export class StatusScreen {
     // Track if result has been recorded (prevent duplicates)
     private _resultRecorded: boolean = false;
 
-    constructor(scene: Scene, gameStats: GameStats, onReplay?: () => void, onExit?: () => void, onResume?: () => void, onNextLevel?: () => void) {
+    constructor(scene: Scene, shipNode: TransformNode, gameStats: GameStats, onReplay?: () => void, onExit?: () => void, onResume?: () => void, onNextLevel?: () => void) {
         this._scene = scene;
+        this._shipNode = shipNode;
         this._gameStats = gameStats;
         this._onReplayCallback = onReplay || null;
         this._onExitCallback = onExit || null;
@@ -87,8 +88,6 @@ export class StatusScreen {
      * Initialize the status screen mesh and UI
      */
     public initialize(): void {
-        this._camera = DefaultScene.XR.baseExperience.camera;
-
         // Create a plane mesh for the status screen
         this._screenMesh = MeshBuilder.CreatePlane(
             "statusScreen",
@@ -96,10 +95,9 @@ export class StatusScreen {
             this._scene
         );
 
-        // Parent to camera for automatic following
-        this._screenMesh.parent = this._camera;
-        this._screenMesh.position = new Vector3(0, 0, 2); // 2 meters forward in local space
-        //this._screenMesh.rotation.y = Math.PI; // Face backward (toward user)
+        // Parent to ship for fixed cockpit position
+        this._screenMesh.parent = this._shipNode;
+        this._screenMesh.position = new Vector3(0, 1, 2); // 2 meters forward in local space
         this._screenMesh.renderingGroupId = 3; // Always render on top
         this._screenMesh.metadata = { uiPickable: true }; // TAG: VR UI - allow pointer selection
 

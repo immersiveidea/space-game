@@ -1,23 +1,28 @@
 import {
     AbstractMesh,
     Color3,
+    HavokPlugin,
     InstancedMesh,
     Mesh,
     MeshBuilder,
-    PhysicsAggregate,
-    PhysicsMotionType,
-    PhysicsShapeType,
+    Observable,
+    PhysicsBody,
+    PhysicsShapeSphere,
+    Quaternion,
     Scene,
+    ShapeCastResult,
     StandardMaterial,
-    TransformNode,
     Vector3,
 } from "@babylonjs/core";
 import { GameConfig } from "../core/gameConfig";
 import { ShipStatus } from "./shipStatus";
 import { GameStats } from "../game/gameStats";
+import { Projectile } from "./projectile";
+import { RockFactory } from "../environment/asteroids/rockFactory";
+import log from "../core/logger";
 
 /**
- * Handles weapon firing and projectile lifecycle
+ * Handles weapon firing and projectile lifecycle using shape casting
  */
 export class WeaponSystem {
     private _ammoBaseMesh: AbstractMesh;
@@ -26,145 +31,207 @@ export class WeaponSystem {
     private _shipStatus: ShipStatus | null = null;
     private _gameStats: GameStats | null = null;
 
+    // Shape casting properties
+    private _activeProjectiles: Projectile[] = [];
+    private _bulletCastShape: PhysicsShapeSphere;
+    private _localCastResult: ShapeCastResult;
+    private _worldCastResult: ShapeCastResult;
+    private _havokPlugin: HavokPlugin | null = null;
+
+    // Observable for score updates when asteroids are destroyed
+    private _scoreObservable: Observable<{score: number, remaining: number, message: string}> | null = null;
+
+    // Ship body to ignore in shape casts
+    private _shipBody: PhysicsBody | null = null;
+
     constructor(scene: Scene) {
         this._scene = scene;
     }
 
-    /**
-     * Set the ship status instance for ammo tracking
-     */
     public setShipStatus(shipStatus: ShipStatus): void {
         this._shipStatus = shipStatus;
     }
 
-    /**
-     * Set the game stats instance for tracking shots fired
-     */
     public setGameStats(gameStats: GameStats): void {
         this._gameStats = gameStats;
     }
 
-    /**
-     * Initialize weapon system (create ammo template)
-     */
+    public setScoreObservable(observable: Observable<{score: number, remaining: number, message: string}>): void {
+        this._scoreObservable = observable;
+    }
+
+    public setShipBody(body: PhysicsBody): void {
+        this._shipBody = body;
+    }
+
     public initialize(): void {
         this._ammoMaterial = new StandardMaterial("ammoMaterial", this._scene);
         this._ammoMaterial.emissiveColor = new Color3(1, 1, 0);
 
         this._ammoBaseMesh = MeshBuilder.CreateIcoSphere(
             "bullet",
-            { radius: 0.1, subdivisions: 2 },
+            { radius: 0.5, subdivisions: 2 },
             this._scene
         );
         this._ammoBaseMesh.material = this._ammoMaterial;
         this._ammoBaseMesh.setEnabled(false);
+
+        // Create reusable shape for casting (matches bullet radius)
+        this._bulletCastShape = new PhysicsShapeSphere(
+            Vector3.Zero(),
+            0.1,
+            this._scene
+        );
+
+        // Reusable result objects (avoid allocations)
+        this._localCastResult = new ShapeCastResult();
+        this._worldCastResult = new ShapeCastResult();
+
+        // Get Havok plugin reference
+        const engine = this._scene.getPhysicsEngine();
+        if (engine) {
+            this._havokPlugin = engine.getPhysicsPlugin() as HavokPlugin;
+        }
     }
 
     /**
-     * Fire a projectile from the ship
-     * @param shipTransform - Ship transform node for position/orientation
-     * @param velocityVector - Complete velocity vector for the projectile (ship forward + ship velocity)
+     * Fire a projectile from the ship (no physics body - uses shape casting)
      */
-    public fire(
-        shipTransform: TransformNode,
-        velocityVector: Vector3
-    ): void {
-        // Only allow shooting if physics is enabled
+    public fire(position: Vector3, velocityVector: Vector3): void {
         const config = GameConfig.getInstance();
-        if (!config.physicsEnabled) {
-            return;
-        }
+        if (!config.physicsEnabled) return;
 
-        // Check if we have ammo before firing
-        if (this._shipStatus && this._shipStatus.ammo <= 0) {
-            return;
-        }
+        if (this._shipStatus && this._shipStatus.ammo <= 0) return;
 
-        // Create projectile instance
+        // Create visual-only projectile (no physics body)
         const ammo = new InstancedMesh("ammo", this._ammoBaseMesh as Mesh);
-        ammo.parent = shipTransform;
-        ammo.position.y = 0.5;
-        ammo.position.z = 8.4;
+        ammo.position = position.clone();
 
-        // Detach from parent to move independently
-        ammo.setParent(null);
+        // Track projectile for update loop
+        this._activeProjectiles.push({
+            mesh: ammo,
+            velocity: velocityVector.clone(),
+            lastPosition: position.clone(),
+            lifetime: 0
+        });
 
-        // Create physics for projectile
-        const ammoAggregate = new PhysicsAggregate(
-            ammo,
-            PhysicsShapeType.SPHERE,
-            {
-                mass: 1000,
-                restitution: 0,
-            },
-            this._scene
-        );
-        ammoAggregate.body.setAngularDamping(1);
-        ammoAggregate.body.setMotionType(PhysicsMotionType.DYNAMIC);
-        ammoAggregate.body.setCollisionCallbackEnabled(true);
-
-        // Set projectile velocity (already includes ship velocity)
-        // Clone to capture current direction - prevents curving if source vector updates
-        ammoAggregate.body.setLinearVelocity(velocityVector.clone());
-
-        // Consume ammo
         if (this._shipStatus) {
             this._shipStatus.consumeAmmo(0.01);
         }
 
-        // Track shot fired
         if (this._gameStats) {
             this._gameStats.recordShotFired();
         }
-
-        // Track hits via collision detection
-        let hitRecorded = false; // Prevent multiple hits from same projectile
-        const gameStats = this._gameStats; // Capture in closure
-
-        const collisionObserver = ammoAggregate.body.getCollisionObservable().add((collisionEvent) => {
-            // Check if projectile hit something (not ship, not another projectile)
-            // Asteroids/rocks are the targets
-            if (!hitRecorded && gameStats && collisionEvent.collidedAgainst) {
-                // Record as hit - assumes collision with asteroid
-                gameStats.recordShotHit();
-                hitRecorded = true;
-
-                // Remove collision observer after first hit
-                if (collisionObserver && ammoAggregate.body) {
-                    try {
-                        ammoAggregate.body.getCollisionObservable().remove(collisionObserver);
-                    } catch (_e) {
-                        // Body may have been disposed during collision handling, ignore
-                    }
-                }
-            }
-        });
-
-        // Auto-dispose after 2 seconds
-        window.setTimeout(() => {
-            // Clean up collision observer if body still exists
-            if (collisionObserver && ammoAggregate.body) {
-                try {
-                    ammoAggregate.body.getCollisionObservable().remove(collisionObserver);
-                } catch (_e) {
-                    // Body may have already been disposed, ignore error
-                }
-            }
-
-            // Dispose if not already disposed
-            try {
-                ammoAggregate.dispose();
-                ammo.dispose();
-            } catch (_e) {
-                // Already disposed, ignore
-            }
-        }, 2000);
     }
 
     /**
-     * Cleanup weapon system resources
+     * Update all active projectiles - call each frame
      */
+    public update(deltaTime: number): void {
+        if (!this._havokPlugin) return;
+
+        const toRemove: number[] = [];
+
+        for (let i = 0; i < this._activeProjectiles.length; i++) {
+            const proj = this._activeProjectiles[i];
+            proj.lifetime += deltaTime;
+
+            // Remove if exceeded lifetime (2 seconds)
+            if (proj.lifetime > 2) {
+                toRemove.push(i);
+                continue;
+            }
+
+            // Calculate next position
+            const currentPos = proj.mesh.position.clone();
+            const nextPos = currentPos.add(proj.velocity.scale(deltaTime));
+
+            // Shape cast from current to next position (ignore ship body)
+            this._havokPlugin.shapeCast({
+                shape: this._bulletCastShape,
+                rotation: Quaternion.Identity(),
+                startPosition: currentPos,
+                endPosition: nextPos,
+                shouldHitTriggers: false,
+                ignoreBody: this._shipBody ?? undefined
+            }, this._localCastResult, this._worldCastResult);
+
+            if (this._worldCastResult.hasHit) {
+                // Calculate exact hit point
+                const hitPoint = Vector3.Lerp(
+                    currentPos,
+                    nextPos,
+                    this._worldCastResult.hitFraction
+                );
+
+                this._onProjectileHit(proj, hitPoint, this._worldCastResult);
+                toRemove.push(i);
+            } else {
+                // No hit - update position
+                proj.lastPosition.copyFrom(currentPos);
+                proj.mesh.position.copyFrom(nextPos);
+            }
+        }
+
+        // Remove hit/expired projectiles (reverse order to preserve indices)
+        for (let i = toRemove.length - 1; i >= 0; i--) {
+            const proj = this._activeProjectiles[toRemove[i]];
+            proj.mesh.dispose();
+            this._activeProjectiles.splice(toRemove[i], 1);
+        }
+    }
+
+    private _onProjectileHit(
+        proj: Projectile,
+        hitPoint: Vector3,
+        result: ShapeCastResult
+    ): void {
+        if (this._gameStats) {
+            this._gameStats.recordShotHit();
+        }
+
+        if (!result.body) return;
+
+        const hitMesh = result.body.transformNode as AbstractMesh;
+        const isAsteroid = hitMesh?.name?.startsWith("asteroid-");
+
+        if (isAsteroid) {
+            log.debug('[WeaponSystem] Asteroid hit! Triggering destruction...');
+
+            // Update score
+            if (this._scoreObservable) {
+                this._scoreObservable.notifyObservers({
+                    score: 1,
+                    remaining: -1,
+                    message: "Asteroid Destroyed"
+                });
+            }
+
+            // Dispose asteroid physics before explosion
+            if (result.shape) {
+                result.shape.dispose();
+            }
+            result.body.dispose();
+
+            // Play explosion effect
+            if (RockFactory.explosionManager) {
+                RockFactory.explosionManager.playExplosion(hitMesh);
+            }
+        } else {
+            // Non-asteroid hit - just apply impulse
+            const impulse = proj.velocity.normalize().scale(50000);
+            result.body.applyImpulse(impulse, hitPoint);
+        }
+    }
+
     public dispose(): void {
+        // Dispose all active projectiles
+        for (const proj of this._activeProjectiles) {
+            proj.mesh.dispose();
+        }
+        this._activeProjectiles = [];
+
+        this._bulletCastShape?.dispose();
         this._ammoBaseMesh?.dispose();
         this._ammoMaterial?.dispose();
     }
