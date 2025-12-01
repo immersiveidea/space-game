@@ -20,6 +20,7 @@ import {MissionBrief} from "../ui/hud/missionBrief";
 import {LevelRegistry} from "./storage/levelRegistry";
 import type {CloudLevelEntry} from "../services/cloudLevelService";
 import { InputControlManager } from "../ship/input/inputControlManager";
+import { LevelHintSystem } from "./hints/levelHintSystem";
 
 export class Level1 implements Level {
     private _ship: Ship;
@@ -36,6 +37,7 @@ export class Level1 implements Level {
     private _isReplayMode: boolean;
     private _backgroundMusic: StaticSound;
     private _missionBrief: MissionBrief;
+    private _hintSystem: LevelHintSystem;
     private _gameStarted: boolean = false;
     private _missionBriefShown: boolean = false;
 
@@ -47,6 +49,7 @@ export class Level1 implements Level {
         this._deserializer = new LevelDeserializer(levelConfig);
         this._ship = new Ship(audioEngine, isReplayMode);
         this._missionBrief = new MissionBrief();
+        this._hintSystem = new LevelHintSystem(audioEngine);
 
         // Only set up XR observables in game mode (not replay mode)
         if (!isReplayMode && DefaultScene.XR) {
@@ -339,6 +342,9 @@ export class Level1 implements Level {
         if (this._missionBrief) {
             this._missionBrief.dispose();
         }
+        if (this._hintSystem) {
+            this._hintSystem.dispose();
+        }
         if (this._ship) {
             this._ship.dispose();
         }
@@ -398,6 +404,7 @@ export class Level1 implements Level {
         });
 
         // Set up camera follow for stars (keeps stars at infinite distance)
+        // Also update hint system audio queue
         DefaultScene.MainScene.onBeforeRenderObservable.add(() => {
             if (this._backgroundStars) {
                 const camera = DefaultScene.XR?.baseExperience?.camera || DefaultScene.MainScene.activeCamera;
@@ -405,6 +412,8 @@ export class Level1 implements Level {
                     this._backgroundStars.followCamera(camera.position);
                 }
             }
+            // Process hint audio queue
+            this._hintSystem?.update();
         });
 
         // Initialize physics recorder (but don't start it yet - will start on XR pose)
@@ -420,7 +429,7 @@ export class Level1 implements Level {
             setLoadingMessage("Loading background music...");
             this._backgroundMusic = await this._audioEngine.createSoundAsync("background", "/assets/themes/default/audio/song1.mp3", {
                 loop: true,
-                volume: 0.5
+                volume: 0.2
             });
             log.debug('Background music loaded successfully');
         }
@@ -434,6 +443,21 @@ export class Level1 implements Level {
         this._missionBrief.initialize(this._audioEngine);
         log.info('[Level1] ========== MISSION BRIEF INITIALIZATION COMPLETE ==========');
         log.debug('Mission brief initialized');
+
+        // Initialize hint system (need UUID from registry, not slug)
+        if (this._levelId) {
+            const registry = LevelRegistry.getInstance();
+            const registryEntry = registry.getAllLevels().get(this._levelId);
+            if (registryEntry?.id) {
+                await this._hintSystem.loadHints(registryEntry.id);
+                this._hintSystem.subscribeToEvents(
+                    this._ship.scoreboard.shipStatus,
+                    this._ship.scoreboard.onScoreObservable,
+                    this._ship.onCollisionObservable
+                );
+                log.info('[Level1] Hint system initialized with level UUID:', registryEntry.id);
+            }
+        }
 
         this._initialized = true;
 

@@ -63,6 +63,9 @@ export class Ship {
     // Observable for mission brief trigger dismissal
     private _onMissionBriefTriggerObservable: Observable<void> = new Observable<void>();
 
+    // Observable for collision events (for hint system)
+    private _onCollisionObservable: Observable<{ collisionType: string }> = new Observable<{ collisionType: string }>();
+
     // Auto-show status screen flag
     private _statusScreenAutoShown: boolean = false;
 
@@ -110,6 +113,10 @@ export class Ship {
 
     public get onMissionBriefTriggerObservable(): Observable<void> {
         return this._onMissionBriefTriggerObservable;
+    }
+
+    public get onCollisionObservable(): Observable<{ collisionType: string }> {
+        return this._onCollisionObservable;
     }
 
     public get velocity(): Vector3 {
@@ -249,6 +256,11 @@ export class Ship {
                             if (this._audio) {
                                 this._audio.playCollisionSound();
                             }
+
+                            // Notify collision observable for hint system
+                            this._onCollisionObservable.notifyObservers({
+                                collisionType: 'any'
+                            });
                         }
                     }
                 });

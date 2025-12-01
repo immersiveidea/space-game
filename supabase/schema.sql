@@ -227,3 +227,30 @@ grant delete, insert, references, select, trigger, truncate, update on public.us
 
 grant delete, insert, references, select, trigger, truncate, update on public.users to service_role;
 
+create table public.hints
+(
+    id           uuid                     default gen_random_uuid() not null
+        primary key,
+    level_id     uuid                                               not null
+        references public.levels
+            on delete cascade,
+    event_type   text                                               not null,
+    event_config jsonb                    default '{}'::jsonb       not null,
+    audio_url    text                                               not null,
+    play_mode    text                     default 'once'::text      not null,
+    sort_order   integer                  default 0,
+    created_at   timestamp with time zone default now()
+);
+
+alter table public.hints
+    owner to postgres;
+
+create index idx_hints_level
+    on public.hints (level_id);
+
+grant select on public.hints to anon;
+
+grant select on public.hints to authenticated;
+
+grant delete, insert, references, select, trigger, truncate, update on public.hints to service_role;
+
