@@ -69,8 +69,6 @@ export class Ship {
     // Flag to prevent game end checks until gameplay has started
     private _gameplayStarted: boolean = false;
 
-    // Controls enabled state
-    private _controlsEnabled: boolean = true;
 
     // Scene observer references (for cleanup)
     private _physicsObserver: any = null;
@@ -696,7 +694,8 @@ export class Ship {
      */
     private handleShoot(): void {
         // If controls are disabled, fire mission brief trigger observable instead of shooting
-        if (!this._controlsEnabled) {
+        const inputManager = InputControlManager.getInstance();
+        if (!inputManager.shipControlsEnabled) {
             log.debug('[Ship] Controls disabled - firing mission brief trigger observable');
             this._onMissionBriefTriggerObservable.notifyObservers();
             return;
