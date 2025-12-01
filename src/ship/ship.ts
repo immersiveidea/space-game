@@ -148,16 +148,18 @@ export class Ship {
         }
     }
 
-    public async initialize() {
+    public async initialize(initialPosition?: Vector3) {
         this._scoreboard = new Scoreboard();
         this._scoreboard.setShip(this); // Pass ship reference for velocity reading
         this._gameStats = new GameStats();
         this._ship = new TransformNode("shipBase", DefaultScene.MainScene);
         const data = await loadAsset("ship.glb");
         this._ship = data.container.transformNodes[0];
-        //this._ship.rotation = new Vector3(0, Math.PI, 0);
-       // this._ship.id = "Ship"; // Set ID so mission brief can find it
-        // Position is now set from level config in Level1.initialize()
+
+        // Set position BEFORE creating physics body to avoid collision race condition
+        if (initialPosition) {
+            this._ship.position.copyFrom(initialPosition);
+        }
 
         // Create physics if enabled
         const config = GameConfig.getInstance();

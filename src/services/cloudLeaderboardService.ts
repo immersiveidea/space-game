@@ -62,35 +62,32 @@ export class CloudLeaderboardService {
     }
 
     /**
-     * Ensure user exists in the users table with current display name
+     * Ensure user exists in the users table
      * Called before submitting scores
+     * Uses RPC to bypass RLS via security definer function
+     * @returns The internal UUID of the user, or null on failure
      */
-    private async ensureUserProfile(userId: string, displayName: string): Promise<boolean> {
+    private async ensureUserProfile(auth0Id: string): Promise<string | null> {
         const supabase = SupabaseService.getInstance();
         const client = await supabase.getAuthenticatedClient();
 
         if (!client) {
             log.warn('[CloudLeaderboardService] Not authenticated - cannot sync user');
-            return false;
+            return null;
         }
 
-        // Upsert the user (insert or update if exists)
-        const { error } = await client
-            .from('users')
-            .upsert({
-                user_id: userId,
-                display_name: displayName
-            }, {
-                onConflict: 'user_id'
-            });
+        // Use security definer function to create/get user (bypasses RLS)
+        const { data, error } = await client.rpc('get_or_create_user_id', {
+            p_auth0_id: auth0Id
+        });
 
         if (error) {
             log.error('[CloudLeaderboardService] Failed to sync user:', error);
-            return false;
+            return null;
         }
 
-        log.info('[CloudLeaderboardService] User synced:', userId);
-        return true;
+        log.info('[CloudLeaderboardService] User synced:', auth0Id, '-> UUID:', data);
+        return data;
     }
 
     /**
@@ -123,11 +120,15 @@ export class CloudLeaderboardService {
             return false;
         }
 
-        // Ensure user profile exists with current display name
-        await this.ensureUserProfile(user.sub, result.playerName);
+        // Ensure user profile exists and get the internal UUID
+        const internalUserId = await this.ensureUserProfile(user.sub);
+        if (!internalUserId) {
+            log.warn('[CloudLeaderboardService] Failed to get/create user profile');
+            return false;
+        }
 
         const entry = {
-            user_id: user.sub,
+            user_id: internalUserId,
             level_id: result.levelId,
             level_name: result.levelName,
             completed: result.completed,

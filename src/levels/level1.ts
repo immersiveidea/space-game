@@ -353,12 +353,10 @@ export class Level1 implements Level {
             log.error('Initialize called twice');
             return;
         }
-        await this._ship.initialize();
-        setLoadingMessage("Loading level from configuration...");
-
-        // Apply ship configuration from level config
+        // Get ship config BEFORE initialize to pass position (avoids physics race condition)
         const shipConfig = this._deserializer.getShipConfig();
-        this._ship.position = new Vector3(...shipConfig.position);
+        await this._ship.initialize(new Vector3(...shipConfig.position));
+        setLoadingMessage("Loading level from configuration...");
 
         if (shipConfig.linearVelocity) {
             this._ship.setLinearVelocity(new Vector3(...shipConfig.linearVelocity));

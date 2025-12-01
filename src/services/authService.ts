@@ -1,5 +1,6 @@
 import { createAuth0Client, Auth0Client, User } from '@auth0/auth0-spa-js';
 import log from '../core/logger';
+import { SupabaseService } from './supabaseService';
 
 /**
  * Singleton service for managing Auth0 authentication
@@ -89,6 +90,9 @@ export class AuthService {
                 email: this._user?.email,
                 sub: this._user?.sub
             });
+
+            // Sync user to Supabase (fire and forget - don't block init)
+            this.syncUserToSupabase();
         } else {
             log.info('[AuthService] User not authenticated');
         }
@@ -153,6 +157,32 @@ export class AuthService {
         } catch (error) {
             log.error('Error getting access token:', error);
             return undefined;
+        }
+    }
+
+    /**
+     * Sync user to Supabase users table
+     * Called after successful authentication
+     * Uses RPC to bypass RLS via security definer function
+     */
+    private async syncUserToSupabase(): Promise<void> {
+        if (!this._user?.sub) return;
+
+        const supabase = SupabaseService.getInstance();
+        if (!supabase.isConfigured()) return;
+
+        const client = await supabase.getAuthenticatedClient();
+        if (!client) return;
+
+        // Use security definer function to create/get user (bypasses RLS)
+        const { data, error } = await client.rpc('get_or_create_user_id', {
+            p_auth0_id: this._user.sub
+        });
+
+        if (error) {
+            log.warn('[AuthService] Failed to sync user to Supabase:', error);
+        } else {
+            log.info('[AuthService] User synced to Supabase, UUID:', data);
         }
     }
 
