@@ -7,7 +7,7 @@ import log from '../core/logger';
 export interface HintEntry {
     id: string;
     levelId: string;
-    eventType: 'ship_status' | 'asteroid_destroyed' | 'collision';
+    eventType: 'ship_status' | 'asteroid_destroyed' | 'collision' | 'mission_brief_shown';
     eventConfig: Record<string, unknown>;
     audioUrl: string;
     playMode: 'once' | 'always';

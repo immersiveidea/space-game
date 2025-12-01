@@ -147,6 +147,16 @@ export class LevelHintSystem {
     }
 
     /**
+     * Trigger mission brief shown hints - call when mission brief is displayed
+     */
+    public triggerMissionBriefShown(): void {
+        const hints = this._hints.filter(h => h.eventType === 'mission_brief_shown');
+        for (const hint of hints) {
+            this.queueHint(hint);
+        }
+    }
+
+    /**
      * Queue a hint for audio playback
      */
     private queueHint(hint: HintEntry): void {

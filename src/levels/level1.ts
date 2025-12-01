@@ -239,6 +239,9 @@ export class Level1 implements Level {
             inputManager.enableShipControls("MissionBrief");
             this.startGameplay();
         });
+
+        // Trigger mission brief hints (e.g., welcome_rookie audio)
+        this._hintSystem?.triggerMissionBriefShown();
     }
 
     /**
