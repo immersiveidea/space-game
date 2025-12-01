@@ -28,6 +28,7 @@ export interface CloudLevelEntry {
     createdAt: string;
     updatedAt: string;
     reviewNotes?: string;
+    missionBriefAudio?: string;
 }
 
 /**
@@ -55,6 +56,7 @@ interface LevelRow {
     created_at: string;
     updated_at: string;
     review_notes?: string;
+    mission_brief_audio?: string;
 }
 
 /**
@@ -93,6 +95,7 @@ function rowToEntry(row: LevelRow): CloudLevelEntry {
         createdAt: row.created_at,
         updatedAt: row.updated_at,
         reviewNotes: row.review_notes,
+        missionBriefAudio: row.mission_brief_audio,
     };
 }
 

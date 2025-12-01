@@ -431,7 +431,7 @@ export class Level1 implements Level {
         log.info('[Level1] _missionBrief object:', this._missionBrief);
         log.info('[Level1] Ship exists:', !!this._ship);
         log.info('[Level1] Ship ID in scene:', DefaultScene.MainScene.getNodeById('Ship') !== null);
-        this._missionBrief.initialize();
+        this._missionBrief.initialize(this._audioEngine);
         log.info('[Level1] ========== MISSION BRIEF INITIALIZATION COMPLETE ==========');
         log.debug('Mission brief initialized');
 

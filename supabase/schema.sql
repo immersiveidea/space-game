@@ -138,6 +138,7 @@ create table public.levels
     tags                text[]                   default '{}'::text[],
     config              jsonb                                              not null,
     mission_brief       text[]                   default '{}'::text[],
+    mission_brief_audio text,
     level_type          text                     default 'private'::text   not null
         constraint valid_level_type
             check (level_type = ANY

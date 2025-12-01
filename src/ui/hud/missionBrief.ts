@@ -8,6 +8,7 @@ import {
 } from "@babylonjs/gui";
 import { DefaultScene } from "../../core/defaultScene";
 import {MeshBuilder, Vector3, Observable, Observer} from "@babylonjs/core";
+import type { AudioEngineV2, StaticSound } from "@babylonjs/core";
 import log from '../../core/logger';
 import { LevelConfig } from "../../levels/config/levelConfig";
 import { CloudLevelEntry } from "../../services/cloudLevelService";
@@ -22,11 +23,14 @@ export class MissionBrief {
     private _isVisible: boolean = false;
     private _onStartCallback: (() => void) | null = null;
     private _triggerObserver: Observer<void> | null = null;
+    private _audioEngine: AudioEngineV2 | null = null;
+    private _currentSound: StaticSound | null = null;
 
     /**
      * Initialize the mission brief as a fullscreen overlay
      */
-    public initialize(): void {
+    public initialize(audioEngine?: AudioEngineV2): void {
+        this._audioEngine = audioEngine || null;
         log.info('[MissionBrief] ========== INITIALIZE CALLED ==========');
         const scene = DefaultScene.MainScene;
         log.info('[MissionBrief] Scene exists:', !!scene);
@@ -232,6 +236,21 @@ export class MissionBrief {
         this._container.isVisible = true;
         this._isVisible = true;
 
+        // Play mission brief audio if specified
+        if (directoryEntry?.missionBriefAudio && this._audioEngine) {
+            log.info('[MissionBrief] Playing audio:', directoryEntry.missionBriefAudio);
+            this._audioEngine.createSoundAsync(
+                "missionBriefAudio",
+                directoryEntry.missionBriefAudio,
+                { loop: false, volume: 1.0 }
+            ).then(sound => {
+                this._currentSound = sound;
+                sound.play();
+            }).catch(err => {
+                log.error('[MissionBrief] Failed to load audio:', err);
+            });
+        }
+
         log.info('[MissionBrief] ========== CONTAINER NOW VISIBLE ==========');
         log.info('[MissionBrief] Container.isVisible:', this._container.isVisible);
         log.info('[MissionBrief] _isVisible flag:', this._isVisible);
@@ -298,6 +317,10 @@ export class MissionBrief {
      * Clean up resources
      */
     public dispose(): void {
+        if (this._currentSound) {
+            this._currentSound.dispose();
+            this._currentSound = null;
+        }
         if (this._advancedTexture) {
             this._advancedTexture.dispose();
             this._advancedTexture = null;
@@ -305,6 +328,7 @@ export class MissionBrief {
         this._container = null;
         this._onStartCallback = null;
         this._triggerObserver = null;
+        this._audioEngine = null;
         this._isVisible = false;
         log.debug('[MissionBrief] Disposed');
     }
