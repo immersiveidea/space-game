@@ -191,13 +191,13 @@ export class Scoreboard {
         const _afterRender = scene.onAfterRenderObservable.add(() => {
             if (i++ % 10 !== 0) return;
 
-            scoreText.text = `Score: ${this.calculateScore()}`;
+            scoreText.text = `Destroyed: ${this.calculateScore()}`;
             remainingText.text = `Remaining: ${this._remaining}`;
 
             // Update velocity from ship if available
             if (this._ship && this._ship.velocity) {
                 const velocityMagnitude = this._ship.velocity.length();
-                velocityText.text = `Velocity: ${velocityMagnitude.toFixed(1)} m/s`;
+                velocityText.text = `Velocity: ${velocityMagnitude.toFixed(1)} km/hr`;
             } else {
                 velocityText.text = `Velocity: 0.0 m/s`;
             }
