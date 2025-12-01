@@ -12,6 +12,7 @@ import type { AudioEngineV2 } from "@babylonjs/core";
 import log from '../../core/logger';
 import { LevelConfig } from "../../levels/config/levelConfig";
 import { CloudLevelEntry } from "../../services/cloudLevelService";
+import { addButtonHoverEffect } from "../utils/buttonEffects";
 
 /**
  * Mission brief display for VR
@@ -48,9 +49,9 @@ export class MissionBrief {
             }
 
             mesh.parent = ship;
-            mesh.position = new Vector3(0,1,2.8);
+            mesh.position = new Vector3(0,1.2,2);
             mesh.rotation = new Vector3(0, 0, 0);
-            mesh.renderingGroupId = 3; // Same as status screen for consistent rendering
+            //mesh.renderingGroupId = 3; // Same as status screen for consistent rendering
             mesh.metadata = { uiPickable: true }; // TAG: VR UI - allow pointer selection
             log.info('[MissionBrief] Mesh parented to ship at position:', mesh.position);
             log.info('[MissionBrief] Mesh absolute position:', mesh.getAbsolutePosition());
@@ -71,7 +72,7 @@ export class MissionBrief {
             this._container.height = "600px";
             this._container.thickness = 4;
             this._container.color = "#00ff00";
-            this._container.background = "rgba(0, 0, 0, 0.95)";
+            this._container.background = "rgba(0, 0, 0, 0.99)";
             this._container.cornerRadius = 20;
             this._container.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
             this._container.verticalAlignment = Control.VERTICAL_ALIGNMENT_CENTER;
@@ -202,7 +203,7 @@ export class MissionBrief {
 
         // Spacer before button
         const spacer3 = new Rectangle("spacer3");
-        spacer3.height = "40px";
+        spacer3.height = "20px";
         spacer3.thickness = 0;
         contentPanel.addControl(spacer3);
 
@@ -217,6 +218,8 @@ export class MissionBrief {
         startButton.fontSize = "36px";
         startButton.fontWeight = "bold";
         startButton.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
+        addButtonHoverEffect(startButton);
+
         startButton.onPointerClickObservable.add(() => {
             log.debug('[MissionBrief] START button clicked - dismissing mission brief');
             this.hide();

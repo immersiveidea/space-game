@@ -55,7 +55,14 @@ export class Preloader {
     }
 
     private setupButtonHandler(): void {
-        this.startButton?.addEventListener('click', () => this.onStartCallback?.());
+        this.startButton?.addEventListener('click', () => {
+            if (this.startButton) {
+                (this.startButton as HTMLButtonElement).disabled = true;
+                this.startButton.style.opacity = '0.6';
+                this.startButton.textContent = 'ENTERING XR...';
+            }
+            this.onStartCallback?.();
+        });
     }
 
     public setLevelInfo(name: string, difficulty: string, missionBrief: string[]): void {

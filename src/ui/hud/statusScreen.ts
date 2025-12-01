@@ -18,6 +18,7 @@ import { GameStats } from "../../game/gameStats";
 import { DefaultScene } from "../../core/defaultScene";
 import { ProgressionManager } from "../../game/progression";
 import { AuthService } from "../../services/authService";
+import { addButtonHoverEffect } from "../utils/buttonEffects";
 import { FacebookShare, ShareData } from "../../services/facebookShare";
 import { InputControlManager } from "../../ship/input/inputControlManager";
 import { formatStars } from "../../game/scoreCalculator";
@@ -46,9 +47,11 @@ export class StatusScreen {
     private _fuelConsumedText: TextBlock;
 
     // Text blocks for score display
+    private _scoreTitleText: TextBlock;
     private _finalScoreText: TextBlock;
     private _scoreBreakdownText: TextBlock;
-    private _starRatingText: TextBlock;
+    private _starsContainer: StackPanel;
+    private _totalStarsText: TextBlock;
 
     // Buttons
     private _replayButton: Button;
@@ -97,8 +100,8 @@ export class StatusScreen {
 
         // Parent to ship for fixed cockpit position
         this._screenMesh.parent = this._shipNode;
-        this._screenMesh.position = new Vector3(0, 1, 2); // 2 meters forward in local space
-        this._screenMesh.renderingGroupId = 3; // Always render on top
+        this._screenMesh.position = new Vector3(0, 1.1, 2); // 2 meters forward in local space
+        //this._screenMesh.renderingGroupId = 3; // Always render on top
         this._screenMesh.metadata = { uiPickable: true }; // TAG: VR UI - allow pointer selection
 
         // Create material
@@ -165,11 +168,11 @@ export class StatusScreen {
         const spacer2b = this.createSpacer(30);
         mainPanel.addControl(spacer2b);
 
-        // Final score display
-        const scoreTitle = this.createTitleText("FINAL SCORE");
-        scoreTitle.fontSize = "50px";
-        scoreTitle.height = "70px";
-        mainPanel.addControl(scoreTitle);
+        // Score title (changes based on game state)
+        this._scoreTitleText = this.createTitleText("CURRENT SCORE");
+        this._scoreTitleText.fontSize = "50px";
+        this._scoreTitleText.height = "70px";
+        mainPanel.addControl(this._scoreTitleText);
 
         this._finalScoreText = new TextBlock();
         this._finalScoreText.text = "0";
@@ -186,22 +189,28 @@ export class StatusScreen {
         this._scoreBreakdownText.color = "#aaaaaa";
         this._scoreBreakdownText.fontSize = "20px";
         this._scoreBreakdownText.height = "120px";
+        this._scoreBreakdownText.width = "100%";
         this._scoreBreakdownText.textHorizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
         this._scoreBreakdownText.textVerticalAlignment = Control.VERTICAL_ALIGNMENT_TOP;
         this._scoreBreakdownText.textWrapping = true;
         mainPanel.addControl(this._scoreBreakdownText);
 
-        // Star ratings
-        this._starRatingText = new TextBlock();
-        this._starRatingText.text = "";
-        this._starRatingText.color = "#FFD700";
-        this._starRatingText.fontSize = "40px";
-        this._starRatingText.height = "100px";
-        this._starRatingText.fontWeight = "bold";
-        this._starRatingText.textHorizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
-        this._starRatingText.textVerticalAlignment = Control.VERTICAL_ALIGNMENT_TOP;
-        this._starRatingText.textWrapping = true;
-        mainPanel.addControl(this._starRatingText);
+        // Star ratings container (populated in updateStatistics)
+        this._starsContainer = new StackPanel("starsContainer");
+        this._starsContainer.isVertical = false;
+        this._starsContainer.height = "100px";
+        this._starsContainer.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
+        mainPanel.addControl(this._starsContainer);
+
+        // Total stars display
+        this._totalStarsText = new TextBlock();
+        this._totalStarsText.text = "";
+        this._totalStarsText.color = "#FFD700";
+        this._totalStarsText.fontSize = "32px";
+        this._totalStarsText.height = "50px";
+        this._totalStarsText.fontWeight = "bold";
+        this._totalStarsText.textHorizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
+        mainPanel.addControl(this._totalStarsText);
 
         // Add spacing before buttons
         const spacer3 = this.createSpacer(40);
@@ -213,6 +222,9 @@ export class StatusScreen {
         buttonBar.height = "80px";
         buttonBar.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
         buttonBar.spacing = 20;
+        buttonBar.paddingLeft = 20;
+        buttonBar.paddingRight = 20;
+        buttonBar.clipChildren = false;
 
         // Create Resume button (only shown when game hasn't ended)
         this._resumeButton = Button.CreateSimpleButton("resumeButton", "RESUME GAME");
@@ -224,6 +236,7 @@ export class StatusScreen {
         this._resumeButton.thickness = 0;
         this._resumeButton.fontSize = "30px";
         this._resumeButton.fontWeight = "bold";
+        addButtonHoverEffect(this._resumeButton);
         this._resumeButton.onPointerClickObservable.add(() => {
             if (this._onResumeCallback) {
                 this._onResumeCallback();
@@ -275,6 +288,7 @@ export class StatusScreen {
         this._exitButton.thickness = 0;
         this._exitButton.fontSize = "30px";
         this._exitButton.fontWeight = "bold";
+        addButtonHoverEffect(this._exitButton, "#cc3333", "#ff4444");
         this._exitButton.onPointerClickObservable.add(() => {
             if (this._onExitCallback) {
                 this._onExitCallback();
@@ -354,6 +368,33 @@ export class StatusScreen {
         spacer.height = `${height}px`;
         spacer.thickness = 0;
         return spacer;
+    }
+
+    /**
+     * Create a star rating column with stars on top and label below
+     */
+    private createStarRatingColumn(stars: number, label: string): StackPanel {
+        const column = new StackPanel();
+        column.isVertical = true;
+        column.width = "150px";
+
+        const starsText = new TextBlock();
+        starsText.text = formatStars(stars);
+        starsText.color = "#FFD700";
+        starsText.fontSize = "36px";
+        starsText.height = "50px";
+        starsText.textHorizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
+        column.addControl(starsText);
+
+        const labelText = new TextBlock();
+        labelText.text = label;
+        labelText.color = "#aaaaaa";
+        labelText.fontSize = "24px";
+        labelText.height = "35px";
+        labelText.textHorizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
+        column.addControl(labelText);
+
+        return column;
     }
 
     /**
@@ -502,29 +543,35 @@ export class StatusScreen {
         this._accuracyText.text = `Accuracy: ${stats.accuracy}%`;
         this._fuelConsumedText.text = `Fuel Consumed: ${stats.fuelConsumed}%`;
 
-        // Calculate and display score
-        const scoreCalc = this._gameStats.calculateFinalScore(this._parTime);
+        // Calculate score - only include end-game bonuses if game has ended
+        const scoreCalc = this._gameStats.getFinalScore(this._isGameEnded);
 
-        // Update final score
+        // Update score title based on game state
+        this._scoreTitleText.text = this._isGameEnded ? "FINAL SCORE" : "CURRENT SCORE";
+
+        // Update score value
         this._finalScoreText.text = scoreCalc.finalScore.toLocaleString();
 
-        // Update score breakdown
-        this._scoreBreakdownText.text =
-            `Time: ${scoreCalc.timeMultiplier.toFixed(2)}x  |  ` +
-            `Accuracy: ${scoreCalc.accuracyMultiplier.toFixed(2)}x\n` +
-            `Fuel: ${scoreCalc.fuelMultiplier.toFixed(2)}x  |  ` +
-            `Hull: ${scoreCalc.hullMultiplier.toFixed(2)}x`;
+        // Update score breakdown - show bonuses only at game end
+        if (this._isGameEnded) {
+            this._scoreBreakdownText.text =
+                `Asteroids: ${scoreCalc.asteroidScore.toLocaleString()}  |  ` +
+                `Acc: +${scoreCalc.bonuses.accuracy.toLocaleString()}\n` +
+                `Fuel: +${scoreCalc.bonuses.fuel.toLocaleString()}  |  ` +
+                `Hull: +${scoreCalc.bonuses.hull.toLocaleString()}`;
+        } else {
+            this._scoreBreakdownText.text = `Points from asteroid destruction`;
+        }
 
-        // Update star ratings with Unicode stars and colors
-        const timeStars = formatStars(scoreCalc.stars.time);
-        const accStars = formatStars(scoreCalc.stars.accuracy);
-        const fuelStars = formatStars(scoreCalc.stars.fuel);
-        const hullStars = formatStars(scoreCalc.stars.hull);
+        // Rebuild star rating columns
+        this._starsContainer.clearControls();
+        this._starsContainer.addControl(this.createStarRatingColumn(scoreCalc.stars.asteroids, "Kills"));
+        this._starsContainer.addControl(this.createStarRatingColumn(scoreCalc.stars.accuracy, "Acc"));
+        this._starsContainer.addControl(this.createStarRatingColumn(scoreCalc.stars.fuel, "Fuel"));
+        this._starsContainer.addControl(this.createStarRatingColumn(scoreCalc.stars.hull, "Hull"));
 
-        this._starRatingText.text =
-            `${timeStars}  ${accStars}  ${fuelStars}  ${hullStars}\n` +
-            `Time    Acc    Fuel   Hull\n` +
-            `${scoreCalc.stars.total}/12 Stars`;
+        // Update total stars
+        this._totalStarsText.text = `${scoreCalc.stars.total}/12 Stars`;
     }
 
     /**

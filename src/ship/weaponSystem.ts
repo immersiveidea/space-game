@@ -198,12 +198,14 @@ export class WeaponSystem {
         if (isAsteroid) {
             log.debug('[WeaponSystem] Asteroid hit! Triggering destruction...');
 
-            // Update score
+            // Update score with asteroid scale for point calculation
             if (this._scoreObservable) {
+                const asteroidScale = hitMesh.scaling.x;
                 this._scoreObservable.notifyObservers({
                     score: 1,
                     remaining: -1,
-                    message: "Asteroid Destroyed"
+                    message: "Asteroid Destroyed",
+                    scale: asteroidScale
                 });
             }
 

@@ -418,17 +418,17 @@ export class Ship {
         this._scoreboard.initialize();
 
         // Subscribe to score events to track asteroids destroyed
-        this._scoreboard.onScoreObservable.add(() => {
-            // Each score event represents an asteroid destroyed
-            this._gameStats.recordAsteroidDestroyed();
+        this._scoreboard.onScoreObservable.add((event) => {
+            // Each score event represents an asteroid destroyed, pass scale for point calc
+            this._gameStats.recordAsteroidDestroyed(event.scale || 1);
 
             // Track asteroid destruction in analytics
             try {
                 const analytics = getAnalytics();
                 analytics.track('asteroid_destroyed', {
-                    weaponType: 'laser', // TODO: Get actual weapon type from event
-                    distance: 0, // TODO: Calculate distance if available
-                    asteroidSize: 0, // TODO: Get actual size if available
+                    weaponType: 'laser',
+                    distance: 0,
+                    asteroidSize: event.scale || 0,
                     remainingCount: this._scoreboard.remaining
                 }, { sampleRate: 0.2 }); // Sample 20% of asteroid events to reduce data
             } catch (error) {

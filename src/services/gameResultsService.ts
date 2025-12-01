@@ -154,7 +154,7 @@ export class GameResultsService {
 
         // Get stats
         const stats = gameStats.getStats();
-        const scoreCalc = gameStats.calculateFinalScore(parTime);
+        const scoreCalc = gameStats.getFinalScore();
 
         return {
             id: crypto.randomUUID(),

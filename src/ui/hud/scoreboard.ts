@@ -13,7 +13,8 @@ export type ScoreEvent = {
     score: number,
     message: string,
     remaining: number,
-    timeRemaining? : number
+    scale?: number,          // Asteroid scale for point calculation
+    timeRemaining?: number
 }
 export class Scoreboard {
     private _score: number = 0;

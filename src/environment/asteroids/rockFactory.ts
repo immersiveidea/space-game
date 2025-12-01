@@ -175,10 +175,11 @@ export class RockFactory {
                 if (eventData.type == 'COLLISION_STARTED') {
                     if ( eventData.collidedAgainst.transformNode.id == 'ammo') {
                         log.debug('[RockFactory] ASTEROID HIT! Triggering explosion...');
-                        score.notifyObservers({score: 1, remaining: -1, message: "Asteroid Destroyed"});
 
                         // Get the asteroid mesh before disposing
                         const asteroidMesh = eventData.collider.transformNode as AbstractMesh;
+                        const asteroidScale = asteroidMesh.scaling.x;
+                        score.notifyObservers({score: 1, remaining: -1, message: "Asteroid Destroyed", scale: asteroidScale});
                         log.debug('[RockFactory] Asteroid mesh to explode:', {
                             name: asteroidMesh.name,
                             id: asteroidMesh.id,

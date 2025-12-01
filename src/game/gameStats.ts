@@ -1,6 +1,6 @@
 import { getAnalytics } from "../analytics";
 import log from "../core/logger";
-import { calculateScore, ScoreCalculation } from "./scoreCalculator";
+import { calculateAsteroidPoints, calculateFinalScore, ScoreCalculation } from "./scoreCalculator";
 
 /**
  * Tracks game statistics for display on status screen
@@ -13,6 +13,8 @@ export class GameStats {
     private _shotsHit: number = 0;
     private _fuelConsumed: number = 0;
     private _performanceTimer: number | null = null;
+    private _runningScore: number = 0;
+    private _parTime: number = 120;
 
     /**
      * Start the game timer and performance tracking
@@ -89,10 +91,27 @@ export class GameStats {
     }
 
     /**
-     * Increment asteroids destroyed count
+     * Set the par time for score calculation
      */
-    public recordAsteroidDestroyed(): void {
+    public setParTime(parTime: number): void {
+        this._parTime = parTime;
+    }
+
+    /**
+     * Record asteroid destroyed and calculate points
+     * @param scale - Asteroid scale (size)
+     */
+    public recordAsteroidDestroyed(scale: number = 1): void {
         this._asteroidsDestroyed++;
+        const points = calculateAsteroidPoints(scale, this.getGameTime(), this._parTime);
+        this._runningScore += points;
+    }
+
+    /**
+     * Get the running score from asteroid destruction
+     */
+    public getRunningScore(): number {
+        return this._runningScore;
     }
 
     /**
@@ -181,6 +200,7 @@ export class GameStats {
         this._shotsFired = 0;
         this._shotsHit = 0;
         this._fuelConsumed = 0;
+        this._runningScore = 0;
 
         // Restart performance tracking
         this.startPerformanceTracking();
@@ -188,22 +208,20 @@ export class GameStats {
 
     /**
      * Calculate final score based on current statistics
-     *
-     * @param parTime - Expected completion time in seconds (default: 120)
-     * @returns Complete score calculation with multipliers and star ratings
+     * @param includeEndGameBonuses - Whether to include end-game bonuses (only at game end)
+     * @returns Complete score calculation with bonuses and star ratings
      */
-    public calculateFinalScore(parTime: number = 120): ScoreCalculation {
-        const gameTimeSeconds = this.getGameTime();
+    public getFinalScore(includeEndGameBonuses: boolean = true): ScoreCalculation {
         const accuracy = this.getAccuracy();
         const fuelConsumed = this._fuelConsumed * 100; // Convert to percentage
         const hullDamage = this._hullDamageTaken * 100; // Convert to percentage
 
-        return calculateScore(
-            gameTimeSeconds,
-            accuracy,
-            fuelConsumed,
+        return calculateFinalScore(
+            this._runningScore,
             hullDamage,
-            parTime
+            fuelConsumed,
+            accuracy,
+            includeEndGameBonuses
         );
     }
 
