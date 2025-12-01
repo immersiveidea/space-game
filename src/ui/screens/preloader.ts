@@ -39,7 +39,10 @@ export class Preloader {
                 <div id="preloaderError" class="preloader-error" style="display: none;">
                     VR headset not detected. This game requires a VR device.
                 </div>
-                <button id="preloaderStartBtn" class="preloader-button">ENTER XR</button>
+                <div class="preloader-button-container">
+                    <button id="preloaderStartBtn" class="preloader-button">ENTER XR</button>
+                </div>
+                
             </div>`;
     }
 
@@ -104,7 +107,7 @@ export class Preloader {
 
     private animateButtonIn(): void {
         if (!this.startButton) return;
-        this.startButton.style.display = 'block';
+        this.startButton.style.display = 'inline-block';
         this.startButton.style.opacity = '0';
         this.startButton.style.transform = 'translateY(20px)';
         setTimeout(() => {

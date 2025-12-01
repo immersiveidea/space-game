@@ -750,7 +750,7 @@ body {
 
 .preloader-content {
     text-align: center;
-    max-width: 600px;
+    max-width: 800px;
     width: 100%;
 }
 
@@ -785,6 +785,12 @@ body {
     background: var(--gradient-primary);
     transition: width var(--transition-base);
     box-shadow: 0 0 10px rgba(102, 126, 234, 0.5);
+}
+
+.preloader-button-container {
+    display: flex;
+    flex-direction: column;
+    text-align: center;
 }
 
 .preloader-button {
@@ -859,7 +865,7 @@ body {
     padding: 0;
     margin: var(--space-md) 0 0 0;
     text-align: left;
-    max-width: 400px;
+    max-width: 600px;
     margin-left: auto;
     margin-right: auto;
 }
