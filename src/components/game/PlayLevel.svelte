@@ -4,6 +4,7 @@
     import { Main } from '../../main';
     import type { LevelConfig } from '../../levels/config/levelConfig';
     import { LevelRegistry } from '../../levels/storage/levelRegistry';
+    import { progressionStore } from '../../stores/progression';
     import log from '../../core/logger';
     import { DefaultScene } from '../../core/defaultScene';
 
@@ -85,23 +86,29 @@
                 throw new Error('Main instance not found');
             }
 
-            // Get level config from registry
+            // Get full level entry from registry
             const registry = LevelRegistry.getInstance();
-            const levelEntry = await registry.getLevel(levelName);
+            const levelEntry = registry.getLevelEntry(levelName);
 
             if (!levelEntry) {
                 throw new Error(`Level "${levelName}" not found`);
             }
 
+            // Check if level is unlocked (deep link protection)
+            const isDefault = levelEntry.levelType === 'official';
+            if (!progressionStore.isLevelUnlocked(levelEntry.name, isDefault)) {
+                log.warn('[PlayLevel] Level locked, redirecting to level select');
+                navigate('/', { replace: true });
+                return;
+            }
+
             log.debug('[PlayLevel] Level config loaded:', levelEntry);
 
-            // Dispatch the levelSelected event (existing system expects this)
-            // We'll refactor this later to call Main methods directly
-            // Note: registry.getLevel() returns LevelConfig directly, not a wrapper
+            // Dispatch the levelSelected event
             const event = new CustomEvent('levelSelected', {
                 detail: {
                     levelName: levelName,
-                    config: levelEntry
+                    config: levelEntry.config
                 }
             });
             window.dispatchEvent(event);
