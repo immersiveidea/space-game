@@ -609,14 +609,20 @@ export class Ship {
             rightStick: Vector2.Zero(),
         };
 
-        // Merge inputs with smooth deadzone scaling (controller takes priority if active, keyboard disabled in VR)
-        // Deadzone: 0.1-0.15 range with linear scaling (avoids abrupt cliff effect)
+        // Merge inputs with non-linear curve (controller takes priority if active, keyboard disabled in VR)
+        // Deadzone: 0.1, Max input: 0.9, Power curve for slow start, fast finish
+        const DEADZONE = 0.1;
+        const MAX_INPUT = 0.9;
+        const CURVE_EXPONENT = 2.5;
+
         const leftMagnitude = controllerState.leftStick.length();
         const rightMagnitude = controllerState.rightStick.length();
 
-        // Scale factor: 0% at 0.1, 100% at 0.15, linear interpolation between
-        const leftScale = Math.max(0, Math.min(1, (leftMagnitude - 0.1) / 0.05));
-        const rightScale = Math.max(0, Math.min(1, (rightMagnitude - 0.1) / 0.05));
+        // Calculate curved scale: slow at low deflection, ramps up toward max at 0.9
+        const leftScale = leftMagnitude <= DEADZONE ? 0 :
+            Math.pow(Math.min(1, (leftMagnitude - DEADZONE) / (MAX_INPUT - DEADZONE)), CURVE_EXPONENT);
+        const rightScale = rightMagnitude <= DEADZONE ? 0 :
+            Math.pow(Math.min(1, (rightMagnitude - DEADZONE) / (MAX_INPUT - DEADZONE)), CURVE_EXPONENT);
 
         const combinedInput = {
             leftStick:

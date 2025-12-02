@@ -156,6 +156,20 @@ export class AuthService {
             return await this._client.getTokenSilently();
         } catch (error) {
             log.error('Error getting access token:', error);
+
+            // If refresh token is missing/invalid, clear stale auth state
+            // User will appear logged out and can log in fresh
+            if (error instanceof Error && error.message.includes('Missing Refresh Token')) {
+                log.warn('[AuthService] Clearing stale auth session');
+                this._user = null;
+                // Clear Auth0 local storage cache without redirecting
+                try {
+                    await this._client.logout({ openUrl: false });
+                } catch {
+                    // Ignore logout errors - just clear local state
+                }
+            }
+
             return undefined;
         }
     }

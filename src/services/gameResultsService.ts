@@ -144,8 +144,7 @@ export class GameResultsService {
         levelName: string,
         gameStats: GameStats,
         totalAsteroids: number,
-        endReason: 'victory' | 'death' | 'stranded',
-        parTime: number
+        endReason: 'victory' | 'death' | 'stranded'
     ): GameResult {
         // Get player name from auth service
         const authService = AuthService.getInstance();

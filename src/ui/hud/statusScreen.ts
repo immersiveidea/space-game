@@ -671,8 +671,7 @@ export class StatusScreen {
                 this._currentLevelName,
                 this._gameStats,
                 this._totalAsteroids,
-                endReason,
-                this._parTime
+                endReason
             );
 
             log.info('[StatusScreen] Built result:', result);

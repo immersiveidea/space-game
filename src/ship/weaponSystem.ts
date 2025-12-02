@@ -20,6 +20,7 @@ import { GameStats } from "../game/gameStats";
 import { Projectile } from "./projectile";
 import { RockFactory } from "../environment/asteroids/rockFactory";
 import log from "../core/logger";
+import { ScoreEvent } from "../ui/hud/scoreboard";
 
 /**
  * Handles weapon firing and projectile lifecycle using shape casting
@@ -39,7 +40,7 @@ export class WeaponSystem {
     private _havokPlugin: HavokPlugin | null = null;
 
     // Observable for score updates when asteroids are destroyed
-    private _scoreObservable: Observable<{score: number, remaining: number, message: string}> | null = null;
+    private _scoreObservable: Observable<ScoreEvent> | null = null;
 
     // Ship body to ignore in shape casts
     private _shipBody: PhysicsBody | null = null;
