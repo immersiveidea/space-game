@@ -1,4 +1,5 @@
 import type { AudioEngineV2, StaticSound } from "@babylonjs/core";
+import { getAudioSource } from "../utils/audioPrefetch";
 
 /**
  * Manages ship audio (thrust sounds and weapon fire)
@@ -22,40 +23,32 @@ export class ShipAudio {
     public async initialize(): Promise<void> {
         if (!this._audioEngine) return;
 
+        const thrustUrl = "/assets/themes/default/audio/thrust5.mp3";
+        const shotUrl = "/assets/themes/default/audio/shot.mp3";
+        const collisionUrl = "/assets/themes/default/audio/collision.mp3";
+
         this._primaryThrustSound = await this._audioEngine.createSoundAsync(
             "thrust",
-            "/assets/themes/default/audio/thrust5.mp3",
-            {
-                loop: true,
-                volume: 0.2,
-            }
+            getAudioSource(thrustUrl),
+            { loop: true, volume: 0.2 }
         );
 
         this._secondaryThrustSound = await this._audioEngine.createSoundAsync(
             "thrust2",
-            "/assets/themes/default/audio/thrust5.mp3",
-            {
-                loop: true,
-                volume: 0.5,
-            }
+            getAudioSource(thrustUrl),
+            { loop: true, volume: 0.5 }
         );
 
         this._weaponSound = await this._audioEngine.createSoundAsync(
             "shot",
-            "/assets/themes/default/audio/shot.mp3",
-            {
-                loop: false,
-                volume: 0.5,
-            }
+            getAudioSource(shotUrl),
+            { loop: false, volume: 0.5 }
         );
 
         this._collisionSound = await this._audioEngine.createSoundAsync(
             "collision",
-            "/assets/themes/default/audio/collision.mp3",
-            {
-                loop: false,
-                volume: 0.25,
-            }
+            getAudioSource(collisionUrl),
+            { loop: false, volume: 0.25 }
         );
     }
 

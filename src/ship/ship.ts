@@ -77,6 +77,9 @@ export class Ship {
     private _physicsObserver: any = null;
     private _renderObserver: any = null;
 
+    // Store loaded asset data for physics initialization
+    private _loadedAssetData: any = null;
+
     constructor(audioEngine?: AudioEngineV2, isReplayMode: boolean = false) {
         this._audioEngine = audioEngine;
         this._isReplayMode = isReplayMode;
@@ -155,251 +158,49 @@ export class Ship {
         }
     }
 
-    public async initialize(initialPosition?: Vector3) {
-        this._scoreboard = new Scoreboard();
-        this._scoreboard.setShip(this); // Pass ship reference for velocity reading
-        this._gameStats = new GameStats();
-        this._ship = new TransformNode("shipBase", DefaultScene.MainScene);
-        const data = await loadAsset("ship.glb");
-        this._ship = data.container.transformNodes[0];
+    /**
+     * Add ship to scene (Phase 2 - before XR entry)
+     * Loads mesh, creates non-physics systems, optionally hidden
+     */
+    public async addToScene(initialPosition?: Vector3, hidden: boolean = false): Promise<void> {
+        log.debug(`[Ship] addToScene called (hidden: ${hidden})`);
 
-        // Set position BEFORE creating physics body to avoid collision race condition
+        this._scoreboard = new Scoreboard();
+        this._scoreboard.setShip(this);
+        this._gameStats = new GameStats();
+
+        // Load ship mesh (optionally hidden)
+        this._loadedAssetData = await loadAsset("ship.glb", "default", { hidden });
+        this._ship = this._loadedAssetData.container.transformNodes[0];
+
         if (initialPosition) {
             this._ship.position.copyFrom(initialPosition);
-        }
-
-        // Create physics if enabled
-        const config = GameConfig.getInstance();
-        if (config.physicsEnabled) {
-            log.info("Physics Enabled for Ship");
-            if (this._ship) {
-                const agg = new PhysicsAggregate(
-                    this._ship,
-                    PhysicsShapeType.MESH,
-                    {
-                        mass: 10,
-                        mesh: data.container.rootNodes[0].getChildMeshes()[0] as Mesh,
-                    },
-                    DefaultScene.MainScene
-                );
-
-                agg.body.setMotionType(PhysicsMotionType.DYNAMIC);
-                agg.body.setLinearDamping(config.shipPhysics.linearDamping);
-                agg.body.setAngularDamping(config.shipPhysics.angularDamping);
-                agg.body.setAngularVelocity(new Vector3(0, 0, 0));
-                agg.body.setCollisionCallbackEnabled(true);
-
-                // Debug: Log center of mass before override
-                const massProps = agg.body.getMassProperties();
-                log.info(`[Ship] Original center of mass (local): ${massProps.centerOfMass.toString()}`);
-                log.info(`[Ship] Mass: ${massProps.mass}`);
-                log.info(`[Ship] Inertia: ${massProps.inertia.toString()}`);
-
-                // Override center of mass to origin to prevent thrust from causing torque
-                // (mesh-based physics was calculating offset center of mass from geometry)
-                agg.body.setMassProperties({
-                    mass: 10,
-                    centerOfMass: new Vector3(0, 0, 0),
-                    inertia: massProps.inertia,
-                    inertiaOrientation: massProps.inertiaOrientation
-                });
-
-                log.info(`[Ship] Center of mass overridden to: ${agg.body.getMassProperties().centerOfMass.toString()}`);
-
-                // Configure physics sleep behavior from config
-                // (disabling sleep prevents abrupt stops at zero linear velocity)
-                if (config.shipPhysics.alwaysActive) {
-                    const physicsPlugin = DefaultScene.MainScene.getPhysicsEngine()?.getPhysicsPlugin() as HavokPlugin;
-                    if (physicsPlugin) {
-                        physicsPlugin.setActivationControl(agg.body, PhysicsActivationControl.ALWAYS_ACTIVE);
-                    }
-                }
-
-                // Register collision handler for energy-based hull damage
-                const observable = agg.body.getCollisionObservable();
-                observable.add((collisionEvent) => {
-                    // Only calculate damage on collision start to avoid double-counting
-                    if (collisionEvent.type === 'COLLISION_STARTED') {
-                        // Get collision bodies
-                        const shipBody = collisionEvent.collider;
-                        const otherBody = collisionEvent.collidedAgainst;
-
-                        // Get velocities
-                        const shipVelocity = shipBody.getLinearVelocity();
-                        const otherVelocity = otherBody.getLinearVelocity();
-
-                        // Calculate relative velocity
-                        const relativeVelocity = shipVelocity.subtract(otherVelocity);
-                        const relativeSpeed = relativeVelocity.length();
-
-                        // Get masses
-                        const shipMass = 10; // Known ship mass from aggregate creation
-                        const otherMass = otherBody.getMassProperties().mass;
-
-                        // Calculate reduced mass for collision
-                        const reducedMass = (shipMass * otherMass) / (shipMass + otherMass);
-
-                        // Calculate kinetic energy of collision
-                        const kineticEnergy = 0.5 * reducedMass * relativeSpeed * relativeSpeed;
-
-                        // Convert energy to damage (tuning factor)
-                        // 1000 units of energy = 0.01 (1%) damage
-                        const ENERGY_TO_DAMAGE_FACTOR = 0.01 / 1000;
-                        const damage = Math.min(kineticEnergy * ENERGY_TO_DAMAGE_FACTOR, 0.5); // Cap at 50% per hit
-
-                        // Apply damage if above minimum threshold
-                        if (this._scoreboard?.shipStatus && damage > 0.001) {
-                            this._scoreboard.shipStatus.damageHull(damage);
-                            log.debug(`Collision damage: ${damage.toFixed(4)} (energy: ${kineticEnergy.toFixed(1)}, speed: ${relativeSpeed.toFixed(1)} m/s)`);
-
-                            // Play collision sound
-                            if (this._audio) {
-                                this._audio.playCollisionSound();
-                            }
-
-                            // Notify collision observable for hint system
-                            this._onCollisionObservable.notifyObservers({
-                                collisionType: 'any'
-                            });
-                        }
-                    }
-                });
-            } else {
-                log.warn("No geometry mesh found, cannot create physics");
-            }
-        }
-
-        // Initialize audio system
-        if (this._audioEngine) {
-            this._audio = new ShipAudio(this._audioEngine);
-            await this._audio.initialize();
-
-            // Initialize voice audio system
-            this._voiceAudio = new VoiceAudioSystem();
-            await this._voiceAudio.initialize(this._audioEngine);
-            // Subscribe voice system to ship status events
-            this._voiceAudio.subscribeToEvents(this._scoreboard.shipStatus);
-        }
-
-        // Initialize weapon system
-        this._weapons = new WeaponSystem(DefaultScene.MainScene);
-        this._weapons.initialize();
-        this._weapons.setShipStatus(this._scoreboard.shipStatus);
-        this._weapons.setGameStats(this._gameStats);
-        this._weapons.setScoreObservable(this._scoreboard.onScoreObservable);
-        if (this._ship.physicsBody) {
-            this._weapons.setShipBody(this._ship.physicsBody);
         }
 
         // Initialize input systems (skip in replay mode)
         if (!this._isReplayMode) {
             this._keyboardInput = new KeyboardInput(DefaultScene.MainScene);
             this._keyboardInput.setup();
-
             this._controllerInput = new ControllerInput();
 
-            // Register input systems with InputControlManager
             const inputManager = InputControlManager.getInstance();
             inputManager.registerInputSystems(this._keyboardInput, this._controllerInput);
 
-            // Wire up shooting events
-            this._keyboardInput.onShootObservable.add(() => {
-                this.handleShoot();
-            });
-
-            this._controllerInput.onShootObservable.add(() => {
-                this.handleShoot();
-            });
-
-            // Wire up status screen toggle event
-            this._controllerInput.onStatusScreenToggleObservable.add(() => {
-                if (this._statusScreen) {
-                    if (this._statusScreen.isVisible) {
-                        // Hide status screen - InputControlManager will handle control re-enabling
-                        this._statusScreen.hide();
-                    } else {
-                        // Show status screen (manual pause, not game end)
-                        // InputControlManager will handle control disabling
-                        this._statusScreen.show(false);
-                    }
-                }
-            });
-
-            // Wire up inspector toggle event (Y button)
-            this._controllerInput.onInspectorToggleObservable.add(() => {
-                import('@babylonjs/inspector').then(() => {
-                    const scene = DefaultScene.MainScene;
-                    if (scene.debugLayer.isVisible()) {
-                        scene.debugLayer.hide();
-                    } else {
-                        scene.debugLayer.show({ overlay: true, showExplorer: true });
-                    }
-                });
-            });
-
-            // Wire up camera adjustment events
-            this._keyboardInput.onCameraChangeObservable.add((cameraKey) => {
-                if (cameraKey === 1) {
-                    this._camera.position.x = 15;
-                    this._camera.rotation.y = -Math.PI / 2;
-                }
-            });
-
-            this._controllerInput.onCameraAdjustObservable.add((adjustment) => {
-                if (DefaultScene.XR?.baseExperience?.camera) {
-                    const camera = DefaultScene.XR.baseExperience.camera;
-                    if (adjustment.direction === "down") {
-                        camera.position.y = camera.position.y - 0.1;
-                    } else {
-                        camera.position.y = camera.position.y + 0.1;
-                    }
-                }
-            });
+            this._keyboardInput.onShootObservable.add(() => this.handleShoot());
+            this._controllerInput.onShootObservable.add(() => this.handleShoot());
+            this._controllerInput.onStatusScreenToggleObservable.add(() => this.toggleStatusScreen());
+            this._controllerInput.onInspectorToggleObservable.add(() => this.toggleInspector());
+            this._keyboardInput.onCameraChangeObservable.add((key) => this.handleCameraChange(key));
+            this._controllerInput.onCameraAdjustObservable.add((adj) => this.handleCameraAdjust(adj));
         }
 
-        // Initialize physics controller
-        this._physics = new ShipPhysics();
-        this._physics.setShipStatus(this._scoreboard.shipStatus);
-        this._physics.setGameStats(this._gameStats);
-
-        // Setup physics update loop (every 10 frames)
-        let p = 0;
-        this._physicsObserver = DefaultScene.MainScene.onAfterPhysicsObservable.add(() => {
-
-                this.updatePhysics();
-
-        });
-        let renderFrameCount = 0;
-        this._renderObserver = DefaultScene.MainScene.onAfterRenderObservable.add(() => {
-            // Update voice audio system (checks for completed sounds and plays next in queue)
-            if (this._voiceAudio) {
-                this._voiceAudio.update();
-            }
-            // Update projectiles (shape casting collision detection)
-            if (this._weapons) {
-                const deltaTime = DefaultScene.MainScene.getEngine().getDeltaTime() / 1000;
-                this._weapons.update(deltaTime);
-            }
-            // Check game end conditions every 30 frames (~0.5 sec at 60fps)
-            if (renderFrameCount++ % 30 === 0) {
-                this.checkGameEndConditions();
-            }
-        });
-
-        // Setup camera
-        this._camera = new FreeCamera(
-            "Flat Camera",
-            new Vector3(0, 1.5, 0),
-            DefaultScene.MainScene
-        );
+        // Setup camera (non-physics)
+        this._camera = new FreeCamera("Flat Camera", new Vector3(0, 1.5, 0), DefaultScene.MainScene);
         this._camera.parent = this._ship;
-        // Rotate camera 180 degrees around Y to compensate for inverted ship GLB model
         this._camera.rotation = new Vector3(0, Math.PI, 0);
 
-        // Set as active camera if XR is not available
         if (!DefaultScene.XR && !this._isReplayMode) {
             DefaultScene.MainScene.activeCamera = this._camera;
-            //this._camera.attachControl(DefaultScene.MainScene.getEngine().getRenderingCanvas(), true);
             log.debug('Flat camera set as active camera');
         }
 
@@ -414,52 +215,11 @@ export class Ship {
             centerGap: 0.5,
         });
 
-        // Initialize scoreboard (it will retrieve and setup its own screen mesh)
+        // Initialize scoreboard and subscribe to events
         this._scoreboard.initialize();
+        this.setupScoreboardObservers();
 
-        // Subscribe to score events to track asteroids destroyed
-        this._scoreboard.onScoreObservable.add((event) => {
-            // Each score event represents an asteroid destroyed, pass scale for point calc
-            this._gameStats.recordAsteroidDestroyed(event.scale || 1);
-
-            // Track asteroid destruction in analytics
-            try {
-                const analytics = getAnalytics();
-                analytics.track('asteroid_destroyed', {
-                    weaponType: 'laser',
-                    distance: 0,
-                    asteroidSize: event.scale || 0,
-                    remainingCount: this._scoreboard.remaining
-                }, { sampleRate: 0.2 }); // Sample 20% of asteroid events to reduce data
-            } catch (error) {
-                // Analytics not initialized or failed - don't break gameplay
-                log.debug('Analytics tracking failed:', error);
-            }
-        });
-
-        // Subscribe to ship status changes to track hull damage
-        this._scoreboard.shipStatus.onStatusChanged.add((event) => {
-            if (event.statusType === "hull" && event.delta < 0) {
-                // Hull damage (delta is negative)
-                const damageAmount = Math.abs(event.delta);
-                this._gameStats.recordHullDamage(damageAmount);
-
-                // Track hull damage in analytics
-                try {
-                    const analytics = getAnalytics();
-                    analytics.track('hull_damage', {
-                        damageAmount: damageAmount,
-                        remainingHull: this._scoreboard.shipStatus.hull,
-                        damagePercent: damageAmount,
-                        source: 'asteroid_collision' // Default assumption
-                    });
-                } catch (error) {
-                    log.debug('Analytics tracking failed:', error);
-                }
-            }
-        });
-
-        // Initialize status screen with callbacks
+        // Initialize status screen
         this._statusScreen = new StatusScreen(
             DefaultScene.MainScene,
             this._ship,
@@ -470,6 +230,220 @@ export class Ship {
             () => this.handleNextLevel()
         );
         this._statusScreen.initialize();
+
+        log.debug('[Ship] addToScene complete');
+    }
+
+    /**
+     * Initialize physics (Phase 3 - after XR entry)
+     * Creates physics body, collision handlers, weapon system
+     */
+    public initializePhysics(): void {
+        log.debug('[Ship] initializePhysics called');
+        const config = GameConfig.getInstance();
+
+        if (!config.physicsEnabled || !this._ship || !this._loadedAssetData) {
+            log.warn('[Ship] Physics disabled or ship not loaded');
+            return;
+        }
+
+        const agg = new PhysicsAggregate(
+            this._ship,
+            PhysicsShapeType.MESH,
+            {
+                mass: 10,
+                mesh: this._loadedAssetData.container.rootNodes[0].getChildMeshes()[0] as Mesh,
+            },
+            DefaultScene.MainScene
+        );
+
+        agg.body.setMotionType(PhysicsMotionType.DYNAMIC);
+        agg.body.setLinearDamping(config.shipPhysics.linearDamping);
+        agg.body.setAngularDamping(config.shipPhysics.angularDamping);
+        agg.body.setAngularVelocity(new Vector3(0, 0, 0));
+        agg.body.setCollisionCallbackEnabled(true);
+
+        // Override center of mass to origin
+        const massProps = agg.body.getMassProperties();
+        agg.body.setMassProperties({
+            mass: 10,
+            centerOfMass: new Vector3(0, 0, 0),
+            inertia: massProps.inertia,
+            inertiaOrientation: massProps.inertiaOrientation
+        });
+
+        if (config.shipPhysics.alwaysActive) {
+            const physicsPlugin = DefaultScene.MainScene.getPhysicsEngine()?.getPhysicsPlugin() as HavokPlugin;
+            if (physicsPlugin) {
+                physicsPlugin.setActivationControl(agg.body, PhysicsActivationControl.ALWAYS_ACTIVE);
+            }
+        }
+
+        // Register collision handler
+        this.setupCollisionHandler(agg);
+
+        // Initialize weapon system (needs physics)
+        this._weapons = new WeaponSystem(DefaultScene.MainScene);
+        this._weapons.initialize();
+        this._weapons.setShipStatus(this._scoreboard.shipStatus);
+        this._weapons.setGameStats(this._gameStats);
+        this._weapons.setScoreObservable(this._scoreboard.onScoreObservable);
+        this._weapons.setShipBody(this._ship.physicsBody!);
+
+        // Initialize physics controller
+        this._physics = new ShipPhysics();
+        this._physics.setShipStatus(this._scoreboard.shipStatus);
+        this._physics.setGameStats(this._gameStats);
+
+        // Setup update loops
+        this._physicsObserver = DefaultScene.MainScene.onAfterPhysicsObservable.add(() => {
+            this.updatePhysics();
+        });
+
+        let renderFrameCount = 0;
+        this._renderObserver = DefaultScene.MainScene.onAfterRenderObservable.add(() => {
+            if (this._voiceAudio) this._voiceAudio.update();
+            if (this._weapons) {
+                const deltaTime = DefaultScene.MainScene.getEngine().getDeltaTime() / 1000;
+                this._weapons.update(deltaTime);
+            }
+            if (renderFrameCount++ % 30 === 0) this.checkGameEndConditions();
+        });
+
+        log.debug('[Ship] initializePhysics complete');
+    }
+
+    /**
+     * Show ship meshes (call after XR entry to make visible)
+     */
+    public showMeshes(): void {
+        if (this._loadedAssetData) {
+            for (const mesh of this._loadedAssetData.meshes.values()) {
+                mesh.isVisible = true;
+                mesh.setEnabled(true);
+            }
+            log.debug('[Ship] Meshes shown');
+        }
+    }
+
+
+    private setupCollisionHandler(agg: PhysicsAggregate): void {
+        agg.body.getCollisionObservable().add((collisionEvent) => {
+            if (collisionEvent.type !== 'COLLISION_STARTED') return;
+
+            const shipBody = collisionEvent.collider;
+            const otherBody = collisionEvent.collidedAgainst;
+            const relativeVelocity = shipBody.getLinearVelocity().subtract(otherBody.getLinearVelocity());
+            const relativeSpeed = relativeVelocity.length();
+
+            const shipMass = 10;
+            const otherMass = otherBody.getMassProperties().mass;
+            const reducedMass = (shipMass * otherMass) / (shipMass + otherMass);
+            const kineticEnergy = 0.5 * reducedMass * relativeSpeed * relativeSpeed;
+
+            const ENERGY_TO_DAMAGE_FACTOR = 0.01 / 1000;
+            const damage = Math.min(kineticEnergy * ENERGY_TO_DAMAGE_FACTOR, 0.5);
+
+            if (this._scoreboard?.shipStatus && damage > 0.001) {
+                this._scoreboard.shipStatus.damageHull(damage);
+                log.debug(`Collision damage: ${damage.toFixed(4)}`);
+                if (this._audio) this._audio.playCollisionSound();
+                this._onCollisionObservable.notifyObservers({ collisionType: 'any' });
+            }
+        });
+    }
+
+    private setupScoreboardObservers(): void {
+        this._scoreboard.onScoreObservable.add((event) => {
+            this._gameStats.recordAsteroidDestroyed(event.scale || 1);
+            try {
+                const analytics = getAnalytics();
+                analytics.track('asteroid_destroyed', {
+                    weaponType: 'laser',
+                    distance: 0,
+                    asteroidSize: event.scale || 0,
+                    remainingCount: this._scoreboard.remaining
+                }, { sampleRate: 0.2 });
+            } catch (error) {
+                log.debug('Analytics tracking failed:', error);
+            }
+        });
+
+        this._scoreboard.shipStatus.onStatusChanged.add((event) => {
+            if (event.statusType === "hull" && event.delta < 0) {
+                const damageAmount = Math.abs(event.delta);
+                this._gameStats.recordHullDamage(damageAmount);
+                try {
+                    const analytics = getAnalytics();
+                    analytics.track('hull_damage', {
+                        damageAmount,
+                        remainingHull: this._scoreboard.shipStatus.hull,
+                        damagePercent: damageAmount / 100,
+                        source: 'asteroid_collision'
+                    });
+                } catch (error) {
+                    log.debug('Analytics tracking failed:', error);
+                }
+            }
+        });
+    }
+
+    private toggleStatusScreen(): void {
+        if (this._statusScreen) {
+            if (this._statusScreen.isVisible) {
+                this._statusScreen.hide();
+            } else {
+                this._statusScreen.show(false);
+            }
+        }
+    }
+
+    private toggleInspector(): void {
+        import('@babylonjs/inspector').then(() => {
+            const scene = DefaultScene.MainScene;
+            if (scene.debugLayer.isVisible()) {
+                scene.debugLayer.hide();
+            } else {
+                scene.debugLayer.show({ overlay: true, showExplorer: true });
+            }
+        });
+    }
+
+    private handleCameraChange(cameraKey: number): void {
+        if (cameraKey === 1) {
+            this._camera.position.x = 15;
+            this._camera.rotation.y = -Math.PI / 2;
+        }
+    }
+
+    private handleCameraAdjust(adjustment: { direction: string }): void {
+        if (DefaultScene.XR?.baseExperience?.camera) {
+            const camera = DefaultScene.XR.baseExperience.camera;
+            camera.position.y += adjustment.direction === "down" ? -0.1 : 0.1;
+        }
+    }
+
+    /**
+     * Initialize audio systems (call after audio engine is unlocked)
+     * Separated from initialize() to allow ship creation before XR entry
+     */
+    public async initializeAudio(audioEngine: AudioEngineV2): Promise<void> {
+        if (this._audio) {
+            log.debug('[Ship] Audio already initialized, skipping');
+            return;
+        }
+
+        this._audioEngine = audioEngine;
+        log.debug('[Ship] Initializing audio systems');
+
+        this._audio = new ShipAudio(audioEngine);
+        await this._audio.initialize();
+
+        this._voiceAudio = new VoiceAudioSystem();
+        await this._voiceAudio.initialize(audioEngine);
+        this._voiceAudio.subscribeToEvents(this._scoreboard.shipStatus);
+
+        log.debug('[Ship] Audio initialization complete');
     }
 
     /**

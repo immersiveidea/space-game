@@ -48,29 +48,36 @@ export class LevelDeserializer {
         this.config = config;
     }
 
+    // Store score observable for deferred physics
+    private _scoreObservable: Observable<ScoreEvent> | null = null;
+
     /**
-     * Create all entities from the configuration
-     * @param scoreObservable - Observable for score events
+     * Deserialize meshes only (Phase 2 - before XR, hidden)
      */
-    public async deserialize(
-        scoreObservable: Observable<ScoreEvent>
+    public async deserializeMeshes(
+        scoreObservable: Observable<ScoreEvent>,
+        hidden: boolean = false
     ): Promise<{
         startBase: AbstractMesh | null;
-        landingAggregate: PhysicsAggregate | null;
         sun: AbstractMesh;
         planets: AbstractMesh[];
         asteroids: AbstractMesh[];
     }> {
-        log.debug('Deserializing level:', this.config.difficulty);
+        log.debug(`[LevelDeserializer] Deserializing meshes (hidden: ${hidden})`);
+        this._scoreObservable = scoreObservable;
 
-        const baseResult = await this.createStartBase();
+        // Create base mesh (no physics)
+        const baseResult = await this.createStartBaseMesh(hidden);
+
+        // Create sun and planets (procedural, no physics needed)
         const sun = this.createSun();
         const planets = this.createPlanets();
-        const asteroids = await this.createAsteroids(scoreObservable);
+
+        // Create asteroid meshes (no physics)
+        const asteroids = await this.createAsteroidMeshes(scoreObservable, hidden);
 
         return {
-            startBase: baseResult.baseMesh,
-            landingAggregate: baseResult.landingAggregate,
+            startBase: baseResult?.baseMesh || null,
             sun,
             planets,
             asteroids
@@ -78,12 +85,36 @@ export class LevelDeserializer {
     }
 
     /**
-     * Create the start base from config
+     * Initialize physics for all entities (Phase 3 - after XR)
      */
-    private async createStartBase() {
+    public initializePhysics(): PhysicsAggregate | null {
+        log.debug('[LevelDeserializer] Initializing physics');
+
+        // Initialize base physics
+        const landingAggregate = StarBase.initializePhysics();
+
+        // Initialize asteroid physics
+        RockFactory.initPhysics();
+
+        return landingAggregate;
+    }
+
+    /**
+     * Show all meshes (call after XR entry)
+     */
+    public showMeshes(): void {
+        StarBase.showMeshes();
+        RockFactory.showMeshes();
+        log.debug('[LevelDeserializer] All meshes shown');
+    }
+
+    /**
+     * Create base mesh only (no physics)
+     */
+    private async createStartBaseMesh(hidden: boolean) {
         const position = this.config.startBase?.position;
         const baseGlbPath = this.config.startBase?.baseGlbPath || 'base.glb';
-        return await StarBase.buildStarBase(position, baseGlbPath);
+        return await StarBase.addToScene(position, baseGlbPath, hidden);
     }
 
     /**
@@ -163,48 +194,40 @@ export class LevelDeserializer {
     }
 
     /**
-     * Create asteroids from config
+     * Create asteroid meshes only (no physics)
      */
-    private async createAsteroids(
-        scoreObservable: Observable<ScoreEvent>
+    private async createAsteroidMeshes(
+        scoreObservable: Observable<ScoreEvent>,
+        hidden: boolean
     ): Promise<AbstractMesh[]> {
         const asteroids: AbstractMesh[] = [];
 
         for (let i = 0; i < this.config.asteroids.length; i++) {
             const asteroidConfig = this.config.asteroids[i];
-
-            log.debug(`[LevelDeserializer] Creating asteroid ${i} (${asteroidConfig.id}):`);
-            log.debug(`[LevelDeserializer]   Position: [${asteroidConfig.position.join(', ')}]`);
-            log.debug(`[LevelDeserializer]   Scale: ${asteroidConfig.scale}`);
-            log.debug(`[LevelDeserializer]   Linear velocity: [${asteroidConfig.linearVelocity.join(', ')}]`);
-            log.debug(`[LevelDeserializer]   Angular velocity: [${asteroidConfig.angularVelocity.join(', ')}]`);
-
-            // Use orbit constraints by default (true if not specified)
             const useOrbitConstraints = this.config.useOrbitConstraints !== false;
-            log.debug(`[LevelDeserializer]   Use orbit constraints: ${useOrbitConstraints}`);
 
-            // Use RockFactory to create the asteroid
-            const _rock = await RockFactory.createRock(
+            // Create mesh only (no physics)
+            RockFactory.createRockMesh(
                 i,
                 this.arrayToVector3(asteroidConfig.position),
                 asteroidConfig.scale,
                 this.arrayToVector3(asteroidConfig.linearVelocity),
                 this.arrayToVector3(asteroidConfig.angularVelocity),
                 scoreObservable,
-                useOrbitConstraints
+                useOrbitConstraints,
+                hidden
             );
 
-            // Get the actual mesh from the Rock object
-            // The Rock class wraps the mesh, need to access it via position getter
             const mesh = this.scene.getMeshByName(asteroidConfig.id);
             if (mesh) {
                 asteroids.push(mesh);
             }
         }
 
-        log.debug(`Created ${asteroids.length} asteroids from config`);
+        log.debug(`[LevelDeserializer] Created ${asteroids.length} asteroid meshes (hidden: ${hidden})`);
         return asteroids;
     }
+
 
     /**
      * Get ship configuration (for external use to position ship)
@@ -220,64 +243,4 @@ export class LevelDeserializer {
         return new Vector3(arr[0], arr[1], arr[2]);
     }
 
-    /**
-     * Static helper to load from JSON string
-     */
-    public static fromJSON(json: string): LevelDeserializer {
-        const config = JSON.parse(json) as LevelConfig;
-        return new LevelDeserializer(config);
-    }
-
-    /**
-     * Static helper to load from JSON file URL
-     */
-    public static async fromURL(url: string): Promise<LevelDeserializer> {
-        const response = await fetch(url);
-        if (!response.ok) {
-            throw new Error(`Failed to load level config from ${url}: ${response.statusText}`);
-        }
-        const json = await response.text();
-        return LevelDeserializer.fromJSON(json);
-    }
-
-    /**
-     * Static helper to load from uploaded file
-     */
-    public static async fromFile(file: File): Promise<LevelDeserializer> {
-        return new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                try {
-                    const json = e.target?.result as string;
-                    resolve(LevelDeserializer.fromJSON(json));
-                } catch (error) {
-                    reject(error);
-                }
-            };
-            reader.onerror = () => reject(new Error('Failed to read file'));
-            reader.readAsText(file);
-        });
-    }
-
-    /**
-     * Static helper to load from Level Registry by ID
-     * This is the preferred method for loading both default and custom levels
-     */
-    public static async fromRegistry(levelId: string): Promise<LevelDeserializer> {
-        const registry = LevelRegistry.getInstance();
-
-        // Ensure registry is initialized
-        if (!registry.isInitialized()) {
-            await registry.initialize();
-        }
-
-        // Get level config from registry (loads if not already loaded)
-        const config = await registry.getLevel(levelId);
-
-        if (!config) {
-            throw new Error(`Level not found in registry: ${levelId}`);
-        }
-
-        return new LevelDeserializer(config);
-    }
 }

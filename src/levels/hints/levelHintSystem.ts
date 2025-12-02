@@ -31,7 +31,14 @@ export class LevelHintSystem {
     // Track triggered thresholds to prevent re-triggering
     private _triggeredThresholds: Set<string> = new Set();
 
-    constructor(audioEngine: AudioEngineV2) {
+    constructor(audioEngine?: AudioEngineV2) {
+        this._audioEngine = audioEngine!;
+    }
+
+    /**
+     * Set audio engine (for deferred initialization)
+     */
+    public setAudioEngine(audioEngine: AudioEngineV2): void {
         this._audioEngine = audioEngine;
     }
 
@@ -160,6 +167,12 @@ export class LevelHintSystem {
      * Queue a hint for audio playback
      */
     private queueHint(hint: HintEntry): void {
+        // Skip if audio engine not initialized yet
+        if (!this._audioEngine) {
+            log.debug('[LevelHintSystem] Skipping hint - audio not initialized:', hint.id);
+            return;
+        }
+
         // Check if 'once' hint already played
         if (hint.playMode === 'once' && this._playedHints.has(hint.id)) {
             return;

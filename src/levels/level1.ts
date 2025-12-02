@@ -21,6 +21,8 @@ import {LevelRegistry} from "./storage/levelRegistry";
 import type {CloudLevelEntry} from "../services/cloudLevelService";
 import { InputControlManager } from "../ship/input/inputControlManager";
 import { LevelHintSystem } from "./hints/levelHintSystem";
+import { getAudioSource } from "../utils/audioPrefetch";
+import { RockFactory } from "../environment/asteroids/rockFactory";
 
 export class Level1 implements Level {
     private _ship: Ship;
@@ -40,37 +42,22 @@ export class Level1 implements Level {
     private _hintSystem: LevelHintSystem;
     private _gameStarted: boolean = false;
     private _missionBriefShown: boolean = false;
+    private _asteroidCount: number = 0;
 
-    constructor(levelConfig: LevelConfig, audioEngine: AudioEngineV2, isReplayMode: boolean = false, levelId?: string) {
+    constructor(levelConfig: LevelConfig, audioEngine?: AudioEngineV2, isReplayMode: boolean = false, levelId?: string) {
         this._levelConfig = levelConfig;
         this._levelId = levelId || null;
-        this._audioEngine = audioEngine;
+        this._audioEngine = audioEngine!; // Will be set later if not provided
         this._isReplayMode = isReplayMode;
         this._deserializer = new LevelDeserializer(levelConfig);
-        this._ship = new Ship(audioEngine, isReplayMode);
+        this._ship = new Ship(undefined, isReplayMode); // Audio initialized separately
         this._missionBrief = new MissionBrief();
-        this._hintSystem = new LevelHintSystem(audioEngine);
+        this._hintSystem = new LevelHintSystem(undefined); // Audio initialized separately
 
-        // Only set up XR observables in game mode (not replay mode)
-        if (!isReplayMode && DefaultScene.XR) {
-            const xr = DefaultScene.XR;
 
-            log.debug('Level1 constructor - Setting up XR observables');
-            log.debug('XR input exists:', !!xr.input);
-            log.debug('onControllerAddedObservable exists:', !!xr.input?.onControllerAddedObservable);
-
-            xr.baseExperience.onInitialXRPoseSetObservable.add(() => {
-                log.debug('[Level1] onInitialXRPoseSetObservable fired');
-
-                // Use consolidated XR camera setup
-                this.setupXRCamera();
-
-                // Show mission brief after camera setup
-                log.debug('[Level1] Showing mission brief on XR entry');
-                this.showMissionBrief();
-            });
-        }
-        // Don't call initialize here - let Main call it after registering the observable
+        // XR camera setup and mission brief are now handled by levelSelectedHandler
+        // after audio is initialized (see finalizeLevelStart)
+        // Don't call initialize here - let Main call it after setup
     }
 
     getReadyObservable(): Observable<Level> {
@@ -99,16 +86,6 @@ export class Level1 implements Level {
         // Create intermediate TransformNode for camera rotation
         // WebXR camera only uses rotationQuaternion (not .rotation), and XR frame updates overwrite it
         // By rotating an intermediate node, we can orient the camera without fighting XR frame updates
-        const cameraRig = new TransformNode("xrCameraRig", DefaultScene.MainScene);
-        cameraRig.parent = this._ship.transformNode;
-        cameraRig.rotation = new Vector3(0, 0, 0); // Rotate 180° to face forward
-        log.debug('[Level1] Created cameraRig TransformNode, rotated 180°');
-
-        // Parent XR camera to the rig
-        xr.baseExperience.camera.parent = cameraRig;
-        xr.baseExperience.camera.position = new Vector3(0, 1.2, 0);
-        log.debug('[Level1] XR camera parented to cameraRig at position (0, 1.2, 0)');
-
         // Show the canvas now that camera is parented
         const canvas = document.getElementById('gameCanvas');
         if (canvas) {
@@ -156,6 +133,16 @@ export class Level1 implements Level {
         xr.input.onControllerAddedObservable.add((controller) => {
             log.debug('[Level1] 🎮 Controller added:', controller.inputSource.handedness);
             this._ship.addController(controller);
+
+            // Set controller meshes to render on top (never occluded)
+            controller.onMeshLoadedObservable.add((mesh) => {
+                const XR_RENDERING_GROUP = 3;
+                mesh.renderingGroupId = XR_RENDERING_GROUP;
+                mesh.getChildMeshes().forEach((child) => {
+                    child.renderingGroupId = XR_RENDERING_GROUP;
+                });
+                log.debug('[Level1] Controller mesh renderingGroupId set to', XR_RENDERING_GROUP);
+            });
         });
 
         log.debug('[Level1] ========== setupXRCamera COMPLETE ==========');
@@ -356,98 +343,90 @@ export class Level1 implements Level {
         }
     }
 
-    public async initialize() {
-        log.debug('Initializing level from config:', this._levelConfig.difficulty);
+    /**
+     * Initialize audio systems (call after audio engine unlock)
+     * Separated from initialize() to allow level creation before XR entry
+     */
+    public async initializeAudio(audioEngine: AudioEngineV2): Promise<void> {
+        log.debug('[Level1] Initializing audio systems');
+        this._audioEngine = audioEngine;
+
+        // Initialize ship audio
+        await this._ship.initializeAudio(audioEngine);
+
+        // Initialize hint system audio
+        this._hintSystem.setAudioEngine(audioEngine);
+
+        // Load background music (uses prefetched audio if available)
+        const musicUrl = "/assets/themes/default/audio/song1.mp3";
+        this._backgroundMusic = await audioEngine.createSoundAsync(
+            "background",
+            getAudioSource(musicUrl),
+            { loop: true, volume: 0.2 }
+        );
+
+        // Initialize mission brief audio
+        this._missionBrief.initialize(audioEngine);
+
+        log.debug('[Level1] Audio initialization complete');
+    }
+
+    /**
+     * Add level meshes to scene (Phase 2 - before XR, hidden)
+     */
+    public async addToScene(hidden: boolean = true): Promise<void> {
+        log.debug(`[Level1] addToScene called (hidden: ${hidden})`);
+
         if (this._initialized) {
-            log.error('Initialize called twice');
+            log.error('[Level1] Already initialized');
             return;
         }
-        // Get ship config BEFORE initialize to pass position (avoids physics race condition)
+
+        // Initialize RockFactory mesh (needs to happen before deserialize)
+        await RockFactory.initMesh();
+
+        // Get ship config and add ship to scene
         const shipConfig = this._deserializer.getShipConfig();
-        await this._ship.initialize(new Vector3(...shipConfig.position));
+        await this._ship.addToScene(new Vector3(...shipConfig.position), hidden);
+
+        // Create XR camera rig
+        const cameraRig = new TransformNode("xrCameraRig", DefaultScene.MainScene);
+        //cameraRig.position.set(0, 1.2, 0);
+        cameraRig.parent = this._ship.transformNode;
+
         setLoadingMessage("Loading level from configuration...");
 
-        if (shipConfig.linearVelocity) {
-            this._ship.setLinearVelocity(new Vector3(...shipConfig.linearVelocity));
-        } else {
-            this._ship.setLinearVelocity(Vector3.Zero());
-        }
-
-        if (shipConfig.angularVelocity) {
-            this._ship.setAngularVelocity(new Vector3(...shipConfig.angularVelocity));
-        } else {
-            this._ship.setAngularVelocity(Vector3.Zero());
-        }
-
-        // Use deserializer to create all entities from config
-        const entities = await this._deserializer.deserialize(this._ship.scoreboard.onScoreObservable);
+        // Deserialize level meshes (no physics)
+        const entities = await this._deserializer.deserializeMeshes(
+            this._ship.scoreboard.onScoreObservable,
+            hidden
+        );
 
         this._startBase = entities.startBase;
-        this._landingAggregate = entities.landingAggregate;
+        this._asteroidCount = entities.asteroids.length;
 
-        // Setup resupply system if landing aggregate exists
-        if (this._landingAggregate) {
-            this._ship.setLandingZone(this._landingAggregate);
-        }
-
-        // sun and planets are already created by deserializer
-
-        // Initialize scoreboard with total asteroid count
-        this._ship.scoreboard.setRemainingCount(entities.asteroids.length);
-        log.debug(`Initialized scoreboard with ${entities.asteroids.length} asteroids`);
+        // Initialize scoreboard with asteroid count
+        this._ship.scoreboard.setRemainingCount(this._asteroidCount);
 
         // Create background starfield
-        setLoadingMessage("Creating starfield...");
         this._backgroundStars = new BackgroundStars(DefaultScene.MainScene, {
             count: 5000,
-            radius: 5000,
-            minBrightness: 0.3,
+            radius: 3000,
+            minBrightness: 0.1,
             maxBrightness: 1.0,
-            pointSize: 2
+            pointSize: 1
         });
 
-        // Set up camera follow for stars (keeps stars at infinite distance)
-        // Also update hint system audio queue
+        // Set up render loop updates
         DefaultScene.MainScene.onBeforeRenderObservable.add(() => {
             if (this._backgroundStars) {
                 const camera = DefaultScene.XR?.baseExperience?.camera || DefaultScene.MainScene.activeCamera;
-                if (camera) {
-                    this._backgroundStars.followCamera(camera.position);
-                }
+                if (camera) this._backgroundStars.followCamera(camera.globalPosition);
             }
-            // Process hint audio queue
             this._hintSystem?.update();
         });
 
-        // Initialize physics recorder (but don't start it yet - will start on XR pose)
-        // Only create recorder in game mode, not replay mode
-        if (!this._isReplayMode) {
-            setLoadingMessage("Initializing physics recorder...");
-            //this._physicsRecorder = new PhysicsRecorder(DefaultScene.MainScene, this._levelConfig);
-            log.debug('Physics recorder initialized (will start on XR pose)');
-        }
-
-        // Load background music before marking as ready
-        if (this._audioEngine) {
-            setLoadingMessage("Loading background music...");
-            this._backgroundMusic = await this._audioEngine.createSoundAsync("background", "/assets/themes/default/audio/song1.mp3", {
-                loop: true,
-                volume: 0.2
-            });
-            log.debug('Background music loaded successfully');
-        }
-
-        // Initialize mission brief (will be shown when entering XR)
-        setLoadingMessage("Initializing mission brief...");
-        log.info('[Level1] ========== ABOUT TO INITIALIZE MISSION BRIEF ==========');
-        log.info('[Level1] _missionBrief object:', this._missionBrief);
-        log.info('[Level1] Ship exists:', !!this._ship);
-        log.info('[Level1] Ship ID in scene:', DefaultScene.MainScene.getNodeById('Ship') !== null);
-        this._missionBrief.initialize(this._audioEngine);
-        log.info('[Level1] ========== MISSION BRIEF INITIALIZATION COMPLETE ==========');
-        log.debug('Mission brief initialized');
-
-        // Initialize hint system (need UUID from registry, not slug)
+        // Load hints (non-physics)
         if (this._levelId) {
             const registry = LevelRegistry.getInstance();
             const registryEntry = registry.getAllLevels().get(this._levelId);
@@ -458,34 +437,73 @@ export class Level1 implements Level {
                     this._ship.scoreboard.onScoreObservable,
                     this._ship.onCollisionObservable
                 );
-                log.info('[Level1] Hint system initialized with level UUID:', registryEntry.id);
             }
         }
 
-        this._initialized = true;
+        // Set par time and level info
+        this.setupStatusScreen();
 
-        // Set par time and level info for score calculation and results recording
-        const parTime = this.getParTimeForDifficulty(this._levelConfig.difficulty);
-        const statusScreen = this._ship.statusScreen;
-        log.info('[Level1] StatusScreen reference:', statusScreen);
-        log.info('[Level1] Level config metadata:', this._levelConfig.metadata);
-        log.info('[Level1] Asteroids count:', entities.asteroids.length);
-        if (statusScreen) {
-            statusScreen.setParTime(parTime);
-            log.info(`[Level1] Set par time to ${parTime}s for difficulty: ${this._levelConfig.difficulty}`);
+        log.debug('[Level1] addToScene complete');
+    }
 
-            // Set level info for game results recording
-            const levelId = this._levelId || 'unknown';
-            const levelName = this._levelConfig.metadata?.description || 'Unknown Level';
-            log.info('[Level1] About to call setCurrentLevel with:', { levelId, levelName, asteroidCount: entities.asteroids.length });
-            statusScreen.setCurrentLevel(levelId, levelName, entities.asteroids.length);
-            log.info('[Level1] setCurrentLevel called successfully');
-        } else {
-            log.error('[Level1] StatusScreen is null/undefined!');
+    /**
+     * Initialize physics for all level entities (Phase 3 - after XR)
+     */
+    public initializePhysics(): void {
+        log.debug('[Level1] initializePhysics called');
+
+        // Initialize ship physics
+        this._ship.initializePhysics();
+
+        // Set ship velocities (needs physics body)
+        const shipConfig = this._deserializer.getShipConfig();
+        if (shipConfig.linearVelocity) {
+            this._ship.setLinearVelocity(new Vector3(...shipConfig.linearVelocity));
+        }
+        if (shipConfig.angularVelocity) {
+            this._ship.setAngularVelocity(new Vector3(...shipConfig.angularVelocity));
         }
 
-        // Notify that initialization is complete
+        // Initialize deserializer physics (base, asteroids)
+        this._landingAggregate = this._deserializer.initializePhysics();
+
+        // Setup resupply system
+        if (this._landingAggregate) {
+            this._ship.setLandingZone(this._landingAggregate);
+        }
+
+        this._initialized = true;
         this._onReadyObservable.notifyObservers(this);
+
+        log.debug('[Level1] initializePhysics complete');
+    }
+
+    /**
+     * Show all level meshes (call after XR entry)
+     */
+    public showMeshes(): void {
+        this._ship.showMeshes();
+        this._deserializer.showMeshes();
+        log.debug('[Level1] All meshes shown');
+    }
+
+    private setupStatusScreen(): void {
+        const parTime = this.getParTimeForDifficulty(this._levelConfig.difficulty);
+        const statusScreen = this._ship.statusScreen;
+        if (statusScreen) {
+            statusScreen.setParTime(parTime);
+            const levelId = this._levelId || 'unknown';
+            const levelName = this._levelConfig.metadata?.description || 'Unknown Level';
+            statusScreen.setCurrentLevel(levelId, levelName, this._asteroidCount);
+        }
+    }
+
+    /**
+     * Legacy initialize - for backwards compatibility
+     */
+    public async initialize(): Promise<void> {
+        await this.addToScene(false);
+        this.initializePhysics();
     }
 
     /**

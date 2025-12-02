@@ -34,10 +34,22 @@ export class Rock {
     }
 }
 
+interface RockConfig {
+    position: Vector3;
+    scale: number;
+    linearVelocity: Vector3;
+    angularVelocity: Vector3;
+    scoreObservable: Observable<ScoreEvent>;
+    useOrbitConstraint: boolean;
+}
+
 export class RockFactory {
     private static _asteroidMesh: AbstractMesh | null = null;
     private static _explosionManager: ExplosionManager | null = null;
     private static _orbitCenter: PhysicsAggregate | null = null;
+
+    // Store created rocks for deferred physics initialization
+    private static _createdRocks: Map<string, { mesh: InstancedMesh; config: RockConfig }> = new Map();
 
     /** Public getter for explosion manager (used by WeaponSystem for shape-cast hits) */
     public static get explosionManager(): ExplosionManager | null {
@@ -45,26 +57,61 @@ export class RockFactory {
     }
 
     /**
-     * Initialize non-audio assets (meshes, explosion manager)
-     * Call this before audio engine is unlocked
+     * Initialize mesh only (Phase 2 - before XR)
+     * Just loads the asteroid mesh template, no physics
      */
-    public static async init() {
-        // Initialize explosion manager
-        const node = new TransformNode('orbitCenter', DefaultScene.MainScene);
-        node.position = Vector3.Zero();
-        this._orbitCenter = new PhysicsAggregate(node, PhysicsShapeType.SPHERE, {radius: .1, mass: 0}, DefaultScene.MainScene );
-        this._orbitCenter.body.setMotionType(PhysicsMotionType.STATIC);
-        this._explosionManager = new ExplosionManager(DefaultScene.MainScene, {
-            duration: 2000,
-            explosionForce: 150.0,
-            frameRate: 60
-        });
-        await this._explosionManager.initialize();
-
-        // Reload mesh if not loaded or if it was disposed during cleanup
+    public static async initMesh(): Promise<void> {
         if (!this._asteroidMesh || this._asteroidMesh.isDisposed()) {
             await this.loadMesh();
         }
+
+        // Initialize explosion manager (visual only, audio added later)
+        if (!this._explosionManager) {
+            this._explosionManager = new ExplosionManager(DefaultScene.MainScene, {
+                duration: 2000,
+                explosionForce: 150.0,
+                frameRate: 60
+            });
+            await this._explosionManager.initialize();
+        }
+
+        log.debug('[RockFactory] Mesh initialized');
+    }
+
+    /**
+     * Initialize physics systems (Phase 3 - after XR)
+     * Creates orbit center and initializes physics for all created rocks
+     */
+    public static initPhysics(): void {
+        // Create orbit center for constraints
+        if (!this._orbitCenter) {
+            const node = new TransformNode('orbitCenter', DefaultScene.MainScene);
+            node.position = Vector3.Zero();
+            this._orbitCenter = new PhysicsAggregate(
+                node, PhysicsShapeType.SPHERE,
+                { radius: .1, mass: 0 },
+                DefaultScene.MainScene
+            );
+            this._orbitCenter.body.setMotionType(PhysicsMotionType.STATIC);
+        }
+
+        // Initialize physics and show all created rocks
+        for (const [id, { mesh, config }] of this._createdRocks) {
+            this.initializeRockPhysics(mesh, config);
+            mesh.setEnabled(true);
+            mesh.isVisible = true;
+        }
+        this._createdRocks.clear();
+
+        log.debug('[RockFactory] Physics initialized');
+    }
+
+    /**
+     * Legacy init - calls initMesh + initPhysics for backwards compatibility
+     */
+    public static async init(): Promise<void> {
+        await this.initMesh();
+        this.initPhysics();
     }
 
     /**
@@ -73,6 +120,7 @@ export class RockFactory {
     public static reset(): void {
         log.debug('[RockFactory] Resetting static state');
         this._asteroidMesh = null;
+        this._createdRocks.clear();
         if (this._explosionManager) {
             this._explosionManager.dispose();
             this._explosionManager = null;
@@ -106,119 +154,154 @@ export class RockFactory {
         log.debug(this._asteroidMesh);
     }
 
-    public static async createRock(i: number, position: Vector3, scale: number,
-                                   linearVelocitry: Vector3, angularVelocity: Vector3, score: Observable<ScoreEvent>,
-                                   useOrbitConstraint: boolean = true): Promise<Rock> {
-
+    /**
+     * Create rock mesh only (Phase 2 - hidden, no physics)
+     */
+    public static createRockMesh(
+        i: number,
+        position: Vector3,
+        scale: number,
+        linearVelocity: Vector3,
+        angularVelocity: Vector3,
+        scoreObservable: Observable<ScoreEvent>,
+        useOrbitConstraint: boolean = true,
+        hidden: boolean = false
+    ): Rock {
         if (!this._asteroidMesh) {
-            throw new Error('[RockFactory] Asteroid mesh not loaded. Call init() first.');
+            throw new Error('[RockFactory] Asteroid mesh not loaded. Call initMesh() first.');
         }
 
-        const rock = new InstancedMesh("asteroid-" +i, this._asteroidMesh as Mesh);
-        log.debug(rock.id);
+        const rock = new InstancedMesh("asteroid-" + i, this._asteroidMesh as Mesh);
         rock.scaling = new Vector3(scale, scale, scale);
         rock.position = position;
-        //rock.material = this._rockMaterial;
         rock.name = "asteroid-" + i;
         rock.id = "asteroid-" + i;
-        rock.metadata = {type: 'asteroid'};
-        rock.setEnabled(true);
+        rock.metadata = { type: 'asteroid' };
+        rock.setEnabled(!hidden);
+        rock.isVisible = !hidden;
 
-        // Only create physics if enabled in config
-        const config = GameConfig.getInstance();
-        if (config.physicsEnabled) {
-            // PhysicsAggregate will automatically compute sphere size from mesh bounding info
-            // The mesh scaling is already applied, so Babylon will create correctly sized physics shape
-            const agg = new PhysicsAggregate(rock, PhysicsShapeType.SPHERE, {
-                mass: 200,
-                friction: 0,
-                restitution: .8
-                // Don't pass radius - let Babylon compute from scaled mesh bounds
-                }, DefaultScene.MainScene);
-            const body = agg.body;
-            body.setAngularDamping(0);
+        // Store config for deferred physics initialization
+        const config: RockConfig = {
+            position,
+            scale,
+            linearVelocity,
+            angularVelocity,
+            scoreObservable,
+            useOrbitConstraint
+        };
+        this._createdRocks.set(rock.id, { mesh: rock, config });
 
+        log.debug(`[RockFactory] Created rock mesh ${rock.id} (hidden: ${hidden})`);
+        return new Rock(rock);
+    }
 
+    /**
+     * Initialize physics for a single rock
+     */
+    private static initializeRockPhysics(rock: InstancedMesh, config: RockConfig): void {
+        const gameConfig = GameConfig.getInstance();
+        if (!gameConfig.physicsEnabled) return;
 
-            // Only apply orbit constraint if enabled for this level and orbit center exists
-            if (useOrbitConstraint && this._orbitCenter) {
-                log.debug(`[RockFactory] Applying orbit constraint for ${rock.name}`);
-                const constraint = new DistanceConstraint(Vector3.Distance(position, this._orbitCenter.body.transformNode.position), DefaultScene.MainScene);
-                body.addConstraint(this._orbitCenter.body, constraint);
-            } else {
-                log.debug(`[RockFactory] Orbit constraint disabled for ${rock.name} - asteroid will move freely`);
-            }
+        const agg = new PhysicsAggregate(rock, PhysicsShapeType.SPHERE, {
+            mass: 200,
+            friction: 0,
+            restitution: .8
+        }, DefaultScene.MainScene);
 
-            body.setLinearDamping(0)
-            body.setMotionType(PhysicsMotionType.DYNAMIC);
-            body.setCollisionCallbackEnabled(true);
+        const body = agg.body;
+        body.setAngularDamping(0);
+        body.setLinearDamping(0);
+        body.setMotionType(PhysicsMotionType.DYNAMIC);
+        body.setCollisionCallbackEnabled(true);
 
-            // Prevent asteroids from sleeping to ensure consistent physics simulation
-            const physicsPlugin = DefaultScene.MainScene.getPhysicsEngine()?.getPhysicsPlugin() as HavokPlugin;
-            if (physicsPlugin) {
-                physicsPlugin.setActivationControl(body, PhysicsActivationControl.ALWAYS_ACTIVE);
-            }
-
-            log.debug(`[RockFactory] Setting velocities for ${rock.name}:`);
-            log.debug(`[RockFactory]   Linear velocity input: ${linearVelocitry.toString()}`);
-            log.debug(`[RockFactory]   Angular velocity input: ${angularVelocity.toString()}`);
-
-            body.setLinearVelocity(linearVelocitry);
-            body.setAngularVelocity(angularVelocity);
-
-            // Verify velocities were set
-            const setLinear = body.getLinearVelocity();
-            const setAngular = body.getAngularVelocity();
-            log.debug(`[RockFactory]   Linear velocity after set: ${setLinear.toString()}`);
-            log.debug(`[RockFactory]   Angular velocity after set: ${setAngular.toString()}`);
-            body.getCollisionObservable().add((eventData) => {
-                if (eventData.type == 'COLLISION_STARTED') {
-                    if ( eventData.collidedAgainst.transformNode.id == 'ammo') {
-                        log.debug('[RockFactory] ASTEROID HIT! Triggering explosion...');
-
-                        // Get the asteroid mesh before disposing
-                        const asteroidMesh = eventData.collider.transformNode as AbstractMesh;
-                        const asteroidScale = asteroidMesh.scaling.x;
-                        score.notifyObservers({score: 1, remaining: -1, message: "Asteroid Destroyed", scale: asteroidScale});
-                        log.debug('[RockFactory] Asteroid mesh to explode:', {
-                            name: asteroidMesh.name,
-                            id: asteroidMesh.id,
-                            position: asteroidMesh.getAbsolutePosition().toString()
-                        });
-
-                        // Dispose asteroid physics objects BEFORE explosion (to prevent double-disposal)
-                        log.debug('[RockFactory] Disposing asteroid physics objects...');
-                        if (eventData.collider.shape) {
-                            eventData.collider.shape.dispose();
-                        }
-                        if (eventData.collider) {
-                            eventData.collider.dispose();
-                        }
-
-                        // Play explosion (visual + audio handled by ExplosionManager)
-                        // Note: ExplosionManager will dispose the asteroid mesh after explosion
-                        if (RockFactory._explosionManager) {
-                            RockFactory._explosionManager.playExplosion(asteroidMesh);
-                        }
-
-                        // Dispose projectile physics objects
-                        log.debug('[RockFactory] Disposing projectile physics objects...');
-                        if (eventData.collidedAgainst.shape) {
-                            eventData.collidedAgainst.shape.dispose();
-                        }
-                        if (eventData.collidedAgainst.transformNode) {
-                            eventData.collidedAgainst.transformNode.dispose();
-                        }
-                        if (eventData.collidedAgainst) {
-                            eventData.collidedAgainst.dispose();
-                        }
-                        log.debug('[RockFactory] Disposal complete');
-                    }
-                }
-            });
+        // Apply orbit constraint if enabled
+        if (config.useOrbitConstraint && this._orbitCenter) {
+            const constraint = new DistanceConstraint(
+                Vector3.Distance(config.position, this._orbitCenter.body.transformNode.position),
+                DefaultScene.MainScene
+            );
+            body.addConstraint(this._orbitCenter.body, constraint);
         }
 
-        return new Rock(rock);
+        // Prevent sleeping
+        const physicsPlugin = DefaultScene.MainScene.getPhysicsEngine()?.getPhysicsPlugin() as HavokPlugin;
+        if (physicsPlugin) {
+            physicsPlugin.setActivationControl(body, PhysicsActivationControl.ALWAYS_ACTIVE);
+        }
+
+        body.setLinearVelocity(config.linearVelocity);
+        body.setAngularVelocity(config.angularVelocity);
+
+        // Setup collision handler
+        this.setupCollisionHandler(body, config.scoreObservable);
+
+        log.debug(`[RockFactory] Physics initialized for ${rock.id}`);
+    }
+
+    private static setupCollisionHandler(body: PhysicsBody, scoreObservable: Observable<ScoreEvent>): void {
+        body.getCollisionObservable().add((eventData) => {
+            if (eventData.type !== 'COLLISION_STARTED') return;
+            if (eventData.collidedAgainst.transformNode.id !== 'ammo') return;
+
+            const asteroidMesh = eventData.collider.transformNode as AbstractMesh;
+            const asteroidScale = asteroidMesh.scaling.x;
+            scoreObservable.notifyObservers({
+                score: 1,
+                remaining: -1,
+                message: "Asteroid Destroyed",
+                scale: asteroidScale
+            });
+
+            // Dispose asteroid physics
+            if (eventData.collider.shape) eventData.collider.shape.dispose();
+            if (eventData.collider) eventData.collider.dispose();
+
+            // Play explosion
+            if (RockFactory._explosionManager) {
+                RockFactory._explosionManager.playExplosion(asteroidMesh);
+            }
+
+            // Dispose projectile physics
+            if (eventData.collidedAgainst.shape) eventData.collidedAgainst.shape.dispose();
+            if (eventData.collidedAgainst.transformNode) eventData.collidedAgainst.transformNode.dispose();
+            if (eventData.collidedAgainst) eventData.collidedAgainst.dispose();
+        });
+    }
+
+    /**
+     * Show all created rock meshes (no-op if initPhysics already showed them)
+     */
+    public static showMeshes(): void {
+        for (const { mesh } of this._createdRocks.values()) {
+            mesh.setEnabled(true);
+            mesh.isVisible = true;
+        }
+        log.debug('[RockFactory] showMeshes called');
+    }
+
+    /**
+     * Legacy createRock - creates mesh with immediate physics (backwards compatible)
+     */
+    public static async createRock(
+        i: number,
+        position: Vector3,
+        scale: number,
+        linearVelocity: Vector3,
+        angularVelocity: Vector3,
+        score: Observable<ScoreEvent>,
+        useOrbitConstraint: boolean = true
+    ): Promise<Rock> {
+        const rock = this.createRockMesh(i, position, scale, linearVelocity, angularVelocity, score, useOrbitConstraint, false);
+
+        // Immediately initialize physics for this rock (legacy behavior)
+        const meshId = "asteroid-" + i;
+        const rockData = this._createdRocks.get(meshId);
+        if (rockData) {
+            this.initializeRockPhysics(rockData.mesh, rockData.config);
+            this._createdRocks.delete(meshId);
+        }
+
+        return rock;
     }
 }
 

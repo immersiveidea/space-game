@@ -7,6 +7,8 @@ import { LevelConfig } from "../../levels/config/levelConfig";
 import { Preloader } from "../../ui/screens/preloader";
 import { LevelRegistry } from "../../levels/storage/levelRegistry";
 import { enterXRMode } from "./xrEntryHandler";
+import { prefetchAsset } from "../../utils/loadAsset";
+import { prefetchAllAudio } from "../../utils/audioPrefetch";
 import log from '../logger';
 
 export interface LevelSelectedContext {
@@ -37,8 +39,13 @@ export function createLevelSelectedHandler(
         context.setProgressCallback((p, m) => preloader.updateProgress(p, m));
 
         try {
+            // Phase 1: Load engine and prefetch assets
             await loadEngineAndAssets(context, preloader);
             await context.initializeXR();
+
+            // Phase 2: Create level and add meshes (hidden)
+            const level = await setupLevel(context, config, levelName, preloader);
+
             displayLevelInfo(preloader, levelName);
             preloader.updateProgress(90, 'Ready to enter VR...');
 
@@ -48,8 +55,9 @@ export function createLevelSelectedHandler(
                 return;
             }
 
+            // Phase 3: Enter XR, initialize physics, audio
             preloader.showStartButton(async () => {
-                await startGameWithXR(context, config, levelName, preloader);
+                await startGameWithXR(context, level, preloader);
             });
         } catch (error) {
             log.error('[Main] Level initialization failed:', error);
@@ -71,12 +79,41 @@ async function loadEngineAndAssets(context: LevelSelectedContext, preloader: Pre
         await context.initializeEngine();
     }
     if (!context.areAssetsLoaded()) {
-        preloader.updateProgress(40, 'Loading 3D models...');
+        preloader.updateProgress(20, 'Loading assets...');
         ParticleHelper.BaseAssetsUrl = window.location.href;
-        await RockFactory.init();
+
+        // Phase 1: Prefetch all GLBs and audio in parallel
+        await Promise.all([
+            prefetchAsset("ship.glb"),
+            prefetchAsset("asteroid.glb"),
+            prefetchAsset("base.glb"),
+            prefetchAllAudio()
+        ]);
+
         context.setAssetsLoaded(true);
-        preloader.updateProgress(70, 'Assets loaded');
+        preloader.updateProgress(50, 'Assets loaded');
     }
+}
+
+/**
+ * Phase 2: Create level and add meshes to scene (hidden)
+ */
+async function setupLevel(
+    context: LevelSelectedContext,
+    config: LevelConfig,
+    levelName: string,
+    preloader: Preloader
+): Promise<Level1> {
+    preloader.updateProgress(55, 'Creating level...');
+
+    const level = new Level1(config, undefined, false, levelName);
+    context.setCurrentLevel(level);
+
+    // Add meshes to scene (hidden - will show after XR entry)
+    await level.addToScene(true);
+
+    preloader.updateProgress(80, 'Level ready');
+    return level;
 }
 
 function displayLevelInfo(preloader: Preloader, levelName: string): void {
@@ -86,31 +123,41 @@ function displayLevelInfo(preloader: Preloader, levelName: string): void {
     }
 }
 
+/**
+ * Phase 3: Enter XR, initialize physics, show meshes, initialize audio
+ */
 async function startGameWithXR(
     context: LevelSelectedContext,
-    config: LevelConfig,
-    levelName: string,
+    level: Level1,
     preloader: Preloader
 ): Promise<void> {
-    preloader.updateProgress(92, 'Entering VR...');
     const engine = context.getEngine();
-    const xrSession = await enterXRMode(config, engine);
+    const config = (level as any)._levelConfig;
 
+    preloader.updateProgress(92, 'Entering VR...');
+
+    // Enter XR mode
+    await enterXRMode(config, engine);
+
+    // Initialize physics (Phase 3)
+    preloader.updateProgress(94, 'Initializing physics...');
+    level.initializePhysics();
+
+    // Show meshes now that XR is active
+    level.showMeshes();
+
+    // Initialize audio after XR entry
     const audioEngine = context.getAudioEngine();
     await audioEngine?.unlockAsync();
-    preloader.updateProgress(95, 'Loading audio...');
-    await RockFactory.initAudio(audioEngine);
+    preloader.updateProgress(97, 'Loading audio...');
+    await Promise.all([
+        RockFactory.initAudio(audioEngine),
+        level.initializeAudio(audioEngine)
+    ]);
     attachAudioListener(audioEngine);
 
-    preloader.updateProgress(98, 'Creating level...');
-    const level = new Level1(config, audioEngine, false, levelName);
-    context.setCurrentLevel(level);
-
-    level.getReadyObservable().add(async () => {
-        await finalizeLevelStart(level, xrSession, engine, preloader, context);
-    });
-
-    await level.initialize();
+    // Finalize
+    await finalizeLevelStart(level, engine, preloader, context);
 }
 
 function attachAudioListener(audioEngine: AudioEngineV2): void {
@@ -122,7 +169,6 @@ function attachAudioListener(audioEngine: AudioEngineV2): void {
 
 async function finalizeLevelStart(
     level: Level1,
-    xrSession: any,
     engine: Engine,
     preloader: Preloader,
     context: LevelSelectedContext
@@ -130,7 +176,7 @@ async function finalizeLevelStart(
     const ship = (level as any)._ship;
     ship?.onReplayRequestObservable.add(() => window.location.reload());
 
-    if (DefaultScene.XR && xrSession && DefaultScene.XR.baseExperience.state === 2) {
+    if (DefaultScene.XR && DefaultScene.XR.baseExperience.state === 2) {
         level.setupXRCamera();
         await level.showMissionBrief();
     } else {

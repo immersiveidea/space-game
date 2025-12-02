@@ -7,6 +7,7 @@ import {
     Vector3
 } from "@babylonjs/core";
 import {DefaultScene} from "../../core/defaultScene";
+import { getAudioSource } from "../../utils/audioPrefetch";
 import log from '../../core/logger';
 
 /**
@@ -68,27 +69,24 @@ export class ExplosionManager {
      */
     public async initAudio(audioEngine: AudioEngineV2): Promise<void> {
         this.audioEngine = audioEngine;
-
         log.debug(`ExplosionManager: Initializing audio with pool size ${this.soundPoolSize}`);
 
-        // Create sound pool for concurrent explosions
+        const audioUrl = "/assets/themes/default/audio/explosion.mp3";
+        const audioSource = getAudioSource(audioUrl);
+        const buffer = await audioEngine.createSoundBufferAsync(audioSource);
+
         for (let i = 0; i < this.soundPoolSize; i++) {
-            const sound = await audioEngine.createSoundAsync(
-                `explosionSound_${i}`,
-                "/assets/themes/default/audio/explosion.mp3",
-                {
-                    loop: false,
-                    volume: 1.0,
-                    spatialEnabled: true,
-                    spatialDistanceModel: "linear",
-                    spatialMaxDistance: 500,
-                    spatialMinUpdateTime: 0.5,
-                    spatialRolloffFactor: 1
-                }
-            );
+            const sound = await audioEngine.createSoundAsync(`explosionSound_${i}`, buffer, {
+                loop: false,
+                volume: 1.0,
+                spatialEnabled: true,
+                spatialDistanceModel: "linear",
+                spatialMaxDistance: 500,
+                spatialMinUpdateTime: 0.5,
+                spatialRolloffFactor: 1
+            });
             this.explosionSounds.push(sound);
         }
-
         log.debug(`ExplosionManager: Loaded ${this.explosionSounds.length} explosion sounds`);
     }
 
