@@ -114,7 +114,7 @@ export class SupabaseService {
         const { data: existingUser, error: fetchError } = await client
             .from('users')
             .select('id')
-            .eq('auth0_sub', user.sub)
+            .eq('auth0_id', user.sub)
             .single();
 
         if (existingUser) {
@@ -126,7 +126,7 @@ export class SupabaseService {
             const { data: newUser, error: insertError } = await client
                 .from('users')
                 .insert({
-                    auth0_sub: user.sub,
+                    auth0_id: user.sub,
                     display_name: user.name || user.nickname || 'Player'
                 })
                 .select('id')

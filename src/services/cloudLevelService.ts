@@ -1,5 +1,4 @@
 import { SupabaseService } from './supabaseService';
-import { AuthService } from './authService';
 import type { LevelConfig } from '../levels/config/levelConfig';
 import log from '../core/logger';
 
@@ -618,6 +617,100 @@ export class CloudLevelService {
     }
 
     // =========================================
+    // ADMIN LEVEL MANAGEMENT
+    // =========================================
+
+    /**
+     * Get all levels for admin editing (requires canManageOfficial)
+     */
+    public async getAllLevelsForAdmin(): Promise<CloudLevelEntry[]> {
+        const permissions = await this.getAdminPermissions();
+        if (!permissions?.canManageOfficial) {
+            log.warn('[CloudLevelService] Not authorized to view all levels');
+            return [];
+        }
+
+        const client = await SupabaseService.getInstance().getAuthenticatedClient();
+        if (!client) {
+            log.warn('[CloudLevelService] Not authenticated');
+            return [];
+        }
+
+        const { data, error } = await client
+            .from('levels')
+            .select('*')
+            .order('level_type', { ascending: true })
+            .order('sort_order', { ascending: true })
+            .order('name', { ascending: true });
+
+        if (error) {
+            log.error('[CloudLevelService] Failed to fetch all levels:', error);
+            return [];
+        }
+
+        return (data || []).map(rowToEntry);
+    }
+
+    /**
+     * Update a level as admin (can update additional fields)
+     */
+    public async updateLevelAsAdmin(
+        id: string,
+        updates: {
+            name?: string;
+            slug?: string;
+            description?: string;
+            difficulty?: string;
+            estimatedTime?: string;
+            tags?: string[];
+            config?: LevelConfig;
+            missionBrief?: string[];
+            sortOrder?: number;
+            defaultLocked?: boolean;
+            levelType?: string;
+        }
+    ): Promise<CloudLevelEntry | null> {
+        const permissions = await this.getAdminPermissions();
+        if (!permissions?.canManageOfficial) {
+            log.warn('[CloudLevelService] Not authorized to update level as admin');
+            return null;
+        }
+
+        const client = await SupabaseService.getInstance().getAuthenticatedClient();
+        if (!client) {
+            log.warn('[CloudLevelService] Not authenticated');
+            return null;
+        }
+
+        const updateData: Record<string, unknown> = {};
+        if (updates.name !== undefined) updateData.name = updates.name;
+        if (updates.slug !== undefined) updateData.slug = updates.slug;
+        if (updates.description !== undefined) updateData.description = updates.description;
+        if (updates.difficulty !== undefined) updateData.difficulty = updates.difficulty;
+        if (updates.estimatedTime !== undefined) updateData.estimated_time = updates.estimatedTime;
+        if (updates.tags !== undefined) updateData.tags = updates.tags;
+        if (updates.config !== undefined) updateData.config = updates.config;
+        if (updates.missionBrief !== undefined) updateData.mission_brief = updates.missionBrief;
+        if (updates.sortOrder !== undefined) updateData.sort_order = updates.sortOrder;
+        if (updates.defaultLocked !== undefined) updateData.default_locked = updates.defaultLocked;
+        if (updates.levelType !== undefined) updateData.level_type = updates.levelType;
+
+        const { data, error } = await client
+            .from('levels')
+            .update(updateData)
+            .eq('id', id)
+            .select()
+            .single();
+
+        if (error) {
+            log.error('[CloudLevelService] Failed to update level as admin:', error);
+            return null;
+        }
+
+        return data ? rowToEntry(data) : null;
+    }
+
+    // =========================================
     // ADMIN STATUS CHECK
     // =========================================
 
@@ -625,20 +718,22 @@ export class CloudLevelService {
      * Check if current user is an admin
      */
     public async isCurrentUserAdmin(): Promise<boolean> {
-        const client = await SupabaseService.getInstance().getAuthenticatedClient();
+        const supabaseService = SupabaseService.getInstance();
+        const client = await supabaseService.getAuthenticatedClient();
         if (!client) {
             return false;
         }
 
-        const user = AuthService.getInstance().getUser();
-        if (!user?.sub) {
+        // Get internal user ID (UUID)
+        const internalUserId = await supabaseService.ensureUserExists();
+        if (!internalUserId) {
             return false;
         }
 
         const { data, error } = await client
             .from('admins')
             .select('is_active')
-            .eq('user_id', user.sub)
+            .eq('user_id', internalUserId)
             .eq('is_active', true)
             .single();
 
@@ -658,27 +753,40 @@ export class CloudLevelService {
         canManageOfficial: boolean;
         canViewAnalytics: boolean;
     } | null> {
-        const client = await SupabaseService.getInstance().getAuthenticatedClient();
+        const supabaseService = SupabaseService.getInstance();
+        const client = await supabaseService.getAuthenticatedClient();
         if (!client) {
+            log.warn('[CloudLevelService] getAdminPermissions: No authenticated client');
             return null;
         }
 
-        const user = AuthService.getInstance().getUser();
-        if (!user?.sub) {
+        // Get internal user ID (UUID)
+        const internalUserId = await supabaseService.ensureUserExists();
+        if (!internalUserId) {
+            log.warn('[CloudLevelService] getAdminPermissions: No internal user ID');
             return null;
         }
+
+        log.info('[CloudLevelService] Checking admin permissions for user:', internalUserId);
 
         const { data, error } = await client
             .from('admins')
             .select('can_review_levels, can_manage_admins, can_manage_official, can_view_analytics')
-            .eq('user_id', user.sub)
+            .eq('user_id', internalUserId)
             .eq('is_active', true)
             .single();
 
-        if (error || !data) {
+        if (error) {
+            log.warn('[CloudLevelService] Admin query error:', error.message, error.code);
             return null;
         }
 
+        if (!data) {
+            log.warn('[CloudLevelService] No admin record found for user');
+            return null;
+        }
+
+        log.info('[CloudLevelService] Admin permissions found:', data);
         return {
             canReviewLevels: data.can_review_levels,
             canManageAdmins: data.can_manage_admins,

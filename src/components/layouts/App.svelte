@@ -11,6 +11,7 @@
   import LevelSelect from '../game/LevelSelect.svelte';
   import PlayLevel from '../game/PlayLevel.svelte';
   import LevelEditor from '../editor/LevelEditor.svelte';
+  import LevelEditForm from '../editor/LevelEditForm.svelte';
   import SettingsScreen from '../settings/SettingsScreen.svelte';
   import ControlsScreen from '../controls/ControlsScreen.svelte';
   import Leaderboard from '../leaderboard/Leaderboard.svelte';
@@ -45,6 +46,9 @@
         <PlayLevel {params} />
       </Route>
       <Route path="/editor"><LevelEditor /></Route>
+      <Route path="/editor/:levelId" let:params>
+        <LevelEditForm levelId={params.levelId} />
+      </Route>
       <Route path="/settings"><SettingsScreen /></Route>
       <Route path="/controls"><ControlsScreen /></Route>
       <Route path="/leaderboard"><Leaderboard /></Route>

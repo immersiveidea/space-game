@@ -1,9 +1,12 @@
 <script lang="ts">
+  import { onMount } from 'svelte';
   import { Link } from 'svelte-routing';
   import { authStore } from '../../stores/auth';
+  import { CloudLevelService } from '../../services/cloudLevelService';
   import UserProfile from '../auth/UserProfile.svelte';
 
   let visible = false;
+  let isAdmin = false;
 
   // Show header when not in game
   $: visible = true; // We'll control visibility via parent component if needed
@@ -16,6 +19,18 @@
   $: webLaunchUrl = typeof window !== 'undefined'
     ? `https://www.oculus.com/open_url/?url=${encodeURIComponent(window.location.href)}`
     : '';
+
+  // Check admin permissions when auth changes
+  $: if ($authStore.isAuthenticated) {
+    checkAdminStatus();
+  } else {
+    isAdmin = false;
+  }
+
+  async function checkAdminStatus() {
+    const permissions = await CloudLevelService.getInstance().getAdminPermissions();
+    isAdmin = permissions?.canManageOfficial ?? false;
+  }
 </script>
 
 {#if visible}
@@ -33,7 +48,9 @@
         <Link to="/controls" class="nav-link controls-link">🎮 Customize Controls</Link>
         <Link to="/leaderboard" class="nav-link leaderboard-link">🏆 Leaderboard</Link>
         <UserProfile />
-        <Link to="/editor" class="nav-link editor-link">📝 Level Editor</Link>
+        {#if isAdmin}
+          <Link to="/editor" class="nav-link">📝 Level Editor</Link>
+        {/if}
         <Link to="/settings" class="nav-link settings-link">⚙️ Settings</Link>
       </nav>
     </div>
