@@ -173,6 +173,11 @@ export class Ship {
         this._loadedAssetData = await loadAsset("ship.glb", "default", { hidden });
         this._ship = this._loadedAssetData.container.transformNodes[0];
 
+        // Set rendering group for all ship meshes
+        for (const mesh of this._loadedAssetData.meshes.values()) {
+            if (mesh) mesh.renderingGroupId = 2;
+        }
+
         if (initialPosition) {
             this._ship.position.copyFrom(initialPosition);
         }
@@ -198,6 +203,7 @@ export class Ship {
         this._camera = new FreeCamera("Flat Camera", new Vector3(0, 1.5, 0), DefaultScene.MainScene);
         this._camera.parent = this._ship;
         this._camera.rotation = new Vector3(0, Math.PI, 0);
+        this._camera.maxZ = 100000; // Far clipping plane for distant planets
 
         if (!DefaultScene.XR && !this._isReplayMode) {
             DefaultScene.MainScene.activeCamera = this._camera;

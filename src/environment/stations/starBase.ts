@@ -55,6 +55,11 @@ export default class StarBase {
 
         this._loadedBase = { baseMesh, landingMesh, container: importMeshes.container };
 
+        // Set rendering group for all base meshes
+        for (const mesh of importMeshes.meshes.values()) {
+            if (mesh) mesh.renderingGroupId = 2;
+        }
+
         log.debug(`[StarBase] Added to scene (hidden: ${hidden})`);
         return { baseMesh, landingMesh, container: importMeshes.container };
     }

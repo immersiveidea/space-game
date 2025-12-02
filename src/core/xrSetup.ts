@@ -68,6 +68,10 @@ async function createXRExperience(): Promise<void> {
         }
     );
     log.debug('Pointer selection enabled with renderingGroupId:', XR_RENDERING_GROUP);
+
+    // Set far clipping plane for distant planets
+    DefaultScene.XR.baseExperience.camera.maxZ = 100000;
+
     createFadeSphere();
 }
 

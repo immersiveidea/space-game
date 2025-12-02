@@ -150,6 +150,7 @@ export class RockFactory {
         this._asteroidMesh.material.freeze();
         if (this._asteroidMesh) {
             this._asteroidMesh.setEnabled(false);
+            this._asteroidMesh.renderingGroupId = 2;
         }
         log.debug(this._asteroidMesh);
     }

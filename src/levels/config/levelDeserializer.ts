@@ -5,6 +5,8 @@ import {
     Observable,
     PBRMaterial,
     PhysicsAggregate,
+    PhysicsMotionType,
+    PhysicsShapeType,
     Texture,
     Vector3,
 } from "@babylonjs/core";
@@ -51,6 +53,9 @@ export class LevelDeserializer {
     // Store score observable for deferred physics
     private _scoreObservable: Observable<ScoreEvent> | null = null;
 
+    // Store planets for deferred physics
+    private _planets: { mesh: AbstractMesh; diameter: number }[] = [];
+
     /**
      * Deserialize meshes only (Phase 2 - before XR, hidden)
      */
@@ -96,6 +101,18 @@ export class LevelDeserializer {
         // Initialize asteroid physics
         RockFactory.initPhysics();
 
+        // Initialize planet physics (static spheres)
+        for (const { mesh, diameter } of this._planets) {
+            const agg = new PhysicsAggregate(
+                mesh,
+                PhysicsShapeType.SPHERE,
+                { radius: diameter / 2, mass: 0 },
+                this.scene
+            );
+            agg.body.setMotionType(PhysicsMotionType.STATIC);
+        }
+        log.debug(`[LevelDeserializer] Created physics for ${this._planets.length} planets`);
+
         return landingAggregate;
     }
 
@@ -137,6 +154,7 @@ export class LevelDeserializer {
         //material.emissiveColor.set(0.5, 0.5, 0.1);
         material.unlit = true;
         sun.material = material;
+        sun.renderingGroupId = 2;
 
         return sun;
     }
@@ -185,8 +203,10 @@ export class LevelDeserializer {
             material.metallic = 0;
             material.unlit = true;
             planet.material = material;
+            planet.renderingGroupId = 2;
 
             planets.push(planet);
+            this._planets.push({ mesh: planet, diameter: planetConfig.diameter });
         }
 
         log.debug(`Created ${planets.length} planets from config`);
