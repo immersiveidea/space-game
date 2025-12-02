@@ -112,15 +112,26 @@ interface PlanetConfig {
 }
 
 /**
+ * Target position for asteroids to orbit or move toward
+ */
+export interface TargetConfig {
+    id: string;
+    name: string;           // Display name for editor
+    position: Vector3Array;
+}
+
+/**
  * Individual asteroid configuration
  */
-interface AsteroidConfig {
+export interface AsteroidConfig {
     id: string;
     position: Vector3Array;
     scale: number;  // Uniform scale applied to all axes
     linearVelocity: Vector3Array;
     angularVelocity?: Vector3Array;
     mass?: number;
+    targetId?: string;                      // Reference to target from targets array
+    targetMode?: 'orbit' | 'moveToward';    // How asteroid interacts with target
 }
 
 /**
@@ -155,6 +166,7 @@ export interface LevelConfig {
     startBase?: StartBaseConfig;
     sun: SunConfig;
     starfield?: StarfieldConfig;
+    targets?: TargetConfig[];
     planets: PlanetConfig[];
     asteroids: AsteroidConfig[];
 

@@ -1,12 +1,25 @@
 <script lang="ts">
-  import type { AsteroidConfig } from '../../levels/config/levelConfig';
+  import type { AsteroidConfig, TargetConfig } from '../../levels/config/levelConfig';
   import Button from '../shared/Button.svelte';
   import Section from '../shared/Section.svelte';
   import Vector3Input from './Vector3Input.svelte';
   import NumberInput from '../shared/NumberInput.svelte';
   import FormGroup from '../shared/FormGroup.svelte';
+  import Select from '../shared/Select.svelte';
 
   export let asteroids: AsteroidConfig[] = [];
+  export let targets: TargetConfig[] = [];
+
+  $: targetOptions = [
+    { value: '', label: '(None)' },
+    ...targets.map(t => ({ value: t.id, label: t.name }))
+  ];
+
+  const modeOptions = [
+    { value: '', label: '(None)' },
+    { value: 'orbit', label: 'Orbit' },
+    { value: 'moveToward', label: 'Move Toward' }
+  ];
 
   let editingIndex: number | null = null;
   let editingAsteroid: AsteroidConfig | null = null;
@@ -76,6 +89,14 @@
       </FormGroup>
       <Vector3Input label="Linear Velocity" bind:value={editingAsteroid.linearVelocity} step={1} />
       <Vector3Input label="Angular Velocity" bind:value={editingAsteroid.angularVelocity} step={0.1} />
+      <FormGroup label="Target">
+        <Select bind:value={editingAsteroid.targetId} options={targetOptions} />
+      </FormGroup>
+      {#if editingAsteroid.targetId}
+        <FormGroup label="Target Mode">
+          <Select bind:value={editingAsteroid.targetMode} options={modeOptions} />
+        </FormGroup>
+      {/if}
       <div class="edit-actions">
         <Button variant="primary" on:click={handleSave}>Save</Button>
         <Button variant="secondary" on:click={handleCancel}>Cancel</Button>

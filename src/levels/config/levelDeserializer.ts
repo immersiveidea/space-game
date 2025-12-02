@@ -239,6 +239,15 @@ export class LevelDeserializer {
             const asteroidConfig = this.config.asteroids[i];
             const useOrbitConstraints = this.config.useOrbitConstraints !== false;
 
+            // Resolve target position if specified
+            let targetPosition: Vector3 | undefined;
+            if (asteroidConfig.targetId && this.config.targets) {
+                const target = this.config.targets.find(t => t.id === asteroidConfig.targetId);
+                if (target) {
+                    targetPosition = this.arrayToVector3(target.position);
+                }
+            }
+
             // Create mesh only (no physics)
             RockFactory.createRockMesh(
                 i,
@@ -248,7 +257,9 @@ export class LevelDeserializer {
                 this.arrayToVector3(asteroidConfig.angularVelocity),
                 scoreObservable,
                 useOrbitConstraints,
-                hidden
+                hidden,
+                targetPosition,
+                asteroidConfig.targetMode
             );
 
             const mesh = this.scene.getMeshByName(asteroidConfig.id);

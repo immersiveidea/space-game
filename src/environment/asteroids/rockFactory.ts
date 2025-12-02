@@ -41,6 +41,8 @@ interface RockConfig {
     angularVelocity: Vector3;
     scoreObservable: Observable<ScoreEvent>;
     useOrbitConstraint: boolean;
+    targetPosition?: Vector3;
+    targetMode?: 'orbit' | 'moveToward';
 }
 
 export class RockFactory {
@@ -166,7 +168,9 @@ export class RockFactory {
         angularVelocity: Vector3,
         scoreObservable: Observable<ScoreEvent>,
         useOrbitConstraint: boolean = true,
-        hidden: boolean = false
+        hidden: boolean = false,
+        targetPosition?: Vector3,
+        targetMode?: 'orbit' | 'moveToward'
     ): Rock {
         if (!this._asteroidMesh) {
             throw new Error('[RockFactory] Asteroid mesh not loaded. Call initMesh() first.');
@@ -188,11 +192,13 @@ export class RockFactory {
             linearVelocity,
             angularVelocity,
             scoreObservable,
-            useOrbitConstraint
+            useOrbitConstraint,
+            targetPosition,
+            targetMode
         };
         this._createdRocks.set(rock.id, { mesh: rock, config });
 
-        log.debug(`[RockFactory] Created rock mesh ${rock.id} (hidden: ${hidden})`);
+        log.debug(`[RockFactory] Created rock mesh ${rock.id} (hidden: ${hidden}, target: ${targetMode || 'none'})`);
         return new Rock(rock);
     }
 
@@ -215,8 +221,11 @@ export class RockFactory {
         body.setMotionType(PhysicsMotionType.DYNAMIC);
         body.setCollisionCallbackEnabled(true);
 
-        // Apply orbit constraint if enabled
-        if (config.useOrbitConstraint && this._orbitCenter) {
+        // Handle target-based physics
+        if (config.targetPosition && config.targetMode) {
+            this.applyTargetPhysics(body, config);
+        } else if (config.useOrbitConstraint && this._orbitCenter) {
+            // Legacy: orbit around origin if no specific target
             const constraint = new DistanceConstraint(
                 Vector3.Distance(config.position, this._orbitCenter.body.transformNode.position),
                 DefaultScene.MainScene
@@ -230,13 +239,55 @@ export class RockFactory {
             physicsPlugin.setActivationControl(body, PhysicsActivationControl.ALWAYS_ACTIVE);
         }
 
-        body.setLinearVelocity(config.linearVelocity);
+        // Apply velocity (may be modified by applyTargetPhysics for moveToward mode)
+        if (!(config.targetPosition && config.targetMode === 'moveToward')) {
+            body.setLinearVelocity(config.linearVelocity);
+        }
         body.setAngularVelocity(config.angularVelocity);
 
         // Setup collision handler
         this.setupCollisionHandler(body, config.scoreObservable);
 
         log.debug(`[RockFactory] Physics initialized for ${rock.id}`);
+    }
+
+    /**
+     * Apply target-based physics (orbit or moveToward)
+     */
+    private static applyTargetPhysics(body: PhysicsBody, config: RockConfig): void {
+        if (!config.targetPosition) return;
+
+        if (config.targetMode === 'orbit') {
+            // Create distance constraint to target position
+            // We need a static body at the target position for the constraint
+            const targetNode = new TransformNode(`target-${body.transformNode.id}`, DefaultScene.MainScene);
+            targetNode.position = config.targetPosition;
+            const targetBody = new PhysicsAggregate(
+                targetNode, PhysicsShapeType.SPHERE,
+                { radius: 0.1, mass: 0 },
+                DefaultScene.MainScene
+            );
+            targetBody.body.setMotionType(PhysicsMotionType.STATIC);
+
+            const distance = Vector3.Distance(config.position, config.targetPosition);
+            const constraint = new DistanceConstraint(distance, DefaultScene.MainScene);
+            body.addConstraint(targetBody.body, constraint);
+
+            // Apply original velocity for orbiting
+            body.setLinearVelocity(config.linearVelocity);
+        } else if (config.targetMode === 'moveToward') {
+            // Calculate speed as sum of absolute velocity components
+            const speed = Math.abs(config.linearVelocity.x) +
+                          Math.abs(config.linearVelocity.y) +
+                          Math.abs(config.linearVelocity.z);
+
+            // Direction toward target
+            const direction = config.targetPosition.subtract(config.position).normalize();
+
+            // Final velocity = direction * speed
+            const velocity = direction.scale(speed);
+            body.setLinearVelocity(velocity);
+        }
     }
 
     private static setupCollisionHandler(body: PhysicsBody, scoreObservable: Observable<ScoreEvent>): void {

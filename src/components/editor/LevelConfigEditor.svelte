@@ -12,6 +12,7 @@
   import StarfieldConfigEditor from './StarfieldConfigEditor.svelte';
   import AsteroidListEditor from './AsteroidListEditor.svelte';
   import PlanetListEditor from './PlanetListEditor.svelte';
+  import TargetListEditor from './TargetListEditor.svelte';
 
   export let levelId: string = '';
 
@@ -33,6 +34,7 @@
     { id: 'base', label: '🛬 Base' },
     { id: 'sun', label: '☀️ Sun' },
     { id: 'starfield', label: '✨ Stars' },
+    { id: 'targets', label: '🎯 Targets' },
     { id: 'asteroids', label: '☄️ Asteroids' },
     { id: 'planets', label: '🪐 Planets' }
   ];
@@ -124,6 +126,12 @@
       config.starfield = undefined;
     }
   }
+
+  function ensureTargets() {
+    if (config && !config.targets) {
+      config.targets = [];
+    }
+  }
 </script>
 
 <div class="editor-container">
@@ -170,8 +178,12 @@
         <SunConfigEditor bind:config={config.sun} />
       {:else if activeTab === 'starfield'}
         <StarfieldConfigEditor config={config.starfield} onToggle={handleStarfieldToggle} />
+      {:else if activeTab === 'targets'}
+        {ensureTargets()}
+        <TargetListEditor bind:targets={config.targets} />
       {:else if activeTab === 'asteroids'}
-        <AsteroidListEditor bind:asteroids={config.asteroids} />
+        {ensureTargets()}
+        <AsteroidListEditor bind:asteroids={config.asteroids} targets={config.targets || []} />
       {:else if activeTab === 'planets'}
         <PlanetListEditor bind:planets={config.planets} />
       {/if}
