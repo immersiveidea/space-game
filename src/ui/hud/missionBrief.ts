@@ -51,7 +51,7 @@ export class MissionBrief {
             mesh.parent = ship;
             mesh.position = new Vector3(0,1.2,2);
             mesh.rotation = new Vector3(0, 0, 0);
-            //mesh.renderingGroupId = 3; // Same as status screen for consistent rendering
+            mesh.renderingGroupId = 3; // Same as status screen for consistent rendering
             mesh.metadata = { uiPickable: true }; // TAG: VR UI - allow pointer selection
             log.info('[MissionBrief] Mesh parented to ship at position:', mesh.position);
             log.info('[MissionBrief] Mesh absolute position:', mesh.getAbsolutePosition());

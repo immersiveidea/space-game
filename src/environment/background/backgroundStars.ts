@@ -29,9 +29,9 @@ export class BackgroundStars {
 
     // Default configuration (reduced from 5000 for Quest 2 performance)
     private static readonly DEFAULT_CONFIG: Required<BackgroundStarsConfig> = {
-        count: 2500,
-        radius: 5000,
-        minBrightness: 0.3,
+        count: 4500,
+        radius: 50000,
+        minBrightness: 0.1,
         maxBrightness: 1.0,
         pointSize: .1,
         colors: [

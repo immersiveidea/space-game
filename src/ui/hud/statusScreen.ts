@@ -101,7 +101,7 @@ export class StatusScreen {
         // Parent to ship for fixed cockpit position
         this._screenMesh.parent = this._shipNode;
         this._screenMesh.position = new Vector3(0, 1.1, 2); // 2 meters forward in local space
-        //this._screenMesh.renderingGroupId = 3; // Always render on top
+        this._screenMesh.renderingGroupId = 3; // Always render on top
         this._screenMesh.metadata = { uiPickable: true }; // TAG: VR UI - allow pointer selection
 
         // Create material

@@ -211,6 +211,12 @@
         <textarea class="settings-textarea mission-brief" bind:value={missionBriefText} rows="6"
           placeholder="Welcome to your first mission...&#10;Navigate through the asteroid field..."></textarea>
       </Section>
+
+      <Section title="Level Configuration" description="Edit ship, base, asteroids, and planets">
+        <Button variant="secondary" on:click={() => navigate(`/editor/${levelId}/config`)}>
+          ⚙️ Edit Config (Ship, Asteroids, Planets...)
+        </Button>
+      </Section>
     </div>
 
     <div class="button-group">
