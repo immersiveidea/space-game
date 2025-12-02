@@ -408,14 +408,9 @@ export class Level1 implements Level {
         // Initialize scoreboard with asteroid count
         this._ship.scoreboard.setRemainingCount(this._asteroidCount);
 
-        // Create background starfield
-        this._backgroundStars = new BackgroundStars(DefaultScene.MainScene, {
-            count: 5000,
-            radius: 3000,
-            minBrightness: 0.1,
-            maxBrightness: 1.0,
-            pointSize: 1
-        });
+        // Create background starfield (use config if available, otherwise defaults)
+        const starfieldConfig = this._deserializer.getStarfieldConfig();
+        this._backgroundStars = new BackgroundStars(DefaultScene.MainScene, starfieldConfig);
 
         // Set up render loop updates
         DefaultScene.MainScene.onBeforeRenderObservable.add(() => {

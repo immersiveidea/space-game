@@ -16,6 +16,7 @@ import { ScoreEvent } from "../../ui/hud/scoreboard";
 import {
     LevelConfig,
     ShipConfig,
+    StarfieldConfig,
     Vector3Array,
     validateLevelConfig
 } from "./levelConfig";
@@ -156,7 +157,19 @@ export class LevelDeserializer {
         sun.material = material;
         sun.renderingGroupId = 2;
 
+        // Apply scale if specified
+        if (config.scale) {
+            sun.scaling = this.arrayToVector3(config.scale);
+        }
+
         return sun;
+    }
+
+    /**
+     * Get starfield configuration for BackgroundStars
+     */
+    public getStarfieldConfig(): StarfieldConfig | undefined {
+        return this.config.starfield;
     }
 
     /**

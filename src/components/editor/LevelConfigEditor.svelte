@@ -8,6 +8,8 @@
   import InfoBox from '../shared/InfoBox.svelte';
   import ShipConfigEditor from './ShipConfigEditor.svelte';
   import BaseConfigEditor from './BaseConfigEditor.svelte';
+  import SunConfigEditor from './SunConfigEditor.svelte';
+  import StarfieldConfigEditor from './StarfieldConfigEditor.svelte';
   import AsteroidListEditor from './AsteroidListEditor.svelte';
   import PlanetListEditor from './PlanetListEditor.svelte';
 
@@ -29,6 +31,8 @@
   const tabs = [
     { id: 'ship', label: '🚀 Ship' },
     { id: 'base', label: '🛬 Base' },
+    { id: 'sun', label: '☀️ Sun' },
+    { id: 'starfield', label: '✨ Stars' },
     { id: 'asteroids', label: '☄️ Asteroids' },
     { id: 'planets', label: '🪐 Planets' }
   ];
@@ -111,6 +115,15 @@
       config.startBase = undefined;
     }
   }
+
+  function handleStarfieldToggle(enabled: boolean) {
+    if (!config) return;
+    if (enabled && !config.starfield) {
+      config.starfield = {};
+    } else if (!enabled) {
+      config.starfield = undefined;
+    }
+  }
 </script>
 
 <div class="editor-container">
@@ -153,6 +166,10 @@
         <ShipConfigEditor bind:config={config.ship} />
       {:else if activeTab === 'base'}
         <BaseConfigEditor config={config.startBase} onToggle={handleBaseToggle} />
+      {:else if activeTab === 'sun'}
+        <SunConfigEditor bind:config={config.sun} />
+      {:else if activeTab === 'starfield'}
+        <StarfieldConfigEditor config={config.starfield} onToggle={handleStarfieldToggle} />
       {:else if activeTab === 'asteroids'}
         <AsteroidListEditor bind:asteroids={config.asteroids} />
       {:else if activeTab === 'planets'}

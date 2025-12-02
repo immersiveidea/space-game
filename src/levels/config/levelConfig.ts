@@ -82,10 +82,22 @@ interface StartBaseConfig {
 /**
  * Sun configuration
  */
-interface SunConfig {
+export interface SunConfig {
     position: Vector3Array;
     diameter: number;
     intensity?: number; // Light intensity
+    scale?: Vector3Array; // Independent x/y/z scaling
+}
+
+/**
+ * Starfield configuration
+ */
+export interface StarfieldConfig {
+    count?: number;        // Number of stars (default: 4500)
+    radius?: number;       // Sphere radius (default: 50000)
+    minBrightness?: number; // Min brightness 0-1 (default: 0.1)
+    maxBrightness?: number; // Max brightness 0-1 (default: 1.0)
+    pointSize?: number;    // Star point size (default: 0.1)
 }
 
 /**
@@ -142,6 +154,7 @@ export interface LevelConfig {
     ship: ShipConfig;
     startBase?: StartBaseConfig;
     sun: SunConfig;
+    starfield?: StarfieldConfig;
     planets: PlanetConfig[];
     asteroids: AsteroidConfig[];
 
