@@ -406,7 +406,7 @@ export class Level1 implements Level {
         );
 
         this._startBase = entities.startBase;
-        this._asteroidCount = entities.asteroids.length;
+        this._asteroidCount = entities.asteroidCount;
 
         // Initialize scoreboard with asteroid count
         this._ship.scoreboard.setRemainingCount(this._asteroidCount);

@@ -67,7 +67,7 @@ export class LevelDeserializer {
         startBase: AbstractMesh | null;
         sun: AbstractMesh;
         planets: AbstractMesh[];
-        asteroids: AbstractMesh[];
+        asteroidCount: number;
     }> {
         log.debug(`[LevelDeserializer] Deserializing meshes (hidden: ${hidden})`);
         this._scoreObservable = scoreObservable;
@@ -80,13 +80,13 @@ export class LevelDeserializer {
         const planets = this.createPlanets();
 
         // Create asteroid meshes (no physics)
-        const asteroids = await this.createAsteroidMeshes(scoreObservable, hidden);
+        await this.createAsteroidMeshes(scoreObservable, hidden);
 
         return {
             startBase: baseResult?.baseMesh || null,
             sun,
             planets,
-            asteroids
+            asteroidCount: this.config.asteroids.length
         };
     }
 
@@ -239,9 +239,7 @@ export class LevelDeserializer {
     private async createAsteroidMeshes(
         scoreObservable: Observable<ScoreEvent>,
         hidden: boolean
-    ): Promise<AbstractMesh[]> {
-        const asteroids: AbstractMesh[] = [];
-
+    ): Promise<void> {
         for (let i = 0; i < this.config.asteroids.length; i++) {
             const asteroidConfig = this.config.asteroids[i];
             const useOrbitConstraints = this.config.useOrbitConstraints !== false;
@@ -279,15 +277,9 @@ export class LevelDeserializer {
                 asteroidConfig.targetMode,
                 rotation
             );
-
-            const mesh = this.scene.getMeshByName(asteroidConfig.id);
-            if (mesh) {
-                asteroids.push(mesh);
-            }
         }
 
-        log.debug(`[LevelDeserializer] Created ${asteroids.length} asteroid meshes (hidden: ${hidden})`);
-        return asteroids;
+        log.debug(`[LevelDeserializer] Created ${this.config.asteroids.length} asteroid meshes (hidden: ${hidden})`);
     }
 
 
