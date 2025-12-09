@@ -1,0 +1,21 @@
+{
+  "name": "babylonjs-editor-space-game-plugin",
+  "version": "1.0.0",
+  "description": "Export BabylonJS Editor scenes to Space Game LevelConfig format",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc && node -e \"const fs=require('fs');const p=JSON.parse(fs.readFileSync('package.json'));p.main='index.js';fs.writeFileSync('dist/package.json',JSON.stringify(p,null,2))\"",
+    "watch": "tsc -w"
+  },
+  "dependencies": {
+    "@auth0/auth0-spa-js": "^2.1.3",
+    "@supabase/supabase-js": "^2.45.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0",
+    "@babylonjs/core": "^6.0.0"
+  },
+  "peerDependencies": {
+    "babylonjs-editor": "^4.0.0"
+  }
+}
