@@ -1,0 +1,156 @@
+{
+    "meshes": [
+        {
+            "name": "ship.glb",
+            "id": "bf9cd6cd-3743-4b89-9c33-e7b12cc3eb3d",
+            "uniqueId": 1764787012172,
+            "type": "Mesh",
+            "position": [
+                0,
+                2,
+                0
+            ],
+            "rotation": [
+                0,
+                3.1129212205596573,
+                0
+            ],
+            "scaling": [
+                100.00000000000159,
+                -100,
+                100.00000000000159
+            ],
+            "localMatrix": [
+                1,
+                0,
+                0,
+                0,
+                0,
+                1,
+                0,
+                0,
+                0,
+                0,
+                1,
+                0,
+                0,
+                0,
+                0,
+                1
+            ],
+            "isEnabled": true,
+            "isVisible": true,
+            "infiniteDistance": false,
+            "pickable": true,
+            "receiveShadows": true,
+            "billboardMode": 0,
+            "visibility": 1,
+            "alwaysSelectAsActiveMesh": false,
+            "checkCollisions": false,
+            "ellipsoid": [
+                0.5,
+                1,
+                0.5
+            ],
+            "ellipsoidOffset": [
+                0,
+                0,
+                0
+            ],
+            "doNotSyncBoundingInfo": false,
+            "isBlocker": false,
+            "sideOrientation": 1,
+            "isUnIndexed": false,
+            "materialId": "default material",
+            "metadata": {
+                "scripts": [
+                    {
+                        "enabled": true,
+                        "key": "scripts/editorScripts/ShipComponent.ts",
+                        "values": {
+                            "linearVelocity": {
+                                "type": "vector3",
+                                "value": [
+                                    0,
+                                    0,
+                                    0
+                                ]
+                            },
+                            "angularVelocity": {
+                                "type": "vector3",
+                                "value": [
+                                    0,
+                                    0,
+                                    0
+                                ]
+                            }
+                        },
+                        "_id": "fa6b5e6d-29c3-4159-9248-cab250039a6e"
+                    }
+                ]
+            },
+            "instances": [],
+            "animations": [],
+            "ranges": [],
+            "layerMask": 268435455,
+            "alphaIndex": 1.7976931348623157e+308,
+            "hasVertexAlpha": false,
+            "overlayAlpha": 1,
+            "overlayColor": [
+                0,
+                0,
+                0
+            ],
+            "applyFog": true
+        }
+    ],
+    "transformNodes": [],
+    "cameras": [],
+    "lights": [],
+    "materials": [],
+    "metadata": {
+        "scripts": [
+            {
+                "enabled": true,
+                "key": "scripts/editorScripts/ShipComponent.ts",
+                "values": {
+                    "linearVelocity": {
+                        "type": "vector3",
+                        "value": [
+                            0,
+                            0,
+                            0
+                        ]
+                    },
+                    "angularVelocity": {
+                        "type": "vector3",
+                        "value": [
+                            0,
+                            0,
+                            0
+                        ]
+                    }
+                },
+                "_id": "fa6b5e6d-29c3-4159-9248-cab250039a6e"
+            }
+        ]
+    },
+    "basePoseMatrix": [
+        -1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1
+    ]
+}

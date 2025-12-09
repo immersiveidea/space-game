@@ -1,0 +1,12 @@
+{
+    "plugins": [
+        {
+            "nameOrPath": "/Users/michaelmainguy/WebstormProjects/space-game/bjsEditorPlugin/dist"
+        }
+    ],
+    "version": "5.2.4",
+    "packageManager": "npm",
+    "lastOpenedScene": "/assets/example.scene",
+    "compressedTexturesEnabled": false,
+    "compressedTexturesEnabledInPreview": false
+}

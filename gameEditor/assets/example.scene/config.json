@@ -1,0 +1,192 @@
+{
+    "clearColor": [
+        0.2,
+        0.2,
+        0.3,
+        1
+    ],
+    "ambientColor": [
+        0,
+        0,
+        0
+    ],
+    "environment": {
+        "environmentIntensity": 1
+    },
+    "fog": {
+        "fogEnabled": false,
+        "fogMode": 0,
+        "fogStart": 10,
+        "fogEnd": 1000,
+        "fogDensity": 0.001,
+        "fogColor": [
+            0.640006735140596,
+            0.640006735140596,
+            0.640006735140596
+        ]
+    },
+    "physics": {
+        "gravity": [
+            0,
+            -981,
+            0
+        ]
+    },
+    "rendering": [
+        {
+            "cameraId": "3cc9ef80-8c60-43e0-bcc4-1b55ff36010d",
+            "ssao2RenderingPipeline": null,
+            "vlsPostProcess": null,
+            "ssrRenderingPipeline": null,
+            "motionBlurPostProcess": null,
+            "defaultRenderingPipeline": null,
+            "iblShadowsRenderPipeline": null
+        }
+    ],
+    "metadata": {
+        "rendering": [],
+        "physicsGravity": [
+            0,
+            -981,
+            0
+        ],
+        "scripts": [
+            {
+                "enabled": true,
+                "key": "scripts/editorScripts/AsteroidComponent.ts",
+                "values": {
+                    "linearVelocity": {
+                        "type": "vector3",
+                        "value": [
+                            0,
+                            0,
+                            0
+                        ]
+                    },
+                    "angularVelocity": {
+                        "type": "vector3",
+                        "value": [
+                            0,
+                            0,
+                            0
+                        ]
+                    },
+                    "mass": {
+                        "type": "number",
+                        "value": 1
+                    },
+                    "targetId": {
+                        "type": "string",
+                        "description": "Reference to a TargetComponent node",
+                        "value": ""
+                    },
+                    "targetMode": {
+                        "type": "string",
+                        "description": "orbit | moveToward | (empty)",
+                        "value": ""
+                    }
+                },
+                "_id": "fe3c8020-9375-4c58-a54f-852339e3f40f"
+            }
+        ]
+    },
+    "editorCamera": {
+        "tags": null,
+        "ellipsoid": [
+            0.5,
+            1,
+            0.5
+        ],
+        "ellipsoidOffset": [
+            0,
+            0,
+            0
+        ],
+        "checkCollisions": false,
+        "applyGravity": false,
+        "updateUpVectorFromRotation": false,
+        "rotation": [
+            0.23466138679888465,
+            0.48668946590326523,
+            0
+        ],
+        "speed": 2000,
+        "position": [
+            -19666.901457088374,
+            17401.223711429564,
+            -55872.0430330369
+        ],
+        "upVector": [
+            0,
+            1,
+            0
+        ],
+        "fov": 0.8,
+        "projectionPlaneTilt": 0,
+        "minZ": 1,
+        "maxZ": 1500000,
+        "inertia": 0.5,
+        "mode": 0,
+        "layerMask": 268435455,
+        "fovMode": 0,
+        "cameraRigMode": 0,
+        "ignoreCameraMaxZ": false,
+        "name": "Editor preview",
+        "id": "3cc9ef80-8c60-43e0-bcc4-1b55ff36010d",
+        "state": "",
+        "metadata": {},
+        "type": "EditorCamera",
+        "inputsmgr": {
+            "FreeCameraKeyboardMoveInput": {
+                "tags": null,
+                "keysUp": [
+                    87
+                ],
+                "keysUpward": [
+                    69
+                ],
+                "keysDown": [
+                    83
+                ],
+                "keysDownward": [
+                    81
+                ],
+                "keysLeft": [
+                    65
+                ],
+                "keysRight": [
+                    68
+                ],
+                "rotationSpeed": 0.5,
+                "keysRotateLeft": [],
+                "keysRotateRight": [],
+                "keysRotateUp": [],
+                "keysRotateDown": []
+            },
+            "FreeCameraMouseInput": {
+                "tags": null,
+                "buttons": [
+                    0,
+                    1,
+                    2
+                ],
+                "angularSensibility": 500
+            },
+            "FreeCameraMouseWheelInput": {
+                "tags": null,
+                "wheelXMoveRelative": 0,
+                "wheelYMoveRelative": 2,
+                "wheelPrecisionX": 3,
+                "wheelPrecisionY": 3,
+                "wheelPrecisionZ": 3
+            },
+            "EditorFreeCameraPanInput": {
+                "tags": null
+            }
+        },
+        "animations": [],
+        "ranges": [],
+        "isEnabled": true
+    },
+    "animations": []
+}
