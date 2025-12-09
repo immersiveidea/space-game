@@ -16,6 +16,7 @@
   import SettingsScreen from '../settings/SettingsScreen.svelte';
   import ControlsScreen from '../controls/ControlsScreen.svelte';
   import Leaderboard from '../leaderboard/Leaderboard.svelte';
+  import ProfilePage from '../profile/ProfilePage.svelte';
 
   // Initialize Auth0 when component mounts
   onMount(async () => {
@@ -56,6 +57,7 @@
       <Route path="/settings"><SettingsScreen /></Route>
       <Route path="/controls"><ControlsScreen /></Route>
       <Route path="/leaderboard"><Leaderboard /></Route>
+      <Route path="/profile"><ProfilePage /></Route>
     </div>
   </div>
 </Router>

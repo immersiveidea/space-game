@@ -257,7 +257,8 @@
         -4.8069811132136699,
         -0.16093262088047533
       ]
-    },{
+    },
+    {
       "id": "asteroid-11",
       "position": [
         300.953057070289603,
@@ -276,14 +277,5 @@
         -0.16093262088047533
       ]
     }
-
-  ],
-  "difficultyConfig": {
-    "rockCount": 10,
-    "forceMultiplier": 1,
-    "rockSizeMin": 8,
-    "rockSizeMax": 20,
-    "distanceMin": 225,
-    "distanceMax": 300
-  }
+  ]
 }

@@ -75,6 +75,7 @@ export interface ShipConfig {
  */
 interface StartBaseConfig {
     position?: Vector3Array;  // Defaults to [0, 0, 0] if not specified
+    rotation?: Vector3Array;
     baseGlbPath?: string;     // Path to base GLB model (defaults to 'base.glb')
     landingGlbPath?: string;  // Path to landing zone GLB model (uses same file as base, different mesh name)
 }
@@ -84,6 +85,7 @@ interface StartBaseConfig {
  */
 export interface SunConfig {
     position: Vector3Array;
+    rotation?: Vector3Array;
     diameter: number;
     intensity?: number; // Light intensity
     scale?: Vector3Array; // Independent x/y/z scaling
@@ -126,24 +128,13 @@ export interface TargetConfig {
 export interface AsteroidConfig {
     id: string;
     position: Vector3Array;
+    rotation?: Vector3Array;
     scale: number;  // Uniform scale applied to all axes
     linearVelocity: Vector3Array;
     angularVelocity?: Vector3Array;
     mass?: number;
     targetId?: string;                      // Reference to target from targets array
     targetMode?: 'orbit' | 'moveToward';    // How asteroid interacts with target
-}
-
-/**
- * Difficulty configuration settings
- */
-interface DifficultyConfig {
-    rockCount: number;
-    forceMultiplier: number;
-    rockSizeMin: number;
-    rockSizeMax: number;
-    distanceMin: number;
-    distanceMax: number;
 }
 
 /**
@@ -169,9 +160,6 @@ export interface LevelConfig {
     targets?: TargetConfig[];
     planets: PlanetConfig[];
     asteroids: AsteroidConfig[];
-
-    // Optional: include original difficulty config for reference
-    difficultyConfig?: DifficultyConfig;
 
     // Physics configuration
     useOrbitConstraints?: boolean; // Default: true - constrains asteroids to orbit at fixed distance

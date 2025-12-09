@@ -145,13 +145,5 @@
       ]
     }
   ],
-  "difficultyConfig": {
-    "rockCount": 5,
-    "forceMultiplier": 0.8,
-    "rockSizeMin": 10,
-    "rockSizeMax": 15,
-    "distanceMin": 220,
-    "distanceMax": 250
-  },
   "useOrbitConstraints": true
 }

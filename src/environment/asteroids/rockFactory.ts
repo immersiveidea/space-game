@@ -36,6 +36,7 @@ export class Rock {
 
 interface RockConfig {
     position: Vector3;
+    rotation?: Vector3;
     scale: number;
     linearVelocity: Vector3;
     angularVelocity: Vector3;
@@ -170,7 +171,8 @@ export class RockFactory {
         useOrbitConstraint: boolean = true,
         hidden: boolean = false,
         targetPosition?: Vector3,
-        targetMode?: 'orbit' | 'moveToward'
+        targetMode?: 'orbit' | 'moveToward',
+        rotation?: Vector3
     ): Rock {
         if (!this._asteroidMesh) {
             throw new Error('[RockFactory] Asteroid mesh not loaded. Call initMesh() first.');
@@ -179,6 +181,7 @@ export class RockFactory {
         const rock = new InstancedMesh("asteroid-" + i, this._asteroidMesh as Mesh);
         rock.scaling = new Vector3(scale, scale, scale);
         rock.position = position;
+        if (rotation) rock.rotation = rotation;
         rock.name = "asteroid-" + i;
         rock.id = "asteroid-" + i;
         rock.metadata = { type: 'asteroid' };
@@ -188,6 +191,7 @@ export class RockFactory {
         // Store config for deferred physics initialization
         const config: RockConfig = {
             position,
+            rotation,
             scale,
             linearVelocity,
             angularVelocity,

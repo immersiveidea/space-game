@@ -388,6 +388,9 @@ export class Level1 implements Level {
         // Get ship config and add ship to scene
         const shipConfig = this._deserializer.getShipConfig();
         await this._ship.addToScene(new Vector3(...shipConfig.position), hidden);
+        if (shipConfig.rotation) {
+            this._ship.transformNode.rotation = new Vector3(...shipConfig.rotation);
+        }
 
         // Create XR camera rig
         const cameraRig = new TransformNode("xrCameraRig", DefaultScene.MainScene);

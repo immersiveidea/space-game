@@ -36,7 +36,8 @@ export default class StarBase {
     public static async addToScene(
         position?: Vector3Array,
         baseGlbPath: string = 'base.glb',
-        hidden: boolean = false
+        hidden: boolean = false,
+        rotation?: Vector3Array
     ): Promise<StarBaseMeshResult> {
         const importMeshes = await loadAsset(baseGlbPath, "default", { hidden });
 
@@ -49,9 +50,12 @@ export default class StarBase {
             baseMesh.metadata.baseGlbPath = baseGlbPath;
         }
 
-        // Apply position
-        (importMeshes.container.rootNodes[0] as TransformNode).position =
-            position ? new Vector3(position[0], position[1], position[2]) : new Vector3(0, 0, 0);
+        // Apply position and rotation to root node
+        const rootNode = importMeshes.container.rootNodes[0] as TransformNode;
+        rootNode.position = position ? new Vector3(position[0], position[1], position[2]) : new Vector3(0, 0, 0);
+        if (rotation) {
+            rootNode.rotation = new Vector3(rotation[0], rotation[1], rotation[2]);
+        }
 
         this._loadedBase = { baseMesh, landingMesh, container: importMeshes.container };
 

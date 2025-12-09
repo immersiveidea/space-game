@@ -124,13 +124,5 @@
         -0.972535786522579
       ]
     }
-  ],
-  "difficultyConfig": {
-    "rockCount": 4,
-    "forceMultiplier": 1,
-    "rockSizeMin": 3,
-    "rockSizeMax": 5,
-    "distanceMin": 100,
-    "distanceMax": 200
-  }
+  ]
 }

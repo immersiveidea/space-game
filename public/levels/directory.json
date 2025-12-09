@@ -17,7 +17,10 @@
         "Don't run into things, it damages your hull"
       ],
       "unlockRequirements": [],
-      "tags": ["tutorial", "easy"],
+      "tags": [
+        "tutorial",
+        "easy"
+      ],
       "defaultLocked": false
     },
     {
@@ -36,7 +39,9 @@
         "Some of the asteroids are a little more distant"
       ],
       "unlockRequirements": [],
-      "tags": ["medium"],
+      "tags": [
+        "medium"
+      ],
       "defaultLocked": true
     },
     {
@@ -54,8 +59,12 @@
         "Asteroids are faster and more dangerous",
         "Plan your route carefully"
       ],
-      "unlockRequirements": ["rescue-mission"],
-      "tags": ["hard"],
+      "unlockRequirements": [
+        "rescue-mission"
+      ],
+      "tags": [
+        "hard"
+      ],
       "defaultLocked": true
     },
     {
@@ -73,8 +82,13 @@
         "Multiple base trips may be necessary",
         "Test your skills to the limit"
       ],
-      "unlockRequirements": ["deep-space-patrol"],
-      "tags": ["very-hard", "combat"],
+      "unlockRequirements": [
+        "deep-space-patrol"
+      ],
+      "tags": [
+        "very-hard",
+        "combat"
+      ],
       "defaultLocked": true
     },
     {
@@ -92,8 +106,13 @@
         "Only the best pilots succeed",
         "May the stars guide you"
       ],
-      "unlockRequirements": ["enemy-territory"],
-      "tags": ["very-hard", "endurance"],
+      "unlockRequirements": [
+        "enemy-territory"
+      ],
+      "tags": [
+        "very-hard",
+        "endurance"
+      ],
       "defaultLocked": true
     },
     {
@@ -112,8 +131,13 @@
         "Complete this to prove your mastery",
         "Good luck, Commander"
       ],
-      "unlockRequirements": ["the-gauntlet"],
-      "tags": ["extreme", "final-boss"],
+      "unlockRequirements": [
+        "the-gauntlet"
+      ],
+      "tags": [
+        "extreme",
+        "final-boss"
+      ],
       "defaultLocked": true
     }
   ]

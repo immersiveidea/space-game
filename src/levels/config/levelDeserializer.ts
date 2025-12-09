@@ -131,8 +131,9 @@ export class LevelDeserializer {
      */
     private async createStartBaseMesh(hidden: boolean) {
         const position = this.config.startBase?.position;
+        const rotation = this.config.startBase?.rotation;
         const baseGlbPath = this.config.startBase?.baseGlbPath || 'base.glb';
-        return await StarBase.addToScene(position, baseGlbPath, hidden);
+        return await StarBase.addToScene(position, baseGlbPath, hidden, rotation);
     }
 
     /**
@@ -160,6 +161,9 @@ export class LevelDeserializer {
         // Apply scale if specified
         if (config.scale) {
             sun.scaling = this.arrayToVector3(config.scale);
+        }
+        if (config.rotation) {
+            sun.rotation = this.arrayToVector3(config.rotation);
         }
 
         return sun;
@@ -217,6 +221,9 @@ export class LevelDeserializer {
             material.unlit = true;
             planet.material = material;
             planet.renderingGroupId = 2;
+            if (planetConfig.rotation) {
+                planet.rotation = this.arrayToVector3(planetConfig.rotation);
+            }
 
             planets.push(planet);
             this._planets.push({ mesh: planet, diameter: planetConfig.diameter });
@@ -249,6 +256,7 @@ export class LevelDeserializer {
             }
 
             // Create mesh only (no physics)
+            const rotation = asteroidConfig.rotation ? this.arrayToVector3(asteroidConfig.rotation) : undefined;
             RockFactory.createRockMesh(
                 i,
                 this.arrayToVector3(asteroidConfig.position),
@@ -259,7 +267,8 @@ export class LevelDeserializer {
                 useOrbitConstraints,
                 hidden,
                 targetPosition,
-                asteroidConfig.targetMode
+                asteroidConfig.targetMode,
+                rotation
             );
 
             const mesh = this.scene.getMeshByName(asteroidConfig.id);

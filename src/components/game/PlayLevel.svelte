@@ -4,6 +4,7 @@
     import { Main } from '../../main';
     import type { LevelConfig } from '../../levels/config/levelConfig';
     import { LevelRegistry } from '../../levels/storage/levelRegistry';
+    import { CloudLevelService } from '../../services/cloudLevelService';
     import { progressionStore } from '../../stores/progression';
     import log from '../../core/logger';
     import { DefaultScene } from '../../core/defaultScene';
@@ -86,17 +87,23 @@
                 throw new Error('Main instance not found');
             }
 
-            // Get full level entry from registry
+            // Get full level entry from registry first
             const registry = LevelRegistry.getInstance();
-            const levelEntry = registry.getLevelEntry(levelName);
+            let levelEntry = registry.getLevelEntry(levelName);
+
+            // If not in registry, try fetching by ID (for private/custom levels)
+            if (!levelEntry) {
+                log.info('[PlayLevel] Level not in registry, fetching from cloud:', levelName);
+                levelEntry = await CloudLevelService.getInstance().getLevelById(levelName);
+            }
 
             if (!levelEntry) {
                 throw new Error(`Level "${levelName}" not found`);
             }
 
-            // Check if level is unlocked (deep link protection)
-            const isDefault = levelEntry.levelType === 'official';
-            if (!progressionStore.isLevelUnlocked(levelEntry.name, isDefault)) {
+            // Check if level is unlocked (skip for private levels)
+            const isOfficial = levelEntry.levelType === 'official';
+            if (isOfficial && !progressionStore.isLevelUnlocked(levelEntry.name, true)) {
                 log.warn('[PlayLevel] Level locked, redirecting to level select');
                 navigate('/', { replace: true });
                 return;

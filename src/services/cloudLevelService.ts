@@ -215,10 +215,27 @@ export class CloudLevelService {
     }
 
     /**
-     * Get a level by ID
+     * Get a level by ID (tries authenticated client first for private levels)
      */
     public async getLevelById(id: string): Promise<CloudLevelEntry | null> {
-        const client = SupabaseService.getInstance().getClient();
+        const supabaseService = SupabaseService.getInstance();
+
+        // Try authenticated client first (needed for private levels)
+        const authClient = await supabaseService.getAuthenticatedClient();
+        if (authClient) {
+            const { data, error } = await authClient
+                .from('levels')
+                .select('*')
+                .eq('id', id)
+                .maybeSingle();
+
+            if (!error && data) {
+                return rowToEntry(data);
+            }
+        }
+
+        // Fall back to public client for public levels
+        const client = supabaseService.getClient();
         if (!client) {
             log.warn('[CloudLevelService] Supabase not configured');
             return null;
@@ -228,12 +245,10 @@ export class CloudLevelService {
             .from('levels')
             .select('*')
             .eq('id', id)
-            .single();
+            .maybeSingle();
 
         if (error) {
-            if (error.code !== 'PGRST116') { // Not found is not an error
-                log.error('[CloudLevelService] Failed to fetch level:', error);
-            }
+            log.error('[CloudLevelService] Failed to fetch level:', error);
             return null;
         }
 
@@ -774,7 +789,7 @@ export class CloudLevelService {
             .select('can_review_levels, can_manage_admins, can_manage_official, can_view_analytics')
             .eq('user_id', internalUserId)
             .eq('is_active', true)
-            .single();
+            .maybeSingle();
 
         if (error) {
             log.warn('[CloudLevelService] Admin query error:', error.message, error.code);
