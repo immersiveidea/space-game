@@ -166,6 +166,9 @@ BEGIN
         RAISE EXCEPTION 'Invalid or expired token';
     END IF;
 
+    -- Set user context for history trigger (defined in migration 006)
+    PERFORM set_config('app.current_user_id', v_user_id::TEXT, true);
+
     IF p_level_id IS NOT NULL THEN
         -- Update existing level (only if owned by user)
         UPDATE levels
