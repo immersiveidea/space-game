@@ -21,7 +21,7 @@ export function buildSunConfig(mesh: AbstractMesh | null): SunConfig {
     const hasRotation = rotation[0] !== 0 || rotation[1] !== 0 || rotation[2] !== 0;
 
     return {
-        position: toVector3Array(mesh.position),
+        position: toVector3Array(mesh.getAbsolutePosition()),
         rotation: hasRotation ? rotation : undefined,
         diameter: (script.diameter as number) ?? 50,
         intensity: (script.intensity as number) ?? 1000000,

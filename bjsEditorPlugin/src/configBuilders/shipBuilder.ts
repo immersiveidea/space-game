@@ -13,7 +13,7 @@ export function buildShipConfig(mesh: AbstractMesh | null): ShipConfig {
     const script = getScriptValues(mesh);
 
     return {
-        position: toVector3Array(mesh.position),
+        position: toVector3Array(mesh.getAbsolutePosition()),
         rotation: mesh.rotation ? toVector3Array(mesh.rotation) : undefined,
         linearVelocity: extractVector3OrUndefined(script.linearVelocity),
         angularVelocity: extractVector3OrUndefined(script.angularVelocity)

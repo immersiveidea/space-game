@@ -42,6 +42,7 @@ interface RockConfig {
     angularVelocity: Vector3;
     scoreObservable: Observable<ScoreEvent>;
     useOrbitConstraint: boolean;
+    targetId?: string;
     targetPosition?: Vector3;
     targetMode?: 'orbit' | 'moveToward';
 }
@@ -53,6 +54,9 @@ export class RockFactory {
 
     // Store created rocks for deferred physics initialization
     private static _createdRocks: Map<string, { mesh: InstancedMesh; config: RockConfig }> = new Map();
+
+    // Cache for target physics bodies (shared among asteroids with same targetId)
+    private static _targetBodies: Map<string, PhysicsAggregate> = new Map();
 
     /** Public getter for explosion manager (used by WeaponSystem for shape-cast hits) */
     public static get explosionManager(): ExplosionManager | null {
@@ -124,6 +128,11 @@ export class RockFactory {
         log.debug('[RockFactory] Resetting static state');
         this._asteroidMesh = null;
         this._createdRocks.clear();
+        // Dispose and clear target bodies
+        for (const targetBody of this._targetBodies.values()) {
+            targetBody.dispose();
+        }
+        this._targetBodies.clear();
         if (this._explosionManager) {
             this._explosionManager.dispose();
             this._explosionManager = null;
@@ -170,6 +179,7 @@ export class RockFactory {
         scoreObservable: Observable<ScoreEvent>,
         useOrbitConstraint: boolean = true,
         hidden: boolean = false,
+        targetId?: string,
         targetPosition?: Vector3,
         targetMode?: 'orbit' | 'moveToward',
         rotation?: Vector3
@@ -197,12 +207,13 @@ export class RockFactory {
             angularVelocity,
             scoreObservable,
             useOrbitConstraint,
+            targetId,
             targetPosition,
             targetMode
         };
         this._createdRocks.set(rock.id, { mesh: rock, config });
 
-        log.debug(`[RockFactory] Created rock mesh ${rock.id} (hidden: ${hidden}, target: ${targetMode || 'none'})`);
+        log.debug(`[RockFactory] Created rock mesh ${rock.id} (hidden: ${hidden}, target: ${targetId || 'none'}, mode: ${targetMode || 'none'})`);
         return new Rock(rock);
     }
 
@@ -227,14 +238,18 @@ export class RockFactory {
 
         // Handle target-based physics
         if (config.targetPosition && config.targetMode) {
+            log.debug(`[RockFactory] Applying ${config.targetMode} physics to ${rock.id} toward target at ${config.targetPosition}`);
             this.applyTargetPhysics(body, config);
         } else if (config.useOrbitConstraint && this._orbitCenter) {
             // Legacy: orbit around origin if no specific target
+            log.debug(`[RockFactory] Using legacy orbit constraint for ${rock.id} (no target specified)`);
             const constraint = new DistanceConstraint(
                 Vector3.Distance(config.position, this._orbitCenter.body.transformNode.position),
                 DefaultScene.MainScene
             );
             body.addConstraint(this._orbitCenter.body, constraint);
+        } else {
+            log.debug(`[RockFactory] No orbit constraint for ${rock.id} (useOrbitConstraint=${config.useOrbitConstraint})`);
         }
 
         // Prevent sleeping
@@ -262,16 +277,8 @@ export class RockFactory {
         if (!config.targetPosition) return;
 
         if (config.targetMode === 'orbit') {
-            // Create distance constraint to target position
-            // We need a static body at the target position for the constraint
-            const targetNode = new TransformNode(`target-${body.transformNode.id}`, DefaultScene.MainScene);
-            targetNode.position = config.targetPosition;
-            const targetBody = new PhysicsAggregate(
-                targetNode, PhysicsShapeType.SPHERE,
-                { radius: 0.1, mass: 0 },
-                DefaultScene.MainScene
-            );
-            targetBody.body.setMotionType(PhysicsMotionType.STATIC);
+            // Get or create shared target body for this targetId
+            const targetBody = this.getOrCreateTargetBody(config.targetId, config.targetPosition);
 
             const distance = Vector3.Distance(config.position, config.targetPosition);
             const constraint = new DistanceConstraint(distance, DefaultScene.MainScene);
@@ -291,7 +298,36 @@ export class RockFactory {
             // Final velocity = direction * speed
             const velocity = direction.scale(speed);
             body.setLinearVelocity(velocity);
+        } else {
+            log.warn(`Invalid targetMode ${config.targetMode}`)
         }
+    }
+
+    /**
+     * Get or create a shared physics body for a target position
+     */
+    private static getOrCreateTargetBody(targetId: string | undefined, position: Vector3): PhysicsAggregate {
+        const cacheKey = targetId || `pos-${position.x}-${position.y}-${position.z}`;
+
+        if (this._targetBodies.has(cacheKey)) {
+            log.debug(`[RockFactory] Reusing existing target body for "${cacheKey}"`);
+            return this._targetBodies.get(cacheKey)!;
+        }
+
+        // Create new target body
+        const targetNode = new TransformNode(`target-${cacheKey}`, DefaultScene.MainScene);
+        targetNode.position = position;
+        const targetBody = new PhysicsAggregate(
+            targetNode, PhysicsShapeType.SPHERE,
+            { radius: 0.1, mass: 0 },
+            DefaultScene.MainScene
+        );
+        targetBody.body.setMotionType(PhysicsMotionType.STATIC);
+
+        this._targetBodies.set(cacheKey, targetBody);
+        log.debug(`[RockFactory] Created new target body for "${cacheKey}" at ${position}`);
+
+        return targetBody;
     }
 
     private static setupCollisionHandler(body: PhysicsBody, scoreObservable: Observable<ScoreEvent>): void {

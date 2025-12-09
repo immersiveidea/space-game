@@ -16,7 +16,7 @@ export function buildBaseConfig(mesh: AbstractMesh | null): StartBaseConfig | un
     const hasRotation = rotation[0] !== 0 || rotation[1] !== 0 || rotation[2] !== 0;
 
     return {
-        position: toVector3Array(mesh.position),
+        position: toVector3Array(mesh.getAbsolutePosition()),
         rotation: hasRotation ? rotation : undefined,
         baseGlbPath: glbPath || undefined,
         landingGlbPath: (script.landingGlbPath as string) || undefined,

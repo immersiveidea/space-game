@@ -15,7 +15,7 @@ function buildSingleTarget(node: TransformNode): TargetConfig {
     return {
         id: node.name || node.id,
         name: (script.displayName as string) || node.name || "Target",
-        position: toVector3Array(node.position)
+        position: toVector3Array(node.getAbsolutePosition())
     };
 }
 

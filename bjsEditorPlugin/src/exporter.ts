@@ -14,6 +14,11 @@ import { buildTargetConfigs } from "./configBuilders/targetBuilder";
 export function exportLevelConfig(scene: Scene): string {
     const meshes = collectMeshesByComponent(scene);
 
+    console.log(`[Exporter] Collected: ${meshes.asteroids.length} asteroids, ${meshes.targets.length} targets, ${meshes.planets.length} planets`);
+    if (meshes.targets.length > 0) {
+        console.log(`[Exporter] Target IDs: ${meshes.targets.map(t => t.name || t.id).join(', ')}`);
+    }
+
     const config: LevelConfig = {
         version: "1.0",
         difficulty: "rookie",

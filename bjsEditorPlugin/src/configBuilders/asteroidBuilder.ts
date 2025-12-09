@@ -14,9 +14,19 @@ function buildSingleAsteroid(mesh: AbstractMesh, index: number): AsteroidConfig 
     const rotation = toVector3Array(mesh.rotation);
     const hasRotation = rotation[0] !== 0 || rotation[1] !== 0 || rotation[2] !== 0;
 
+    // Debug: compare local vs absolute position
+    const localPos = mesh.position;
+    const absPos = mesh.getAbsolutePosition();
+    if (Math.abs(localPos.x - absPos.x) > 1 || Math.abs(localPos.y - absPos.y) > 1 || Math.abs(localPos.z - absPos.z) > 1) {
+        console.warn(`[AsteroidBuilder] Position mismatch for ${mesh.name}:`,
+            `local=(${localPos.x.toFixed(1)}, ${localPos.y.toFixed(1)}, ${localPos.z.toFixed(1)})`,
+            `absolute=(${absPos.x.toFixed(1)}, ${absPos.y.toFixed(1)}, ${absPos.z.toFixed(1)})`,
+            `parent=${mesh.parent?.name || 'none'}`);
+    }
+
     return {
         id: mesh.name || `asteroid-${index}`,
-        position: toVector3Array(mesh.position),
+        position: toVector3Array(mesh.getAbsolutePosition()),  // Use absolute position
         rotation: hasRotation ? rotation : undefined,
         scale: mesh.scaling.x,
         linearVelocity: extractVector3(script.linearVelocity, [0, 0, 0]),

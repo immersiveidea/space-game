@@ -248,10 +248,18 @@ export class LevelDeserializer {
 
             // Resolve target position if specified
             let targetPosition: Vector3 | undefined;
-            if (asteroidConfig.targetId && this.config.targets) {
-                const target = this.config.targets.find(t => t.id === asteroidConfig.targetId);
-                if (target) {
-                    targetPosition = this.arrayToVector3(target.position);
+            if (asteroidConfig.targetId) {
+                if (this.config.targets && this.config.targets.length > 0) {
+                    const target = this.config.targets.find(t => t.id === asteroidConfig.targetId);
+                    if (target) {
+                        targetPosition = this.arrayToVector3(target.position);
+                        log.debug(`[LevelDeserializer] Asteroid ${asteroidConfig.id} linked to target ${target.id} at ${targetPosition}`);
+                    } else {
+                        const availableIds = this.config.targets.map(t => t.id).join(', ');
+                        log.warn(`[LevelDeserializer] Asteroid ${asteroidConfig.id} has targetId "${asteroidConfig.targetId}" but no match found. Available: [${availableIds}]`);
+                    }
+                } else {
+                    log.warn(`[LevelDeserializer] Asteroid ${asteroidConfig.id} has targetId "${asteroidConfig.targetId}" but no targets array in config`);
                 }
             }
 
@@ -266,6 +274,7 @@ export class LevelDeserializer {
                 scoreObservable,
                 useOrbitConstraints,
                 hidden,
+                asteroidConfig.targetId,
                 targetPosition,
                 asteroidConfig.targetMode,
                 rotation

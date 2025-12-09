@@ -56,6 +56,10 @@ function categorizeByScript(
         case "BaseComponent":
             result.base = mesh;
             break;
+        case "TargetComponent":
+            // Targets can be Mesh or TransformNode - handle both
+            result.targets.push(mesh as unknown as TransformNode);
+            break;
     }
 }
 

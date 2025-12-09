@@ -14,7 +14,7 @@ function buildSinglePlanet(mesh: AbstractMesh): PlanetConfig {
 
     return {
         name: mesh.name || "planet",
-        position: toVector3Array(mesh.position),
+        position: toVector3Array(mesh.getAbsolutePosition()),
         diameter: (script.diameter as number) ?? 100,
         texturePath: (script.texturePath as string) || "planet_texture.jpg",
         rotation: hasRotation(mesh) ? toVector3Array(mesh.rotation) : undefined
