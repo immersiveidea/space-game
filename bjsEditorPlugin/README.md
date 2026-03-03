@@ -48,3 +48,4 @@ npm run build  # Production build
 ```
 
 Debug in Editor: CTRL+ALT+i to open DevTools, F5 to reload plugin.
+Test gitea action
