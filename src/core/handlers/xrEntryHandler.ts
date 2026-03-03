@@ -1,4 +1,4 @@
-import { Engine, FreeCamera, Vector3 } from "@babylonjs/core";
+import { AbstractEngine, FreeCamera, Vector3 } from "@babylonjs/core";
 import { DefaultScene } from "../defaultScene";
 import { LevelConfig } from "../../levels/config/levelConfig";
 import log from '../logger';
@@ -9,7 +9,7 @@ import log from '../logger';
  */
 export async function enterXRMode(
     config: LevelConfig,
-    engine: Engine
+    engine: AbstractEngine
 ): Promise<any> {
     if (!DefaultScene.XR) {
         return startFlatMode(engine);
@@ -39,7 +39,7 @@ function prePositionCamera(config: LevelConfig): void {
     log.debug('[XR] Camera pre-positioned at cockpit:', cockpitPosition.toString());
 }
 
-function startFlatMode(engine: Engine): null {
+function startFlatMode(engine: AbstractEngine): null {
     const canvas = document.getElementById('gameCanvas');
     if (canvas) canvas.style.display = 'block';
     engine.stopRenderLoop();

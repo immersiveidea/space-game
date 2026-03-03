@@ -1,4 +1,4 @@
-import { AudioEngineV2, Engine } from "@babylonjs/core";
+import { AbstractEngine, AudioEngineV2 } from "@babylonjs/core";
 import '@babylonjs/loaders';
 
 import { DefaultScene } from "./core/defaultScene";
@@ -20,7 +20,7 @@ const canvas = document.querySelector('#gameCanvas') as HTMLCanvasElement;
 
 export class Main implements LevelSelectedContext, CleanupContext {
     private _currentLevel: Level | null = null;
-    private _engine: Engine;
+    private _engine: AbstractEngine;
     private _audioEngine: AudioEngineV2;
     private _initialized: boolean = false;
     private _assetsLoaded: boolean = false;
@@ -43,7 +43,7 @@ export class Main implements LevelSelectedContext, CleanupContext {
     areAssetsLoaded(): boolean { return this._assetsLoaded; }
     setAssetsLoaded(value: boolean): void { this._assetsLoaded = value; }
     getAudioEngine(): AudioEngineV2 { return this._audioEngine; }
-    getEngine(): Engine { return this._engine; }
+    getEngine(): AbstractEngine { return this._engine; }
     setCurrentLevel(level: Level): void { this._currentLevel = level; }
     setProgressCallback(cb: (percent: number, message: string) => void): void {
         this._progressCallback = cb;

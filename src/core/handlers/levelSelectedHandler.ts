@@ -1,4 +1,4 @@
-import { AudioEngineV2, Engine, ParticleHelper } from "@babylonjs/core";
+import { AbstractEngine, AudioEngineV2, ParticleHelper } from "@babylonjs/core";
 import { DefaultScene } from "../defaultScene";
 import { Level1 } from "../../levels/level1";
 import Level from "../../levels/level";
@@ -20,7 +20,7 @@ export interface LevelSelectedContext {
     initializeEngine(): Promise<void>;
     initializeXR(): Promise<void>;
     getAudioEngine(): AudioEngineV2;
-    getEngine(): Engine;
+    getEngine(): AbstractEngine;
     setCurrentLevel(level: Level): void;
     setProgressCallback(callback: (percent: number, message: string) => void): void;
     play(): Promise<void>;
@@ -169,7 +169,7 @@ function attachAudioListener(audioEngine: AudioEngineV2): void {
 
 async function finalizeLevelStart(
     level: Level1,
-    engine: Engine,
+    engine: AbstractEngine,
     preloader: Preloader,
     context: LevelSelectedContext
 ): Promise<void> {
@@ -188,7 +188,7 @@ async function finalizeLevelStart(
     await context.play();
 }
 
-function showCanvasForFlatMode(engine: Engine): void {
+function showCanvasForFlatMode(engine: AbstractEngine): void {
     const canvas = document.getElementById('gameCanvas');
     if (canvas) canvas.style.display = 'block';
     engine.stopRenderLoop();

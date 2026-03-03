@@ -1,11 +1,11 @@
-import { Engine } from "@babylonjs/core";
+import { AbstractEngine } from "@babylonjs/core";
 import { DefaultScene } from "./defaultScene";
 import { RockFactory } from "../environment/asteroids/rockFactory";
 import log from './logger';
 import Level from "../levels/level";
 
 export interface CleanupContext {
-    getEngine(): Engine;
+    getEngine(): AbstractEngine;
     getCurrentLevel(): Level | null;
     setCurrentLevel(level: Level | null): void;
     resetState(): void;

@@ -1,18 +1,22 @@
 import {
+    AbstractEngine,
     AudioEngineV2,
     Color3,
     CreateAudioEngineAsync,
     Engine,
     HavokPlugin,
     Scene,
-    Vector3
+    Vector3,
+    WebGPUEngine,
 } from "@babylonjs/core";
 import HavokPhysics from "@babylonjs/havok";
 import { DefaultScene } from "./defaultScene";
 import { ProgressReporter } from "./xrSetup";
+import { useWebGPU } from "./queryParams";
+import log from './logger';
 
 export interface SceneSetupResult {
-    engine: Engine;
+    engine: AbstractEngine;
     audioEngine: AudioEngineV2;
 }
 
@@ -24,7 +28,7 @@ export async function setupScene(
     reporter: ProgressReporter
 ): Promise<SceneSetupResult> {
     reporter.reportProgress(5, 'Creating rendering engine...');
-    const engine = createEngine(canvas);
+    const engine = await createEngine(canvas);
 
     reporter.reportProgress(10, 'Creating scene...');
     createMainScene(engine);
@@ -44,14 +48,22 @@ export async function setupScene(
     return { engine, audioEngine };
 }
 
-function createEngine(canvas: HTMLCanvasElement): Engine {
-    const engine = new Engine(canvas, true);
+async function createEngine(canvas: HTMLCanvasElement): Promise<AbstractEngine> {
+    let engine: AbstractEngine;
+    if (useWebGPU) {
+        log.info('[Engine] Creating WebGPU engine');
+        log.warn('[Engine] WebXR/VR is still experimental');
+        engine = await WebGPUEngine.CreateAsync(canvas, { antialias: true });
+    } else {
+        log.info('[Engine] Creating WebGL engine');
+        engine = new Engine(canvas, true);
+    }
     engine.setHardwareScalingLevel(1 / window.devicePixelRatio);
     window.onresize = () => engine.resize();
     return engine;
 }
 
-function createMainScene(engine: Engine): void {
+function createMainScene(engine: AbstractEngine): void {
     // Dispose old scene if it exists (prevents doubling on reload)
     if (DefaultScene.MainScene && !DefaultScene.MainScene.isDisposed) {
         DefaultScene.MainScene.dispose();
