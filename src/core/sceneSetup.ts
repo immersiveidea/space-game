@@ -52,7 +52,7 @@ async function createEngine(canvas: HTMLCanvasElement): Promise<AbstractEngine> 
     let engine: AbstractEngine;
     if (useWebGPU) {
         log.info('[Engine] Creating WebGPU engine');
-        log.warn('[Engine] WebXR/VR is still experimental');
+        log.warn('[Engine] WebXR/VR is still experimental with WebGPU engine');
         engine = await WebGPUEngine.CreateAsync(canvas, { antialias: true });
     } else {
         log.info('[Engine] Creating WebGL engine');
