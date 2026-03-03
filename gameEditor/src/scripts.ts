@@ -5,13 +5,13 @@
 
 import { loadScene, scriptsDictionary, scriptAssetsCache, _applyScriptsForObject, _removeRegisteredScriptInstance, _preloadScriptsAssets } from "babylonjs-editor-tools";
 import * as scripts_editorScripts_AsteroidComponent from "./scripts/editorScripts/AsteroidComponent";
-import * as scripts_editorScripts_BaseComponent from "./scripts/editorScripts/BaseComponent";
 import * as scripts_editorScripts_ShipComponent from "./scripts/editorScripts/ShipComponent";
+import * as scripts_editorScripts_BaseComponent from "./scripts/editorScripts/BaseComponent";
 
 export const scriptsMap = {
     "scripts/editorScripts/AsteroidComponent.ts": scripts_editorScripts_AsteroidComponent,
-	"scripts/editorScripts/BaseComponent.ts": scripts_editorScripts_BaseComponent,
-	"scripts/editorScripts/ShipComponent.ts": scripts_editorScripts_ShipComponent
+	"scripts/editorScripts/ShipComponent.ts": scripts_editorScripts_ShipComponent,
+	"scripts/editorScripts/BaseComponent.ts": scripts_editorScripts_BaseComponent
 };
 
 export { loadScene, scriptsDictionary, scriptAssetsCache, _applyScriptsForObject, _removeRegisteredScriptInstance, _preloadScriptsAssets };

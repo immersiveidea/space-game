@@ -1,0 +1,189 @@
+{
+  "sun": {
+    "diameter": 50,
+    "position": [
+      0,
+      0,
+      400
+    ]
+  },
+  "ship": {
+    "position": [
+      0,
+      2,
+      0
+    ],
+    "rotation": [
+      0,
+      0,
+      0
+    ]
+  },
+  "planets": [],
+  "version": "1.0",
+  "metadata": {
+    "author": "BabylonJS Editor",
+    "description": "Exported from Editor"
+  },
+  "targets": [
+    {
+      "id": "ORBIT",
+      "name": "ORBIT",
+      "position": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "LINEAR",
+      "name": "LINEAR",
+      "position": [
+        0,
+        -46.40267541850123,
+        0
+      ]
+    }
+  ],
+  "asteroids": [
+    {
+      "id": "Asteroid",
+      "mass": 100,
+      "scale": 5,
+      "position": [
+        0,
+        55.91356273231697,
+        -84.76095007459317
+      ],
+      "linearVelocity": [
+        0,
+        0,
+        -30
+      ],
+      "angularVelocity": [
+        0,
+        0,
+        5
+      ],
+      "targetId": "ORBIT",
+      "targetMode": "orbit"
+    },
+    {
+      "id": "Asteroid (Mesh Instance)",
+      "mass": 100,
+      "scale": 5,
+      "position": [
+        -216.86571629860342,
+        6.395638981779044,
+        0
+      ],
+      "linearVelocity": [
+        0,
+        0,
+        20
+      ],
+      "angularVelocity": [
+        1,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "Asteroid (Mesh Instance)",
+      "mass": 100,
+      "scale": 5,
+      "position": [
+        125.92973388713749,
+        0,
+        0
+      ],
+      "linearVelocity": [
+        0,
+        0,
+        30
+      ],
+      "angularVelocity": [
+        0,
+        0,
+        0
+      ],
+      "targetId": "ORBIT",
+      "targetMode": "orbit"
+    },
+    {
+      "id": "Asteroid (Mesh Instance)",
+      "mass": 1,
+      "scale": 25,
+      "position": [
+        121.55444252370417,
+        3.373869538878104,
+        -350.47951942991017
+      ],
+      "linearVelocity": [
+        0,
+        0,
+        50
+      ],
+      "angularVelocity": [
+        0,
+        0,
+        10
+      ],
+      "targetId": "ORBIT",
+      "targetMode": "orbit"
+    },
+    {
+      "id": "Asteroid (Mesh Instance)",
+      "mass": 100,
+      "scale": 5,
+      "position": [
+        -50.27889543892182,
+        2.934664213442815,
+        57.70721855086853
+      ],
+      "linearVelocity": [
+        100,
+        0,
+        10
+      ],
+      "angularVelocity": [
+        0,
+        2,
+        0
+      ]
+    },
+    {
+      "id": "Asteroid (Mesh Instance)",
+      "mass": 210,
+      "scale": 5,
+      "position": [
+        -154.4148281169747,
+        -133.4543443541567,
+        -230.29621395184932
+      ],
+      "linearVelocity": [
+        0,
+        30,
+        0
+      ],
+      "angularVelocity": [
+        0.1,
+        1,
+        -1
+      ],
+      "targetId": "ORBIT",
+      "targetMode": "orbit"
+    }
+  ],
+  "startBase": {
+    "position": [
+      0,
+      0,
+      0
+    ],
+    "baseGlbPath": "base.glb"
+  },
+  "timestamp": "2025-12-05T14:49:29.176Z",
+  "difficulty": "rookie",
+  "useOrbitConstraints": true
+}

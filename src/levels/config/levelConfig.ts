@@ -144,6 +144,7 @@ export interface LevelConfig {
     version: string;
     difficulty: string;
     timestamp?: string; // ISO date string
+    backgroundMusic?: string; // Audio filename e.g., "song1.mp3" - defaults to "song1.mp3"
     metadata?: {
         author?: string;
         description?: string;

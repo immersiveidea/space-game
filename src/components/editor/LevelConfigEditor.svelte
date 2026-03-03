@@ -22,7 +22,7 @@
   let level: CloudLevelEntry | null = null;
   let config: LevelConfig | null = null;
   let error = '';
-  let activeTab = 'ship';
+  let activeTab = 'general';
 
   // Message state
   let message = '';
@@ -30,6 +30,7 @@
   let showMessage = false;
 
   const tabs = [
+    { id: 'general', label: '⚙️ General' },
     { id: 'ship', label: '🚀 Ship' },
     { id: 'base', label: '🛬 Base' },
     { id: 'sun', label: '☀️ Sun' },
@@ -38,6 +39,8 @@
     { id: 'asteroids', label: '☄️ Asteroids' },
     { id: 'planets', label: '🪐 Planets' }
   ];
+
+  const musicOptions = ['song1.mp3', 'song2.mp3','song3.mp3'];
 
   onMount(async () => {
     await loadLevel();
@@ -84,7 +87,12 @@
 
     try {
       const service = CloudLevelService.getInstance();
-      const updated = await service.updateLevelAsAdmin(level.id, { config });
+      // Convert empty strings to undefined before saving
+      const cleanConfig = {
+        ...config,
+        backgroundMusic: config.backgroundMusic || undefined
+      };
+      const updated = await service.updateLevelAsAdmin(level.id, { config: cleanConfig });
 
       if (updated) {
         level = updated;
@@ -170,7 +178,23 @@
 
     <!-- Tab Content -->
     <div class="tab-content">
-      {#if activeTab === 'ship'}
+      {#if activeTab === 'general'}
+        <Section title="General Settings">
+          <div class="field-row">
+            <label for="backgroundMusic">Background Music</label>
+            <select id="backgroundMusic" bind:value={config.backgroundMusic}>
+              <option value="">Default (song1.mp3)</option>
+              {#each musicOptions as song}
+                <option value={song}>{song}</option>
+              {/each}
+            </select>
+          </div>
+          <div class="field-row">
+            <label for="difficulty">Difficulty</label>
+            <input id="difficulty" type="text" bind:value={config.difficulty} />
+          </div>
+        </Section>
+      {:else if activeTab === 'ship'}
         <ShipConfigEditor bind:config={config.ship} />
       {:else if activeTab === 'base'}
         <BaseConfigEditor config={config.startBase} onToggle={handleBaseToggle} />
@@ -233,5 +257,28 @@
 
   .tab-content {
     min-height: 300px;
+  }
+
+  .field-row {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .field-row label {
+    min-width: 150px;
+    color: var(--color-text-secondary, #888);
+  }
+
+  .field-row select,
+  .field-row input {
+    flex: 1;
+    padding: 0.5rem;
+    background: var(--color-bg-tertiary, #252540);
+    border: 1px solid var(--color-border, #333);
+    border-radius: 4px;
+    color: var(--color-text-primary, #fff);
+    max-width: 300px;
   }
 </style>

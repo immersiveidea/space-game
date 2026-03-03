@@ -64,6 +64,9 @@ function createMainScene(engine: Engine): void {
     //DefaultScene.MainScene.performancePriority = ScenePerformancePriority.Intermediate;
     DefaultScene.MainScene.autoClear = false;
     DefaultScene.MainScene.autoClearDepthAndStencil = false;
+    //const hdrTexture = new HDRCubeTexture("/assets/untitled.hdr", DefaultScene.MainScene, 2048);
+    //DefaultScene.MainScene.environmentTexture = hdrTexture;
+    //DefaultScene.MainScene.createDefaultSkybox(hdrTexture, true, 1000);
 }
 
 async function setupPhysics(): Promise<void> {

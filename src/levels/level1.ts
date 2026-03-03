@@ -358,7 +358,9 @@ export class Level1 implements Level {
         this._hintSystem.setAudioEngine(audioEngine);
 
         // Load background music (uses prefetched audio if available)
-        const musicUrl = "/assets/themes/default/audio/song1.mp3";
+        const musicFile = this._levelConfig.backgroundMusic || "song1.mp3";
+        log.debug(musicFile);
+        const musicUrl = `/assets/themes/default/audio/${musicFile}`;
         this._backgroundMusic = await audioEngine.createSoundAsync(
             "background",
             getAudioSource(musicUrl),

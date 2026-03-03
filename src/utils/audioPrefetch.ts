@@ -9,6 +9,7 @@ const AUDIO_FILES = [
     `${AUDIO_BASE}/shot.mp3`,
     `${AUDIO_BASE}/collision.mp3`,
     `${AUDIO_BASE}/song1.mp3`,
+    `${AUDIO_BASE}/song2.mp3`,
 ];
 
 // Cache for prefetched audio buffers

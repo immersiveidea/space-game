@@ -9,14 +9,10 @@ if (queryLevel && ['debug', 'info', 'warn', 'error'].includes(queryLevel)) {
 
 // Check localStorage for custom level (enables production debugging)
 const storedLevel = localStorage.getItem('log-level');
-
+console.log(storedLevel);
 // Set level: localStorage override > environment default
 if (storedLevel) {
     log.setLevel(storedLevel as log.LogLevelDesc);
-} else {
-    const isDev = window.location.hostname === 'localhost' ||
-                  window.location.hostname.includes('dev.');
-    log.setLevel(isDev ? 'debug' : 'warn');
 }
 
 export default log;
