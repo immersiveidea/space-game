@@ -1,4 +1,4 @@
-import Beacon from 'sig-beacon';
+import Beacon from '@zestyxyz/beacon';
 import log from '../core/logger';
 
 /**

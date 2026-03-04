@@ -28,7 +28,7 @@
     "@newrelic/browser-agent": "^1.302.0",
     "@supabase/supabase-js": "^2.84.0",
     "loglevel": "^1.9.2",
-    "sig-beacon": "^0.0.14",
+    "@zestyxyz/beacon": "^0.0.16",
     "svelte-routing": "^2.13.0"
   },
   "devDependencies": {
