@@ -49,18 +49,40 @@ export async function setupScene(
 }
 
 async function createEngine(canvas: HTMLCanvasElement): Promise<AbstractEngine> {
-    let engine: AbstractEngine;
-    if (useWebGPU) {
-        log.info('[Engine] Creating WebGPU engine');
-        log.warn('[Engine] WebXR/VR is still experimental with WebGPU engine');
-        engine = await WebGPUEngine.CreateAsync(canvas, { antialias: true });
-    } else {
-        log.info('[Engine] Creating WebGL engine');
-        engine = new Engine(canvas, true);
+    const engine = useWebGPU
+        ? await tryCreateWebGPUEngine(canvas)
+        : null;
+    const finalEngine = engine ?? createWebGLEngine(canvas);
+    finalEngine.setHardwareScalingLevel(1 / window.devicePixelRatio);
+    window.onresize = () => finalEngine.resize();
+    return finalEngine;
+}
+
+async function tryCreateWebGPUEngine(canvas: HTMLCanvasElement): Promise<AbstractEngine | null> {
+    if (!navigator.gpu) {
+        log.warn('[Engine] WebGPU requested but navigator.gpu not available');
+        return null;
     }
-    engine.setHardwareScalingLevel(1 / window.devicePixelRatio);
-    window.onresize = () => engine.resize();
-    return engine;
+    const adapter = await navigator.gpu.requestAdapter();
+    if (!adapter) {
+        log.warn('[Engine] No WebGPU adapter found');
+        return null;
+    }
+    log.info(`[Engine] WebGPU adapter: ${adapter.info?.vendor ?? 'unknown'}`);
+    try {
+        const gpuEngine = new WebGPUEngine(canvas, { antialias: true });
+        await gpuEngine.initAsync();
+        log.info('[Engine] WebGPU engine ready — WebXR will use XRGPUBinding if available');
+        return gpuEngine;
+    } catch (e) {
+        log.error('[Engine] WebGPU initialization failed', e);
+        return null;
+    }
+}
+
+function createWebGLEngine(canvas: HTMLCanvasElement): AbstractEngine {
+    log.info('[Engine] Creating WebGL engine');
+    return new Engine(canvas, true);
 }
 
 function createMainScene(engine: AbstractEngine): void {

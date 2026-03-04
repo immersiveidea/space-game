@@ -1,6 +1,7 @@
-import { AbstractEngine, FreeCamera, Vector3 } from "@babylonjs/core";
+import { AbstractEngine, FreeCamera, Vector3, WebGPUEngine } from "@babylonjs/core";
 import { DefaultScene } from "../defaultScene";
 import { LevelConfig } from "../../levels/config/levelConfig";
+import { isWebGPUXRAvailable, createWebGPURenderTarget, getWebGPUSessionInit } from "../xr-webgpu/xrGpuEntryPoint";
 import log from '../logger';
 
 /**
@@ -17,10 +18,9 @@ export async function enterXRMode(
 
     try {
         prePositionCamera(config);
-        const session = await DefaultScene.XR.baseExperience.enterXRAsync(
-            'immersive-vr',
-            'local-floor'
-        );
+        const session = isWebGPUXRAvailable(engine)
+            ? await enterWebGPUXR(engine as WebGPUEngine)
+            : await enterWebGLXR();
         log.debug('XR session started successfully');
         return session;
     } catch (error) {
@@ -28,6 +28,16 @@ export async function enterXRMode(
         DefaultScene.XR = null;
         return startFlatMode(engine);
     }
+}
+
+async function enterWebGPUXR(engine: WebGPUEngine): Promise<any> {
+    const base = DefaultScene.XR!.baseExperience;
+    const gpuTarget = createWebGPURenderTarget(base.sessionManager, engine, DefaultScene.MainScene);
+    return base.enterXRAsync('immersive-vr', 'local-floor', gpuTarget, getWebGPUSessionInit());
+}
+
+async function enterWebGLXR(): Promise<any> {
+    return DefaultScene.XR!.baseExperience.enterXRAsync('immersive-vr', 'local-floor');
 }
 
 function prePositionCamera(config: LevelConfig): void {
