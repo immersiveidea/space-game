@@ -3,6 +3,7 @@ import App from '../components/layouts/App.svelte';
 import { LegacyMigration } from '../levels/migration/legacyMigration';
 import { LevelRegistry } from '../levels/storage/levelRegistry';
 import log from './logger';
+import { initBeacon } from '../services/beacon';
 
 // Type for Main class - imported dynamically to avoid circular dependency
 type MainClass = new (progressCallback?: (percent: number, message: string) => void) => any;
@@ -56,6 +57,7 @@ export async function initializeApp(MainConstructor: MainClass): Promise<void> {
     }
 
     mountAppAndCreateMain(MainConstructor);
+    initBeacon();
     log.info('[Main] initializeApp() FINISHED');
 }
 
