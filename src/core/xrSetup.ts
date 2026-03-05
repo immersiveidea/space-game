@@ -5,6 +5,7 @@ import {
 import { DefaultScene } from "./defaultScene";
 import { InputControlManager } from "../ship/input/inputControlManager";
 import log from './logger';
+import { createZestyBanner } from '../ads/zestyBanner';
 
 const XR_RENDERING_GROUP = 3;
 const FADE_DELAY_MS = 500;
@@ -54,7 +55,18 @@ async function createXRExperience(): Promise<void> {
         disablePointerSelection: true  // Disable to re-enable with custom options
     });
     log.debug(WebXRFeaturesManager.GetAvailableFeatures());
+    try {
+        const banner = createZestyBanner("a2170882-f232-4da0-9315-747ee049e642",
+            "billboard", 10, DefaultScene.MainScene, DefaultScene.XR);
+        banner.position.z = 50;
+        banner.position.y = 5;
+        banner.rotation.y = Math.PI;
+        banner.renderOverlay = true;
+        banner.overlayColor = Color3.Red();
 
+    } catch (e) {
+        log.debug("Zesty banner init failed:", e);
+    }
     // Enable pointer selection with renderingGroupId so laser is never occluded
     DefaultScene.XR.baseExperience.featuresManager.enableFeature(
         WebXRFeatureName.POINTER_SELECTION,
