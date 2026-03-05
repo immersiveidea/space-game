@@ -24,10 +24,11 @@ async function loadAd(
     const ad = await fetchCampaignAd(adUnitId, format);
     adRef.current = ad;
     const mat = banner.material as StandardMaterial;
-    mat.diffuseTexture?.dispose();
+    mat.emissiveTexture?.dispose();
     const tex = new Texture(ad.assetUrl, scene);
     tex.hasAlpha = true;
-    mat.diffuseTexture = tex;
+    mat.emissiveTexture = tex;
+
     if (ad.campaignId) sendOnLoadMetric(adUnitId, ad.campaignId);
 }
 
@@ -44,8 +45,8 @@ export function createZestyBanner(
     const banner = MeshBuilder.CreatePlane('zestybanner', planeOpts, scene);
 
     const mat = new StandardMaterial('zestyMat', scene);
-    mat.diffuseTexture = new Texture(fmt.defaultImage, scene);
-    (mat.diffuseTexture as Texture).hasAlpha = true;
+    mat.emissiveTexture = new Texture(fmt.defaultImage, scene);
+    (mat.emissiveTexture as Texture).hasAlpha = true;
     banner.material = mat;
 
     const adRef = { current: { assetUrl: '', ctaUrl: '', campaignId: '' } };
